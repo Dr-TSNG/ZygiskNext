@@ -1,0 +1,21 @@
+[package]
+name = "zygiskd"
+version = "1.0.0"
+edition = "2021"
+rust-version = "1.65"
+
+[dependencies]
+android_logger = "0.12.0"
+anyhow = "1.0.68"
+const_format = "0.2.5"
+env_logger = "0.10.0"
+log = "0.4.17"
+memfd = "0.6.2"
+nix = "0.26.2"
+num_enum = "0.5.9"
+passfd = "0.1.5"
+
+[profile.release]
+strip = true
+opt-level = "z"
+lto = true
