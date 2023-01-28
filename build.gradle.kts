@@ -6,6 +6,15 @@ plugins {
     id("com.android.library") apply false
 }
 
+buildscript {
+    repositories {
+        maven("https://plugins.gradle.org/m2/")
+    }
+    dependencies {
+        classpath("org.mozilla.rust-android-gradle:plugin:0.9.3")
+    }
+}
+
 val verCode by extra(25207)
 val verName by extra("25.2-1")
 val androidMinSdkVersion by extra(29)
@@ -22,6 +31,7 @@ tasks.register("Delete", Delete::class) {
 
 fun Project.configureBaseExtension() {
     extensions.findByType(BaseExtension::class)?.run {
+        namespace = "icu.nullptr.zygisksu"
         compileSdkVersion(androidCompileSdkVersion)
         ndkVersion = androidCompileNdkVersion
         buildToolsVersion = androidBuildToolsVersion

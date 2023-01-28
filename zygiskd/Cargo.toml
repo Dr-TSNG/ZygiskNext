@@ -1,14 +1,14 @@
 [package]
 name = "zygiskd"
+authors = ["Nullptr"]
 version = "1.0.0"
 edition = "2021"
-rust-version = "1.65"
+rust-version = "1.67"
 
 [dependencies]
 android_logger = "0.12.0"
 anyhow = "1.0.68"
 const_format = "0.2.5"
-env_logger = "0.10.0"
 log = "0.4.17"
 memfd = "0.6.2"
 nix = "0.26.2"

@@ -20,12 +20,11 @@ fn init_android_logger(tag: &str) {
 fn main() -> Result<()> {
     let process = std::env::args().next().unwrap();
     let process = process.split('/').last().unwrap();
-    env_logger::init();
-    // init_android_logger(process);
+    init_android_logger(process);
     match process {
         "zygiskwd" => {
             log::info!("Start zygisksu watchdog");
-            // watchdog::check_permission()?;
+            watchdog::check_permission()?;
             watchdog::ensure_single_instance()?;
             watchdog::spawn_daemon()?;
         }
@@ -40,9 +39,7 @@ fn main() -> Result<()> {
             unsafe { libc::prctl(libc::PR_SET_PDEATHSIG, libc::SIGKILL); }
             zygisk::start(true)?;
         }
-        _ => return { 
-            Err(anyhow!("Unexpected process name: {process}"))
-        },
+        _ => return Err(anyhow!("Unexpected process name: {process}"))
     }
     Ok(())
 }

@@ -42,13 +42,13 @@ impl UnixStreamExt for UnixStream {
     fn read_u32(&mut self) -> Result<u32> {
         let mut buf = [0u8; 4];
         self.read_exact(&mut buf)?;
-        Ok(u32::from_le_bytes(buf))
+        Ok(u32::from_ne_bytes(buf))
     }
 
     fn read_usize(&mut self) -> Result<usize> {
-        let mut buf = [0u8; 8];
+        let mut buf = [0u8; std::mem::size_of::<usize>()];
         self.read_exact(&mut buf)?;
-        Ok(usize::from_le_bytes(buf))
+        Ok(usize::from_ne_bytes(buf))
     }
 
     fn write_usize(&mut self, value: usize) -> Result<()> {
