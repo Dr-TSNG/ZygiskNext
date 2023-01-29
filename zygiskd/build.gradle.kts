@@ -10,10 +10,6 @@ cargo {
     targets = listOf("arm64", "arm", "x86", "x86_64")
     val isDebug = gradle.startParameter.taskNames.any { it.toLowerCase().contains("debug") }
     profile = if (isDebug) "debug" else "release"
-    targetDirectory = "build/intermediates/rust"
-    exec = { spec, _ ->
-        spec.environment("CARGO_TARGET_DIR", targetDirectory)
-    }
 }
 
 androidComponents.onVariants { variant ->
@@ -25,11 +21,16 @@ androidComponents.onVariants { variant ->
         }
     }
 
-    task<Exec>("pushAndRun$variantCapped") {
+    task("push$variantCapped") {
         group = "zygiskd"
-        dependsOn("build$variantCapped")
+        dependsOn("cargoBuildArm", "cargoBuildArm64")
         doLast {
-            commandLine("adb", "push", "target/")
+            val moduleDir = "/data/adb/ksu/modules/zygisksu"
+            exec { commandLine("adb", "push", "build/rustJniLibs/android/armeabi-v7a/zygiskd", "/data/local/tmp/zygiskd32") }
+            exec { commandLine("adb", "push", "build/rustJniLibs/android/arm64-v8a/zygiskd", "/data/local/tmp/zygiskd64") }
+            exec { commandLine("adb", "shell", "su", "-c", "mv /data/local/tmp/zygiskd32 $moduleDir/zygiskd32") }
+            exec { commandLine("adb", "shell", "su", "-c", "mv /data/local/tmp/zygiskd64 $moduleDir/zygiskd64") }
+            exec { commandLine("adb", "shell", "su", "-c", "ln -sf zygiskd64 $moduleDir/zygiskwd") }
         }
     }
 }

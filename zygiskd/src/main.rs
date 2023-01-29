@@ -1,11 +1,11 @@
 #![allow(dead_code)]
 
-mod watchdog;
 mod constants;
-mod zygisk;
 mod utils;
+mod watchdog;
+mod zygisk;
 
-use anyhow::{anyhow, Result};
+use anyhow::{bail, Result};
 use log::LevelFilter;
 use nix::libc;
 
@@ -17,7 +17,7 @@ fn init_android_logger(tag: &str) {
     );
 }
 
-fn main() -> Result<()> {
+fn entry() -> Result<()> {
     let process = std::env::args().next().unwrap();
     let process = process.split('/').last().unwrap();
     init_android_logger(process);
@@ -39,7 +39,13 @@ fn main() -> Result<()> {
             unsafe { libc::prctl(libc::PR_SET_PDEATHSIG, libc::SIGKILL); }
             zygisk::start(true)?;
         }
-        _ => return Err(anyhow!("Unexpected process name: {process}"))
+        _ => bail!("Unexpected process name: {process}")
     }
     Ok(())
+}
+
+fn main() {
+    if let Err(e) = entry() {
+        log::error!("Crashed: {}", e.backtrace());
+    }
 }

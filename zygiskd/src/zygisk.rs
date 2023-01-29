@@ -1,26 +1,26 @@
 use crate::constants::DaemonSocketAction;
 use crate::utils::{restore_native_bridge, UnixStreamExt};
 use crate::{constants, utils};
-use anyhow::{anyhow, Result};
+use anyhow::{bail, Result};
 use memfd::Memfd;
 use nix::{
     libc::{self, dlsym},
     unistd::getppid,
 };
 use passfd::FdPassingExt;
-use std::cell::Cell;
 use std::io::Write;
 use std::sync::Arc;
 use std::thread;
-use std::{
-    ffi::c_void,
-    fs,
-    os::unix::{
-        net::{UnixListener, UnixStream},
-        prelude::AsRawFd,
-    },
-    path::PathBuf,
+use std::ffi::c_void;
+use std::fs;
+use std::os::fd::FromRawFd;
+use std::os::unix::{
+    net::{UnixListener, UnixStream},
+    prelude::AsRawFd,
 };
+use std::path::PathBuf;
+use std::process::Command;
+use nix::sys::socket::{AddressFamily, SockFlag, SockType, UnixAddr};
 
 type ZygiskCompanionEntryFn = unsafe extern "C" fn(i32);
 
@@ -33,11 +33,11 @@ struct Module {
 struct Context {
     native_bridge: String,
     modules: Arc<Vec<Module>>,
-    stream: Cell<UnixStream>,
+    listener: UnixListener,
 }
 
 pub fn start(is64: bool) -> Result<()> {
-    // check_parent()?;
+    check_parent()?;
     let arch = get_arch(is64)?;
     log::debug!("Daemon architecture: {arch}");
 
@@ -47,56 +47,44 @@ pub fn start(is64: bool) -> Result<()> {
     log::info!("Create socket");
     let listener = create_daemon_socket(is64)?;
 
-    log::info!("Waiting for connection");
-    let (stream, _) = listener.accept()?;
-    drop(listener);
-
     let context = Context {
         native_bridge: utils::get_native_bridge(),
         modules: Arc::new(modules),
-        stream: Cell::new(stream),
+        listener,
     };
 
-    log::info!("Connection established");
-    restore_native_bridge()?;
+    log::info!("Start to listen zygote connections");
     handle_daemon_actions(context)?;
 
     Ok(())
 }
 
 fn check_parent() -> Result<()> {
-    let parent = fs::read_link(format!("/proc/{}/exe", getppid().as_raw()))?;
-    let parent = parent.file_name().unwrap().to_str().unwrap();
-    if parent != constants::ZYGISKWD {
-        return Err(anyhow!("zygiskd is not started by watchdog"));
+    let parent = fs::read_to_string(format!("/proc/{}/cmdline", getppid().as_raw()))?;
+    let parent = parent.split('/').last().unwrap().trim_end_matches('\0');
+    if parent != "zygiskwd" {
+        bail!("Daemon is not started by watchdog: {parent}");
     }
     Ok(())
 }
 
 fn get_arch(is64: bool) -> Result<&'static str> {
-    // let output = Command::new("getprop ro.product.cpu.abi").output()?;
-    // let system_arch = String::from_utf8(output.stdout)?;
-    let system_arch = "x86_64"; // DEBUGGING
+    let output = Command::new("getprop").arg("ro.product.cpu.abi").output()?;
+    let system_arch = String::from_utf8(output.stdout)?;
     let is_arm = system_arch.contains("arm");
     let is_x86 = system_arch.contains("x86");
-    if is64 {
-        match (is_arm, is_x86) {
-            (true, _) => Ok("arm64-v8a"),
-            (_, true) => Ok("x86_64"),
-            _ => Err(anyhow!("Unsupported system architecture: {}", system_arch)),
-        }
-    } else {
-        match (is_arm, is_x86) {
-            (true, _) => Ok("armeabi-v7a"),
-            (_, true) => Ok("x86"),
-            _ => Err(anyhow!("Unsupported system architecture: {}", system_arch)),
-        }
+    match (is_arm, is_x86, is64) {
+        (true, _, false) => Ok("armeabi-v7a"),
+        (true, _, true) => Ok("arm64-v8a"),
+        (_, true, false) => Ok("x86"),
+        (_, true, true) => Ok("x86_64"),
+        _ => bail!("Unsupported system architecture: {}", system_arch),
     }
 }
 
 fn load_modules(arch: &str) -> Result<Vec<Module>> {
     let mut modules = Vec::new();
-    let dir = match fs::read_dir(constants::KSU_MODULE_DIR) {
+    let dir = match fs::read_dir(constants::PATH_KSU_MODULE_DIR) {
         Ok(dir) => dir,
         Err(e) => {
             log::warn!("Failed reading modules directory: {}", e);
@@ -119,7 +107,7 @@ fn load_modules(arch: &str) -> Result<Vec<Module>> {
             }
         };
         let companion_entry = match preload_module(&memfd) {
-            Ok(companion_entry) => companion_entry,
+            Ok(entry) => entry,
             Err(e) => {
                 log::warn!("  Failed to preload `{name}`: {e}");
                 continue;
@@ -136,7 +124,7 @@ fn load_modules(arch: &str) -> Result<Vec<Module>> {
     Ok(modules)
 }
 
-fn create_memfd(name: &str, so_path: &PathBuf) -> Result<memfd::Memfd> {
+fn create_memfd(name: &str, so_path: &PathBuf) -> Result<Memfd> {
     let opts = memfd::MemfdOptions::default().allow_sealing(true);
     let memfd = opts.create(name)?;
 
@@ -164,7 +152,7 @@ fn preload_module(memfd: &Memfd) -> Result<Option<ZygiskCompanionEntryFn>> {
             let e = std::ffi::CStr::from_ptr(libc::dlerror())
                 .to_string_lossy()
                 .into_owned();
-            return Err(anyhow!("dlopen failed: {}", e));
+            bail!("dlopen failed: {}", e);
         }
         let symbol = std::ffi::CString::new("zygisk_companion_entry")?;
         let entry = dlsym(handle, symbol.as_ptr());
@@ -178,17 +166,25 @@ fn preload_module(memfd: &Memfd) -> Result<Option<ZygiskCompanionEntryFn>> {
 
 fn create_daemon_socket(is64: bool) -> Result<UnixListener> {
     utils::set_socket_create_context("u:r:zygote:s0")?;
-    let socket_name = if is64 { "zygiskd64" } else { "zygiskd32" };
-    let listener = UnixListener::bind(socket_name)?;
+    let name = if is64 { "zygiskd64" } else { "zygiskd32" };
+    // TODO: Replace with SockAddrExt::from_abstract_name when it's stable
+    let addr = UnixAddr::new_abstract(name.as_bytes())?;
+    let socket = nix::sys::socket::socket(AddressFamily::Unix, SockType::Stream, SockFlag::empty(), None)?;
+    nix::sys::socket::bind(socket, &addr)?;
+    log::debug!("Listening on {}", addr);
+    log::debug!("Socket fd: {}", socket);
+    let listener = unsafe { UnixListener::from_raw_fd(socket) };
     Ok(listener)
 }
 
-fn handle_daemon_actions(mut context: Context) -> Result<()> {
-    let stream = context.stream.get_mut();
+fn handle_daemon_actions(context: Context) -> Result<()> {
     loop {
+        let (mut stream, _) = context.listener.accept()?;
         let action = stream.read_u8()?;
         match DaemonSocketAction::try_from(action) {
+            // First connection from zygote
             Ok(DaemonSocketAction::ReadNativeBridge) => {
+                restore_native_bridge()?;
                 stream.write_usize(context.native_bridge.len())?;
                 stream.write_all(context.native_bridge.as_bytes())?;
             }
@@ -210,9 +206,7 @@ fn handle_daemon_actions(mut context: Context) -> Result<()> {
                     }
                 });
             }
-            Err(_) => {
-                return Err(anyhow!("Invalid action code: {action}"));
-            }
+            Err(_) => bail!("Invalid action code: {action}")
         }
     }
 }
@@ -226,15 +220,13 @@ fn create_companion(mut server: UnixStream, modules: &Vec<Module>) -> Result<()>
         let module = &modules[index];
         log::debug!("New companion request from module {}", module.name);
 
-        unsafe {
-            match module.companion_entry {
-                Some(entry) => {
-                    let (sock_app, sock_companion) = UnixStream::pair()?;
-                    server.send_fd(sock_app.as_raw_fd())?;
-                    entry(sock_companion.as_raw_fd());
-                }
-                None => (),
+        match module.companion_entry {
+            Some(entry) => {
+                let (sock_app, sock_companion) = UnixStream::pair()?;
+                server.send_fd(sock_app.as_raw_fd())?;
+                unsafe { entry(sock_companion.as_raw_fd()); }
             }
+            None => (),
         }
     }
 }
