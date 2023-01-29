@@ -22,6 +22,7 @@ dependencyResolutionManagement {
 
 rootProject.name = "ZygiskOnKernelSU"
 include(
+    ":loader",
     ":module",
     ":zygiskd",
 )

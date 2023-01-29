@@ -14,6 +14,7 @@ memfd = "0.6.2"
 nix = "0.26.2"
 num_enum = "0.5.9"
 passfd = "0.1.5"
+rand = "0.8.5"
 
 [profile.release]
 strip = true

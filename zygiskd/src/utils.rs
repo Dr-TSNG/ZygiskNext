@@ -2,6 +2,14 @@ use crate::constants;
 use anyhow::Result;
 use nix::unistd::gettid;
 use std::{fs, io::{Read, Write}, os::unix::net::UnixStream, process::Command};
+use std::os::fd::FromRawFd;
+use std::os::unix::net::UnixListener;
+use nix::sys::socket::{AddressFamily, SockFlag, SockType, UnixAddr};
+use rand::distributions::{Alphanumeric, DistString};
+
+pub fn random_string() -> String {
+    Alphanumeric.sample_string(&mut rand::thread_rng(), 8)
+}
 
 pub fn set_socket_create_context(context: &str) -> Result<()> {
     let path = "/proc/thread-self/attr/sockcreate";
@@ -16,7 +24,7 @@ pub fn set_socket_create_context(context: &str) -> Result<()> {
 }
 
 pub fn get_native_bridge() -> String {
-    std::env::var("NATIVE_BRIDGE").unwrap_or("0".to_string())
+    std::env::var("NATIVE_BRIDGE").unwrap_or_default()
 }
 
 pub fn restore_native_bridge() -> Result<()> {
@@ -29,6 +37,7 @@ pub trait UnixStreamExt {
     fn read_u8(&mut self) -> Result<u8>;
     fn read_u32(&mut self) -> Result<u32>;
     fn read_usize(&mut self) -> Result<usize>;
+    fn write_u8(&mut self, value: u8) -> Result<()>;
     fn write_usize(&mut self, value: usize) -> Result<()>;
 }
 
@@ -51,8 +60,23 @@ impl UnixStreamExt for UnixStream {
         Ok(usize::from_ne_bytes(buf))
     }
 
+    fn write_u8(&mut self, value: u8) -> Result<()> {
+        self.write_all(&value.to_ne_bytes())?;
+        Ok(())
+    }
+
     fn write_usize(&mut self, value: usize) -> Result<()> {
         self.write_all(&value.to_ne_bytes())?;
         Ok(())
     }
+}
+
+// TODO: Replace with SockAddrExt::from_abstract_name when it's stable
+pub fn abstract_namespace_socket(name: &str) -> Result<UnixListener> {
+    let addr = UnixAddr::new_abstract(name.as_bytes())?;
+    let socket = nix::sys::socket::socket(AddressFamily::Unix, SockType::Stream, SockFlag::empty(), None)?;
+    nix::sys::socket::bind(socket, &addr)?;
+    nix::sys::socket::listen(socket, 2)?;
+    let listener = unsafe { UnixListener::from_raw_fd(socket) };
+    Ok(listener)
 }

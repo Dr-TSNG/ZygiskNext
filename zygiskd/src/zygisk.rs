@@ -13,14 +13,13 @@ use std::sync::Arc;
 use std::thread;
 use std::ffi::c_void;
 use std::fs;
-use std::os::fd::FromRawFd;
+use std::os::fd::IntoRawFd;
 use std::os::unix::{
     net::{UnixListener, UnixStream},
     prelude::AsRawFd,
 };
 use std::path::PathBuf;
 use std::process::Command;
-use nix::sys::socket::{AddressFamily, SockFlag, SockType, UnixAddr};
 
 type ZygiskCompanionEntryFn = unsafe extern "C" fn(i32);
 
@@ -32,8 +31,7 @@ struct Module {
 
 struct Context {
     native_bridge: String,
-    modules: Arc<Vec<Module>>,
-    listener: UnixListener,
+    modules: Vec<Module>,
 }
 
 pub fn start(is64: bool) -> Result<()> {
@@ -44,17 +42,25 @@ pub fn start(is64: bool) -> Result<()> {
     log::info!("Load modules");
     let modules = load_modules(arch)?;
 
+    let context = Context {
+        native_bridge: utils::get_native_bridge(),
+        modules,
+    };
+    let context = Arc::new(context);
+
     log::info!("Create socket");
     let listener = create_daemon_socket(is64)?;
 
-    let context = Context {
-        native_bridge: utils::get_native_bridge(),
-        modules: Arc::new(modules),
-        listener,
-    };
-
-    log::info!("Start to listen zygote connections");
-    handle_daemon_actions(context)?;
+    log::info!("Handle zygote connections");
+    for stream in listener.incoming() {
+        let stream = stream?;
+        let context = Arc::clone(&context);
+        thread::spawn(move || {
+            if let Err(e) = handle_daemon_action(stream, &context) {
+                log::warn!("Error handling daemon action: {e}");
+            }
+        });
+    }
 
     Ok(())
 }
@@ -166,68 +172,52 @@ fn preload_module(memfd: &Memfd) -> Result<Option<ZygiskCompanionEntryFn>> {
 
 fn create_daemon_socket(is64: bool) -> Result<UnixListener> {
     utils::set_socket_create_context("u:r:zygote:s0")?;
-    let name = if is64 { "zygiskd64" } else { "zygiskd32" };
-    // TODO: Replace with SockAddrExt::from_abstract_name when it's stable
-    let addr = UnixAddr::new_abstract(name.as_bytes())?;
-    let socket = nix::sys::socket::socket(AddressFamily::Unix, SockType::Stream, SockFlag::empty(), None)?;
-    nix::sys::socket::bind(socket, &addr)?;
-    nix::sys::socket::listen(socket, 2)?;
-    log::debug!("Listening on {}", addr);
-    log::debug!("Socket fd: {}", socket);
-    let listener = unsafe { UnixListener::from_raw_fd(socket) };
+    let suffix = if is64 { "zygiskd64" } else { "zygiskd32" };
+    let name = String::from(suffix) + constants::SOCKET_PLACEHOLDER;
+    let listener = utils::abstract_namespace_socket(&name)?;
     Ok(listener)
 }
 
-fn handle_daemon_actions(context: Context) -> Result<()> {
-    loop {
-        let (mut stream, _) = context.listener.accept()?;
-        let action = stream.read_u8()?;
-        match DaemonSocketAction::try_from(action) {
-            // First connection from zygote
-            Ok(DaemonSocketAction::ReadNativeBridge) => {
-                restore_native_bridge()?;
-                stream.write_usize(context.native_bridge.len())?;
-                stream.write_all(context.native_bridge.as_bytes())?;
+fn handle_daemon_action(mut stream: UnixStream, context: &Context) -> Result<()> {
+    let action = stream.read_u8()?;
+    match DaemonSocketAction::try_from(action) {
+        Ok(DaemonSocketAction::PingHeartbeat) => {
+            // Do nothing
+        }
+        Ok(DaemonSocketAction::ReadNativeBridge) => {
+            restore_native_bridge()?;
+            stream.write_usize(context.native_bridge.len())?;
+            stream.write_all(context.native_bridge.as_bytes())?;
+        }
+        Ok(DaemonSocketAction::ReadInjector) => {
+            let so_path = PathBuf::from(constants::PATH_INJECTOR);
+            let memfd = create_memfd("injector", &so_path)?;
+            stream.send_fd(memfd.into_raw_fd())?;
+        }
+        Ok(DaemonSocketAction::ReadModules) => {
+            stream.write_usize(context.modules.len())?;
+            for module in context.modules.iter() {
+                stream.write_usize(module.name.len())?;
+                stream.write_all(module.name.as_bytes())?;
+                stream.send_fd(module.memfd.as_raw_fd())?;
             }
-            Ok(DaemonSocketAction::ReadModules) => {
-                stream.write_usize(context.modules.len())?;
-                for module in context.modules.iter() {
-                    stream.write_usize(module.name.len())?;
-                    stream.write_all(module.name.as_bytes())?;
-                    stream.send_fd(module.memfd.as_raw_fd())?;
+        }
+        Ok(DaemonSocketAction::RequestCompanionSocket) => {
+            let index = stream.read_usize()?;
+            let module = &context.modules[index];
+            log::debug!("New companion request from module {}", module.name);
+
+            match module.companion_entry {
+                Some(entry) => {
+                    stream.write_u8(1)?;
+                    unsafe { entry(stream.as_raw_fd()); }
+                }
+                None => {
+                    stream.write_u8(0)?;
                 }
             }
-            Ok(DaemonSocketAction::RequestCompanionSocket) => {
-                let (server, client) = UnixStream::pair()?;
-                stream.send_fd(client.as_raw_fd())?;
-                let modules_ref = Arc::clone(&context.modules);
-                thread::spawn(move || {
-                    if let Err(e) = create_companion(server, modules_ref.as_ref()) {
-                        log::warn!("Companion thread exited: {e}");
-                    }
-                });
-            }
-            Err(_) => bail!("Invalid action code: {action}")
         }
+        Err(_) => bail!("Invalid action code: {action}")
     }
-}
-
-fn create_companion(mut server: UnixStream, modules: &Vec<Module>) -> Result<()> {
-    loop {
-        let index = match server.read_usize() {
-            Ok(index) => index,
-            Err(_) => return Ok(()), // EOF
-        };
-        let module = &modules[index];
-        log::debug!("New companion request from module {}", module.name);
-
-        match module.companion_entry {
-            Some(entry) => {
-                let (sock_app, sock_companion) = UnixStream::pair()?;
-                server.send_fd(sock_app.as_raw_fd())?;
-                unsafe { entry(sock_companion.as_raw_fd()); }
-            }
-            None => (),
-        }
-    }
+    Ok(())
 }
