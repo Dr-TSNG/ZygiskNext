@@ -3,5 +3,4 @@
 .cxx
 build
 local.properties
-target
 Cargo.lock

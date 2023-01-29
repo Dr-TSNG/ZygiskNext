@@ -171,6 +171,7 @@ fn create_daemon_socket(is64: bool) -> Result<UnixListener> {
     let addr = UnixAddr::new_abstract(name.as_bytes())?;
     let socket = nix::sys::socket::socket(AddressFamily::Unix, SockType::Stream, SockFlag::empty(), None)?;
     nix::sys::socket::bind(socket, &addr)?;
+    nix::sys::socket::listen(socket, 2)?;
     log::debug!("Listening on {}", addr);
     log::debug!("Socket fd: {}", socket);
     let listener = unsafe { UnixListener::from_raw_fd(socket) };
