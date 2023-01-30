@@ -46,6 +46,6 @@ fn entry() -> Result<()> {
 
 fn main() {
     if let Err(e) = entry() {
-        log::error!("Crashed: {}", e.backtrace());
+        log::error!("Crashed: {}\n{}", e, e.backtrace());
     }
 }

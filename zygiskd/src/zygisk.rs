@@ -56,7 +56,7 @@ pub fn start(is64: bool) -> Result<()> {
         let context = Arc::clone(&context);
         thread::spawn(move || {
             if let Err(e) = handle_daemon_action(stream, &context) {
-                log::warn!("Error handling daemon action: {}", e.backtrace());
+                log::warn!("Error handling daemon action: {}\n{}", e, e.backtrace());
             }
         });
     }
@@ -180,15 +180,17 @@ fn create_daemon_socket(is64: bool) -> Result<UnixListener> {
 
 fn handle_daemon_action(mut stream: UnixStream, context: &Context) -> Result<()> {
     let action = stream.read_u8()?;
-    match DaemonSocketAction::try_from(action) {
-        Ok(DaemonSocketAction::PingHeartbeat) => {
+    let action = DaemonSocketAction::try_from(action)?;
+    log::debug!("New daemon action {:?}", action);
+    match action {
+        DaemonSocketAction::PingHeartbeat => {
             restore_native_bridge()?;
         }
-        Ok(DaemonSocketAction::ReadNativeBridge) => {
+        DaemonSocketAction::ReadNativeBridge => {
             stream.write_usize(context.native_bridge.len())?;
             stream.write_all(context.native_bridge.as_bytes())?;
         }
-        Ok(DaemonSocketAction::ReadModules) => {
+        DaemonSocketAction::ReadModules => {
             stream.write_usize(context.modules.len())?;
             for module in context.modules.iter() {
                 stream.write_usize(module.name.len())?;
@@ -196,7 +198,7 @@ fn handle_daemon_action(mut stream: UnixStream, context: &Context) -> Result<()>
                 stream.send_fd(module.memfd.as_raw_fd())?;
             }
         }
-        Ok(DaemonSocketAction::RequestCompanionSocket) => {
+        DaemonSocketAction::RequestCompanionSocket => {
             let index = stream.read_usize()?;
             let module = &context.modules[index];
             log::debug!("New companion request from module {}", module.name);
@@ -211,7 +213,6 @@ fn handle_daemon_action(mut stream: UnixStream, context: &Context) -> Result<()>
                 }
             }
         }
-        Err(_) => bail!("Invalid action code: {action}")
     }
     Ok(())
 }
