@@ -4,6 +4,8 @@ plugins {
 
 android {
     buildFeatures {
+        androidResources = false
+        buildConfig = false
         prefab = true
     }
 

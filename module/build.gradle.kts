@@ -1,10 +1,11 @@
 plugins {
-    id("com.android.application")
+    id("com.android.library")
 }
-
-val moduleName = "Zygisk On KernelSU"
-val moduleBaseId = "zygisksu"
-val authors = "Nullptr"
 
 val verCode: Int by rootProject.extra
 val verName: String by rootProject.extra
+
+android.buildFeatures {
+    androidResources = false
+    buildConfig = false
+}

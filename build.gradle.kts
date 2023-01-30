@@ -1,5 +1,4 @@
-import com.android.build.api.dsl.ApplicationExtension
-import com.android.build.gradle.BaseExtension
+import com.android.build.gradle.LibraryExtension
 
 plugins {
     id("com.android.application") apply false
@@ -30,30 +29,24 @@ tasks.register("Delete", Delete::class) {
 }
 
 fun Project.configureBaseExtension() {
-    extensions.findByType(BaseExtension::class)?.run {
+    extensions.findByType(LibraryExtension::class)?.run {
         namespace = "icu.nullptr.zygisksu"
-        compileSdkVersion(androidCompileSdkVersion)
+        compileSdk = androidCompileSdkVersion
         ndkVersion = androidCompileNdkVersion
         buildToolsVersion = androidBuildToolsVersion
 
         defaultConfig {
             minSdk = androidMinSdkVersion
             targetSdk = androidTargetSdkVersion
-            versionCode = verCode
-            versionName = verName
         }
-    }
 
-    extensions.findByType(ApplicationExtension::class)?.lint {
-        abortOnError = true
-        checkReleaseBuilds = false
+        lint {
+            abortOnError = true
+        }
     }
 }
 
 subprojects {
-    plugins.withId("com.android.application") {
-        configureBaseExtension()
-    }
     plugins.withId("com.android.library") {
         configureBaseExtension()
     }
