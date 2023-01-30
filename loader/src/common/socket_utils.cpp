@@ -65,9 +65,16 @@ namespace socket_utils {
 
         if (msg.msg_controllen != bufsz ||
             cmsg == nullptr ||
-            cmsg->cmsg_len != CMSG_LEN(sizeof(int) * cnt) ||
+            // TODO: pass from rust: 20, expected: 16
+            // cmsg->cmsg_len != CMSG_LEN(sizeof(int) * cnt) ||
             cmsg->cmsg_level != SOL_SOCKET ||
             cmsg->cmsg_type != SCM_RIGHTS) {
+            LOGD("msg.msg_controllen=%d bufsz=%d cmsg=%p cmsg->cmsg_len=%d expected=%d cmsg->cmsg_level=%d expected=%d cmsg->cmsg_type=%d expected=%d",
+                 msg.msg_controllen, bufsz, cmsg,
+                 cmsg == nullptr ? 0 : cmsg->cmsg_len, CMSG_LEN(sizeof(int) * cnt),
+                 cmsg == nullptr ? 0 : cmsg->cmsg_level, SOL_SOCKET,
+                 cmsg == nullptr ? 0 : cmsg->cmsg_type, SCM_RIGHTS
+            );
             return nullptr;
         }
 
@@ -87,6 +94,10 @@ namespace socket_utils {
 
     size_t read_usize(int fd) {
         return read_exact_or<size_t>(fd, 0);
+    }
+
+    bool write_usize(int fd, size_t val) {
+        return write_exact<size_t>(fd, val);
     }
 
     std::string read_string(int fd) {
@@ -110,5 +121,9 @@ namespace socket_utils {
         int result;
         memcpy(&result, data, sizeof(int));
         return result;
+    }
+
+    uint8_t read_u8(int fd) {
+        return read_exact_or<uint8_t>(fd, 0);
     }
 }

@@ -17,4 +17,8 @@ namespace socket_utils {
     bool write_u8(int fd, uint8_t val);
 
     int recv_fd(int fd);
+
+    bool write_usize(int fd, size_t val);
+
+    uint8_t read_u8(int fd);
 }

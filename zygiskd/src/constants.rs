@@ -18,4 +18,5 @@ pub enum DaemonSocketAction {
     ReadNativeBridge,
     ReadModules,
     RequestCompanionSocket,
+    GetModuleDir,
 }

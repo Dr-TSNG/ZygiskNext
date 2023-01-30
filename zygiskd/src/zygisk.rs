@@ -213,6 +213,17 @@ fn handle_daemon_action(mut stream: UnixStream, context: &Context) -> Result<()>
                 }
             }
         }
+        DaemonSocketAction::GetModuleDir => {
+            unsafe {
+                let index = stream.read_usize()?;
+                let module = &context.modules[index];
+                let path = format!("{}/{}", constants::PATH_KSU_MODULE_DIR, module.name);
+                let filename = std::ffi::CString::new(path)?;
+                let fd = libc::open(filename.as_ptr(), libc::O_PATH | libc::O_CLOEXEC);
+                stream.send_fd(fd)?;
+                libc::close(fd);
+            }
+        }
     }
     Ok(())
 }
