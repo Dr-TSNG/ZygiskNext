@@ -13,7 +13,6 @@ use std::sync::Arc;
 use std::thread;
 use std::ffi::c_void;
 use std::fs;
-use std::os::fd::IntoRawFd;
 use std::os::unix::{
     net::{UnixListener, UnixStream},
     prelude::AsRawFd,
@@ -57,7 +56,7 @@ pub fn start(is64: bool) -> Result<()> {
         let context = Arc::clone(&context);
         thread::spawn(move || {
             if let Err(e) = handle_daemon_action(stream, &context) {
-                log::warn!("Error handling daemon action: {e}");
+                log::warn!("Error handling daemon action: {}", e.backtrace());
             }
         });
     }
@@ -175,6 +174,7 @@ fn create_daemon_socket(is64: bool) -> Result<UnixListener> {
     let suffix = if is64 { "zygiskd64" } else { "zygiskd32" };
     let name = String::from(suffix) + constants::SOCKET_PLACEHOLDER;
     let listener = utils::abstract_namespace_socket(&name)?;
+    log::debug!("Daemon socket: {name}");
     Ok(listener)
 }
 
@@ -182,17 +182,11 @@ fn handle_daemon_action(mut stream: UnixStream, context: &Context) -> Result<()>
     let action = stream.read_u8()?;
     match DaemonSocketAction::try_from(action) {
         Ok(DaemonSocketAction::PingHeartbeat) => {
-            // Do nothing
+            restore_native_bridge()?;
         }
         Ok(DaemonSocketAction::ReadNativeBridge) => {
-            restore_native_bridge()?;
             stream.write_usize(context.native_bridge.len())?;
             stream.write_all(context.native_bridge.as_bytes())?;
-        }
-        Ok(DaemonSocketAction::ReadInjector) => {
-            let so_path = PathBuf::from(constants::PATH_INJECTOR);
-            let memfd = create_memfd("injector", &so_path)?;
-            stream.send_fd(memfd.into_raw_fd())?;
         }
         Ok(DaemonSocketAction::ReadModules) => {
             stream.write_usize(context.modules.len())?;

@@ -19,7 +19,7 @@ namespace zygiskd {
 
         while (retry--) {
             int r = connect(fd, reinterpret_cast<struct sockaddr*>(&addr), socklen);
-            if (r != -1) return r;
+            if (r == 0) return fd;
             LOGW("retrying to connect to zygiskd, sleep 1s");
             sleep(1);
         }
@@ -27,11 +27,13 @@ namespace zygiskd {
     }
 
     bool PingHeartbeat() {
+        LOGD("Daemon socket: %s", kZygiskSocket);
         auto fd = Connect(5);
         if (fd == -1) {
             PLOGE("Connect to zygiskd");
             return false;
         }
+        socket_utils::write_u8(fd, (uint8_t) SocketAction::PingHeartBeat);
         return true;
     }
 
@@ -43,16 +45,6 @@ namespace zygiskd {
         }
         socket_utils::write_u8(fd, (uint8_t) SocketAction::ReadNativeBridge);
         return socket_utils::read_string(fd);
-    }
-
-    UniqueFd ReadInjector() {
-        auto fd = Connect(1);
-        if (fd == -1) {
-            PLOGE("ReadInjector");
-            return -1;
-        }
-        socket_utils::write_u8(fd, (uint8_t) SocketAction::ReadInjector);
-        return socket_utils::recv_fd(fd);
     }
 
     std::vector<Module> ReadModules() {

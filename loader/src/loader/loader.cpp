@@ -12,7 +12,8 @@ extern "C" [[gnu::visibility("default")]]
 uint8_t NativeBridgeItf[sizeof(NativeBridgeCallbacks<__ANDROID_API_R__>) * 2]{0};
 
 namespace {
-    constexpr std::array kZygoteProcesses = {"zygote", "zygote32""zygote64", "usap32", "usap64"};
+    constexpr auto kZygoteProcesses = {"zygote", "zygote32", "zygote64", "usap32", "usap64"};
+    constexpr auto kInjector = "/system/" LP_SELECT("lib", "lib64") "/libinjector.so";
 
     void* sOriginalBridge = nullptr;
 }
@@ -31,9 +32,8 @@ void Constructor() {
     }
 
     std::string_view cmdline = getprogname();
-    if (std::any_of(
-            kZygoteProcesses.begin(),
-            kZygoteProcesses.end(),
+    if (std::none_of(
+            kZygoteProcesses.begin(), kZygoteProcesses.end(),
             [&](const char* p) { return cmdline == p; }
     )) {
         LOGW("Not started as zygote (cmdline=%s)", cmdline.data());
@@ -49,10 +49,7 @@ void Constructor() {
         native_bridge = zygiskd::ReadNativeBridge();
 
         LOGI("Load injector");
-        auto injector = zygiskd::ReadInjector();
-        if (injector != -1) break;
-
-        auto handle = DlopenMem(injector, RTLD_NOW);
+        auto handle = DlopenExt(kInjector, RTLD_NOW);
         if (handle == nullptr) {
             LOGE("Failed to dlopen injector: %s", dlerror());
             break;
@@ -60,12 +57,13 @@ void Constructor() {
         auto entry = dlsym(handle, "entry");
         if (entry == nullptr) {
             LOGE("Failed to dlsym injector entry: %s", dlerror());
+            dlclose(handle);
             break;
         }
-        reinterpret_cast<void (*)()>(entry)();
+        reinterpret_cast<void (*)(void*)>(entry)(handle);
     } while (false);
 
-    if (native_bridge.empty()) return;
+    if (native_bridge.empty() || native_bridge == "0") return;
     LOGI("Load original native bridge: %s", native_bridge.data());
     sOriginalBridge = dlopen(native_bridge.data(), RTLD_NOW);
     if (sOriginalBridge == nullptr) {

@@ -75,9 +75,9 @@ namespace socket_utils {
     }
 
     template<typename T>
-    inline T read_exact(int fd) {
+    inline T read_exact_or(int fd, T fail) {
         T res;
-        return sizeof(T) == xread(fd, &res, sizeof(T)) ? res : -1;
+        return sizeof(T) == xread(fd, &res, sizeof(T)) ? res : fail;
     }
 
     template<typename T>
@@ -86,11 +86,11 @@ namespace socket_utils {
     }
 
     size_t read_usize(int fd) {
-        return read_exact<size_t>(fd);
+        return read_exact_or<size_t>(fd, 0);
     }
 
     std::string read_string(int fd) {
-        auto len = read_exact<size_t>(fd);
+        auto len = read_usize(fd);
         char buf[len + 1];
         buf[len] = '\0';
         xread(fd, buf, len);

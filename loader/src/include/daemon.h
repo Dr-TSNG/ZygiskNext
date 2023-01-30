@@ -10,7 +10,7 @@
 # define LP_SELECT(lp32, lp64) lp32
 #endif
 
-constexpr std::string_view kZygiskSocket = LP_SELECT("zygisk32", "zygisk64") "placeholder123456";
+constexpr std::string_view kZygiskSocket = LP_SELECT("zygiskd32", "zygiskd64") "socket_placeholder";
 
 class UniqueFd {
     using Fd = int;
@@ -52,9 +52,8 @@ namespace zygiskd {
     };
 
     enum class SocketAction {
-        HeartBeat,
+        PingHeartBeat,
         ReadNativeBridge,
-        ReadInjector,
         ReadModules,
         RequestCompanionSocket,
     };
@@ -62,8 +61,6 @@ namespace zygiskd {
     bool PingHeartbeat();
 
     std::string ReadNativeBridge();
-
-    UniqueFd ReadInjector();
 
     std::vector<Module> ReadModules();
 }

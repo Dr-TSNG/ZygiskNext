@@ -14,8 +14,11 @@ buildscript {
     }
 }
 
-val verCode by extra(25207)
-val verName by extra("25.2-1")
+val moduleId by extra("zygisksu")
+val moduleName by extra("Zygisk on KernelSU")
+val verName by extra("v4.0.0")
+val verCode by extra(4000)
+
 val androidMinSdkVersion by extra(29)
 val androidTargetSdkVersion by extra(33)
 val androidCompileSdkVersion by extra(33)
