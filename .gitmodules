@@ -1,0 +1,3 @@
+[submodule "loader/src/external/liblsplt"]
+	path = loader/src/external/liblsplt
+	url = https://github.com/LSPosed/LSPlt
