@@ -1,5 +1,14 @@
 # Zygisk on KernelSU
 
+Zygisk loader for KernelSU, which allows Zygisk modules to run without Magisk environment.
+
+## Development road map
+
+- [x] Basic Zygisk loader
+- [ ] Stabilize injector
+- [ ] Separate zygiskd process
+- [ ] Handle 64 bit only devices
+
 ## Running on Magisk
 
 It is possible to run Zygisksu on Magisk with a few steps:

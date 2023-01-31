@@ -2,5 +2,5 @@ id=${moduleId}
 name=${moduleName}
 version=${versionName}
 versionCode=${versionCode}
-author=Nullptr
+author=Nullptr, 5ec1cff
 description=Run Zygisk on KernelSU.
