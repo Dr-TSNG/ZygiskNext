@@ -63,7 +63,7 @@ if [ "$ARCH" = "x86" ] || [ "$ARCH" = "x64" ]; then
   if [ "$HAS32BIT" = ture ]; then
     ui_print "- Extracting x86 libraries"
     extract "$ZIPFILE" 'bin/x86/zygiskd' "$MODPATH/bin/zygiskd32" true
-    rename "$MODPATH/bin/zygiskd" "$MODPATH/bin/zygiskd32"
+    mv "$MODPATH/bin/zygiskd" "$MODPATH/bin/zygiskd32"
     extract "$ZIPFILE" 'lib/x86/libinjector.so' "$MODPATH/system/lib" true
     extract "$ZIPFILE" 'lib/x86/libzygiskloader.so' "$MODPATH/system/lib" true
     ln -sf "zygiskd32" "$MODPATH/bin/zygiskwd"
@@ -72,7 +72,7 @@ if [ "$ARCH" = "x86" ] || [ "$ARCH" = "x64" ]; then
   if [ "$HAS64BIT" = true ]; then
     ui_print "- Extracting x64 libraries"
     extract "$ZIPFILE" 'bin/x86_64/zygiskd' "$MODPATH/bin/zygiskd64" true
-    rename "$MODPATH/bin/zygiskd" "$MODPATH/bin/zygiskd64"
+    mv "$MODPATH/bin/zygiskd" "$MODPATH/bin/zygiskd64"
     extract "$ZIPFILE" 'lib/x86_64/libinjector.so' "$MODPATH/system/lib64" true
     extract "$ZIPFILE" 'lib/x86_64/libzygiskloader.so' "$MODPATH/system/lib64" true
     ln -sf "zygiskd64" "$MODPATH/bin/zygiskwd"
@@ -81,7 +81,7 @@ else
   if [ "$HAS32BIT" = true ]; then
     ui_print "- Extracting arm libraries"
     extract "$ZIPFILE" 'bin/armeabi-v7a/zygiskd' "$MODPATH/bin" true
-    rename "$MODPATH/bin/zygiskd" "$MODPATH/bin/zygiskd32"
+    mv "$MODPATH/bin/zygiskd" "$MODPATH/bin/zygiskd32"
     extract "$ZIPFILE" 'lib/armeabi-v7a/libinjector.so' "$MODPATH/system/lib" true
     extract "$ZIPFILE" 'lib/armeabi-v7a/libzygiskloader.so' "$MODPATH/system/lib" true
     ln -sf "zygiskd32" "$MODPATH/bin/zygiskwd"
@@ -90,7 +90,7 @@ else
   if [ "$HAS64BIT" = true ]; then
     ui_print "- Extracting arm64 libraries"
     extract "$ZIPFILE" 'bin/arm64-v8a/zygiskd' "$MODPATH/bin" true
-    rename "$MODPATH/bin/zygiskd" "$MODPATH/bin/zygiskd64"
+    mv "$MODPATH/bin/zygiskd" "$MODPATH/bin/zygiskd64"
     extract "$ZIPFILE" 'lib/arm64-v8a/libinjector.so' "$MODPATH/system/lib64" true
     extract "$ZIPFILE" 'lib/arm64-v8a/libzygiskloader.so' "$MODPATH/system/lib64" true
     ln -sf "zygiskd64" "$MODPATH/bin/zygiskwd"
