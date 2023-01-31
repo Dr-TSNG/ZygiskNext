@@ -65,7 +65,7 @@ namespace zygiskd {
 
     std::vector<Module> ReadModules();
 
-    UniqueFd ConnectCompanion(size_t index);
+    int ConnectCompanion(size_t index);
 
-    UniqueFd GetModuleDir(size_t index);
+    int GetModuleDir(size_t index);
 }

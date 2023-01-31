@@ -86,6 +86,10 @@ namespace socket_utils {
         return sizeof(T) == xwrite(fd, &val, sizeof(T));
     }
 
+    uint8_t read_u8(int fd) {
+        return read_exact_or<uint8_t>(fd, 0);
+    }
+
     size_t read_usize(int fd) {
         return read_exact_or<size_t>(fd, 0);
     }
@@ -115,9 +119,5 @@ namespace socket_utils {
         int result;
         memcpy(&result, data, sizeof(int));
         return result;
-    }
-
-    uint8_t read_u8(int fd) {
-        return read_exact_or<uint8_t>(fd, 0);
     }
 }

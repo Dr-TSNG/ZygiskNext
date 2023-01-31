@@ -99,8 +99,9 @@ fn load_modules(arch: &str) -> Result<Vec<Module>> {
     for entry_result in dir.into_iter() {
         let entry = entry_result?;
         let name = entry.file_name().into_string().unwrap();
-        let so_path = entry.path().join(format!("zygisk/{arch}.so"));
-        if !so_path.exists() {
+        let so_path = entry.path().join(format!("zygisksu/{arch}.so"));
+        let disabled = entry.path().join("disabled");
+        if !so_path.exists() || disabled.exists() {
             continue;
         }
         log::info!("  Loading module `{name}`...");
@@ -203,6 +204,7 @@ fn handle_daemon_action(mut stream: UnixStream, context: &Context) -> Result<()>
             let module = &context.modules[index];
             log::debug!("New companion request from module {}", module.name);
 
+            // FIXME: Spawn a new process
             match module.companion_entry {
                 Some(entry) => {
                     stream.write_u8(1)?;
@@ -214,15 +216,11 @@ fn handle_daemon_action(mut stream: UnixStream, context: &Context) -> Result<()>
             }
         }
         DaemonSocketAction::GetModuleDir => {
-            unsafe {
-                let index = stream.read_usize()?;
-                let module = &context.modules[index];
-                let path = format!("{}/{}", constants::PATH_KSU_MODULE_DIR, module.name);
-                let filename = std::ffi::CString::new(path)?;
-                let fd = libc::open(filename.as_ptr(), libc::O_PATH | libc::O_CLOEXEC);
-                stream.send_fd(fd)?;
-                libc::close(fd);
-            }
+            let index = stream.read_usize()?;
+            let module = &context.modules[index];
+            let dir = format!("{}/{}", constants::PATH_KSU_MODULE_DIR, module.name);
+            let dir = fs::File::open(dir)?;
+            stream.send_fd(dir.as_raw_fd())?;
         }
     }
     Ok(())

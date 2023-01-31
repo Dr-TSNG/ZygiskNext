@@ -10,6 +10,8 @@ namespace socket_utils {
 
     ssize_t xwrite(int fd, const void *buf, size_t count);
 
+    uint8_t read_u8(int fd);
+
     size_t read_usize(int fd);
 
     std::string read_string(int fd);
@@ -19,6 +21,4 @@ namespace socket_utils {
     int recv_fd(int fd);
 
     bool write_usize(int fd, size_t val);
-
-    uint8_t read_u8(int fd);
 }

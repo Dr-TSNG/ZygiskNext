@@ -8,8 +8,8 @@
 
 namespace zygiskd {
 
-    UniqueFd Connect(uint8_t retry) {
-        UniqueFd fd = socket(PF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, 0);
+    int Connect(uint8_t retry) {
+        int fd = socket(PF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, 0);
         struct sockaddr_un addr{
                 .sun_family = AF_UNIX,
                 .sun_path={0},
@@ -23,12 +23,14 @@ namespace zygiskd {
             LOGW("retrying to connect to zygiskd, sleep 1s");
             sleep(1);
         }
+
+        close(fd);
         return -1;
     }
 
     bool PingHeartbeat() {
         LOGD("Daemon socket: %s", kZygiskSocket.data());
-        auto fd = Connect(5);
+        UniqueFd fd = Connect(5);
         if (fd == -1) {
             PLOGE("Connect to zygiskd");
             return false;
@@ -38,7 +40,7 @@ namespace zygiskd {
     }
 
     std::string ReadNativeBridge() {
-        auto fd = Connect(1);
+        UniqueFd fd = Connect(1);
         if (fd == -1) {
             PLOGE("ReadNativeBridge");
             return "";
@@ -49,7 +51,7 @@ namespace zygiskd {
 
     std::vector<Module> ReadModules() {
         std::vector<Module> modules;
-        auto fd = Connect(1);
+        UniqueFd fd = Connect(1);
         if (fd == -1) {
             PLOGE("ReadModules");
             return modules;
@@ -69,8 +71,8 @@ namespace zygiskd {
         return modules;
     }
 
-    UniqueFd ConnectCompanion(size_t index) {
-        auto fd = Connect(1);
+    int ConnectCompanion(size_t index) {
+        int fd = Connect(1);
         if (fd == -1) {
             PLOGE("ConnectCompanion");
             return -1;
@@ -84,8 +86,8 @@ namespace zygiskd {
         }
     }
 
-    UniqueFd GetModuleDir(size_t index) {
-        auto fd = Connect(1);
+    int GetModuleDir(size_t index) {
+        int fd = Connect(1);
         if (fd == -1) {
             PLOGE("GetModuleDir");
             return -1;
