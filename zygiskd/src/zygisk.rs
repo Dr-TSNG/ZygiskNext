@@ -99,8 +99,8 @@ fn load_modules(arch: &str) -> Result<Vec<Module>> {
     for entry_result in dir.into_iter() {
         let entry = entry_result?;
         let name = entry.file_name().into_string().unwrap();
-        let so_path = entry.path().join(format!("zygisksu/{arch}.so"));
-        let disabled = entry.path().join("disabled");
+        let so_path = entry.path().join(format!("zygisk/{arch}.so"));
+        let disabled = entry.path().join("disable");
         if !so_path.exists() || disabled.exists() {
             continue;
         }

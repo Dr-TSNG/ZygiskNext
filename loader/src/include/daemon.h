@@ -2,6 +2,7 @@
 
 #include <string_view>
 #include <string>
+#include <unistd.h>
 #include <vector>
 
 #if defined(__LP64__)
@@ -44,11 +45,9 @@ namespace zygiskd {
 
     struct Module {
         std::string name;
-        void* handle;
-        int id;
+        UniqueFd memfd;
 
-        inline explicit Module(int id, std::string name, void* handle)
-                : name(name), handle(handle), id(id) {}
+        inline explicit Module(std::string name, int memfd) : name(name), memfd(memfd) {}
     };
 
     enum class SocketAction {

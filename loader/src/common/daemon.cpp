@@ -61,12 +61,7 @@ namespace zygiskd {
         for (size_t i = 0; i < len; i++) {
             std::string name = socket_utils::read_string(fd);
             int module_fd = socket_utils::recv_fd(fd);
-            auto handle = DlopenMem(module_fd, RTLD_NOW);
-            if (handle == nullptr) {
-                LOGW("Failed to dlopen module %s: %s", name.data(), dlerror());
-                continue;
-            }
-            modules.emplace_back(i, name, handle);
+            modules.emplace_back(name, module_fd);
         }
         return modules;
     }

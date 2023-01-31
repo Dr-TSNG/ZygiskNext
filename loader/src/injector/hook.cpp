@@ -12,6 +12,7 @@
 #include <daemon.h>
 #include <dirent.h>
 
+#include "dl.h"
 #include "zygisk.hpp"
 #include "memory.hpp"
 #include "module.hpp"
@@ -535,14 +536,17 @@ void HookContext::fork_post() {
 }
 
 void HookContext::run_modules_pre() {
-    auto ms = zygiskd::ReadModules();
-    modules.reserve(ms.size());
-    for (auto &m: ms) {
-        auto h = m.handle;
-        if (void *e = dlsym(h, "zygisk_module_entry")) {
-            modules.emplace_back(m.id, h, e);
+    size_t size = preloaded_modules.size();
+    modules.reserve(size);
+    for (size_t i = 0; i < size; i++) {
+        auto& module = preloaded_modules[i];
+        if (void* handle = DlopenMem(module.memfd, RTLD_NOW);
+            void* entry = handle ? dlsym(handle, "zygisk_module_entry") : nullptr) {
+            modules.emplace_back(i, handle, entry);
         }
     }
+    // memfds will be closed by RTTI
+    preloaded_modules.clear();
 
     for (auto &m : modules) {
         m.onLoad(env);
