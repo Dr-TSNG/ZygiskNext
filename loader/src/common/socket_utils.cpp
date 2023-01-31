@@ -69,12 +69,6 @@ namespace socket_utils {
             // cmsg->cmsg_len != CMSG_LEN(sizeof(int) * cnt) ||
             cmsg->cmsg_level != SOL_SOCKET ||
             cmsg->cmsg_type != SCM_RIGHTS) {
-            LOGD("msg.msg_controllen=%d bufsz=%d cmsg=%p cmsg->cmsg_len=%d expected=%d cmsg->cmsg_level=%d expected=%d cmsg->cmsg_type=%d expected=%d",
-                 msg.msg_controllen, bufsz, cmsg,
-                 cmsg == nullptr ? 0 : cmsg->cmsg_len, CMSG_LEN(sizeof(int) * cnt),
-                 cmsg == nullptr ? 0 : cmsg->cmsg_level, SOL_SOCKET,
-                 cmsg == nullptr ? 0 : cmsg->cmsg_type, SCM_RIGHTS
-            );
             return nullptr;
         }
 

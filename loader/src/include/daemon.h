@@ -67,5 +67,5 @@ namespace zygiskd {
 
     UniqueFd ConnectCompanion(size_t index);
 
-    UniqueFd getModuleDir(size_t index);
+    UniqueFd GetModuleDir(size_t index);
 }

@@ -59,7 +59,6 @@ namespace zygiskd {
         for (size_t i = 0; i < len; i++) {
             std::string name = socket_utils::read_string(fd);
             int module_fd = socket_utils::recv_fd(fd);
-            LOGD("receive fd: %d", module_fd);
             auto handle = DlopenMem(module_fd, RTLD_NOW);
             if (handle == nullptr) {
                 LOGW("Failed to dlopen module %s: %s", name.data(), dlerror());
@@ -85,10 +84,10 @@ namespace zygiskd {
         }
     }
 
-    UniqueFd getModuleDir(size_t index) {
+    UniqueFd GetModuleDir(size_t index) {
         auto fd = Connect(1);
         if (fd == -1) {
-            PLOGE("getModuleDir");
+            PLOGE("GetModuleDir");
             return -1;
         }
         socket_utils::write_u8(fd, (uint8_t) SocketAction::GetModuleDir);

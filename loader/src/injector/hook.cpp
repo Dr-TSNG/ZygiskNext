@@ -419,9 +419,7 @@ int ZygiskModule::connectCompanion() const {
 }
 
 int ZygiskModule::getModuleDir() const {
-    // TODO: getModuleDir
-    LOGW("module called getModuleDir");
-    return zygiskd::getModuleDir(id);
+    return zygiskd::GetModuleDir(id);
 }
 
 void ZygiskModule::setOption(zygisk::Option opt) {
