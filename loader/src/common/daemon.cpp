@@ -27,7 +27,7 @@ namespace zygiskd {
     }
 
     bool PingHeartbeat() {
-        LOGD("Daemon socket: %s", kZygiskSocket);
+        LOGD("Daemon socket: %s", kZygiskSocket.data());
         auto fd = Connect(5);
         if (fd == -1) {
             PLOGE("Connect to zygiskd");
@@ -58,14 +58,44 @@ namespace zygiskd {
         size_t len = socket_utils::read_usize(fd);
         for (size_t i = 0; i < len; i++) {
             std::string name = socket_utils::read_string(fd);
-            UniqueFd module_fd = socket_utils::recv_fd(fd);
+            int module_fd = socket_utils::recv_fd(fd);
             auto handle = DlopenMem(module_fd, RTLD_NOW);
             if (handle == nullptr) {
                 LOGW("Failed to dlopen module %s: %s", name.data(), dlerror());
                 continue;
             }
-            modules.emplace_back(name, handle);
+            modules.emplace_back(i, name, handle);
         }
         return modules;
+    }
+
+    UniqueFd ConnectCompanion(size_t index) {
+        auto fd = Connect(1);
+        if (fd == -1) {
+            PLOGE("ConnectCompanion");
+            return -1;
+        }
+        socket_utils::write_u8(fd, (uint8_t) SocketAction::RequestCompanionSocket);
+        socket_utils::write_usize(fd, index);
+        if (socket_utils::read_u8(fd) == 1) {
+            return fd;
+        } else {
+            return -1;
+        }
+    }
+
+    UniqueFd GetModuleDir(size_t index) {
+        auto fd = Connect(1);
+        if (fd == -1) {
+            PLOGE("GetModuleDir");
+            return -1;
+        }
+        socket_utils::write_u8(fd, (uint8_t) SocketAction::GetModuleDir);
+        socket_utils::write_usize(fd, index);
+        if (socket_utils::read_u8(fd) == 1) {
+            return fd;
+        } else {
+            return -1;
+        }
     }
 }

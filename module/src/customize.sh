@@ -60,9 +60,9 @@ mkdir "$MODPATH/system"
 [ "$HAS64BIT" = true ] && mkdir "$MODPATH/system/lib64"
 
 if [ "$ARCH" = "x86" ] || [ "$ARCH" = "x64" ]; then
-  if [ "$HAS32BIT" = ture ]; then
+  if [ "$HAS32BIT" = true ]; then
     ui_print "- Extracting x86 libraries"
-    extract "$ZIPFILE" 'bin/x86/zygiskd' "$MODPATH/bin/zygiskd32" true
+    extract "$ZIPFILE" 'bin/x86/zygiskd' "$MODPATH/bin" true
     mv "$MODPATH/bin/zygiskd" "$MODPATH/bin/zygiskd32"
     extract "$ZIPFILE" 'lib/x86/libinjector.so' "$MODPATH/system/lib" true
     extract "$ZIPFILE" 'lib/x86/libzygiskloader.so' "$MODPATH/system/lib" true
@@ -71,7 +71,7 @@ if [ "$ARCH" = "x86" ] || [ "$ARCH" = "x64" ]; then
 
   if [ "$HAS64BIT" = true ]; then
     ui_print "- Extracting x64 libraries"
-    extract "$ZIPFILE" 'bin/x86_64/zygiskd' "$MODPATH/bin/zygiskd64" true
+    extract "$ZIPFILE" 'bin/x86_64/zygiskd' "$MODPATH/bin" true
     mv "$MODPATH/bin/zygiskd" "$MODPATH/bin/zygiskd64"
     extract "$ZIPFILE" 'lib/x86_64/libinjector.so' "$MODPATH/system/lib64" true
     extract "$ZIPFILE" 'lib/x86_64/libzygiskloader.so' "$MODPATH/system/lib64" true

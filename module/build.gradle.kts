@@ -1,6 +1,8 @@
 import java.security.MessageDigest
 import org.apache.tools.ant.filters.ReplaceTokens
 
+import org.apache.tools.ant.filters.FixCrLfFilter
+
 plugins {
     id("com.android.library")
 }
@@ -33,6 +35,7 @@ androidComponents.onVariants { variant ->
         from("${rootProject.projectDir}/README.md")
         from("$projectDir/src") {
             exclude("module.prop", "customize.sh", "daemon.sh")
+            filter<FixCrLfFilter>("eol" to FixCrLfFilter.CrLf.newInstance("lf"))
         }
         from("$projectDir/src") {
             include("module.prop")
@@ -50,6 +53,7 @@ androidComponents.onVariants { variant ->
                 "DEBUG" to if (buildTypeLowered == "debug") "true" else "false"
             )
             filter<ReplaceTokens>("tokens" to tokens)
+            filter<FixCrLfFilter>("eol" to FixCrLfFilter.CrLf.newInstance("lf"))
         }
         into("bin") {
             from(project(":zygiskd").buildDir.path + "/rustJniLibs/android")

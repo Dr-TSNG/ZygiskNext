@@ -1,0 +1,6 @@
+[submodule "loader/src/external/liblsplt"]
+	path = loader/src/external/liblsplt
+	url = https://github.com/LSPosed/LSPlt
+[submodule "loader/src/external/parallel-hashmap"]
+	path = loader/src/external/parallel-hashmap
+	url = https://github.com/greg7mdp/parallel-hashmap

@@ -9,7 +9,6 @@
 #else
 # define LP_SELECT(lp32, lp64) lp32
 #endif
-
 constexpr std::string_view kZygiskSocket = LP_SELECT("zygiskd32", "zygiskd64") "socket_placeholder";
 
 class UniqueFd {
@@ -46,9 +45,10 @@ namespace zygiskd {
     struct Module {
         std::string name;
         void* handle;
+        int id;
 
-        inline explicit Module(std::string name, void* handle)
-                : name(name), handle(handle) {}
+        inline explicit Module(int id, std::string name, void* handle)
+                : name(name), handle(handle), id(id) {}
     };
 
     enum class SocketAction {
@@ -56,6 +56,7 @@ namespace zygiskd {
         ReadNativeBridge,
         ReadModules,
         RequestCompanionSocket,
+        GetModuleDir,
     };
 
     bool PingHeartbeat();
@@ -63,4 +64,8 @@ namespace zygiskd {
     std::string ReadNativeBridge();
 
     std::vector<Module> ReadModules();
+
+    UniqueFd ConnectCompanion(size_t index);
+
+    UniqueFd GetModuleDir(size_t index);
 }
