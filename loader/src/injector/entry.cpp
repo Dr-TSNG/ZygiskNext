@@ -5,7 +5,6 @@
 using namespace std;
 
 void *self_handle = nullptr;
-vector<zygiskd::Module> preloaded_modules;
 
 [[gnu::destructor]] [[maybe_unused]]
 static void zygisk_cleanup_wait() {
@@ -16,18 +15,9 @@ static void zygisk_cleanup_wait() {
     }
 }
 
-void preload_modules() {
-    LOGI("Preload modules");
-    preloaded_modules = zygiskd::ReadModules();
-    for (auto& module : preloaded_modules) {
-        LOGD("  Preloaded `%s`", module.name.data());
-    }
-}
-
 extern "C" __used void entry(void *handle) {
-    LOGD("Load injector successful");
+    LOGD("Load injector successfully");
     self_handle = handle;
-    preload_modules();
     hook_functions();
 }
 

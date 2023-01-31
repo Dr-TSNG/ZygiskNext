@@ -536,17 +536,16 @@ void HookContext::fork_post() {
 }
 
 void HookContext::run_modules_pre() {
-    size_t size = preloaded_modules.size();
+    auto ms = zygiskd::ReadModules();
+    auto size = ms.size();
     modules.reserve(size);
     for (size_t i = 0; i < size; i++) {
-        auto& module = preloaded_modules[i];
-        if (void* handle = DlopenMem(module.memfd, RTLD_NOW);
+        auto& m = ms[i];
+        if (void* handle = DlopenMem(m.memfd, RTLD_NOW);
             void* entry = handle ? dlsym(handle, "zygisk_module_entry") : nullptr) {
             modules.emplace_back(i, handle, entry);
         }
     }
-    // memfds will be closed by RTTI
-    preloaded_modules.clear();
 
     for (auto &m : modules) {
         m.onLoad(env);
