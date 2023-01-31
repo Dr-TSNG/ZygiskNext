@@ -5,6 +5,7 @@
 #include <sys/prctl.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <regex.h>
 
 #include <lsplt.hpp>
 
@@ -60,7 +61,24 @@ struct HookContext {
     bitset<MAX_FD_SIZE> allowed_fds;
     vector<int> exempted_fds;
 
-    HookContext() : env(nullptr), args{nullptr}, process(nullptr), pid(-1), info_flags(0) {}
+    struct RegisterInfo {
+        regex_t regex;
+        string symbol;
+        void *callback;
+        void **backup;
+    };
+
+    struct IgnoreInfo {
+        regex_t regex;
+        string symbol;
+    };
+
+    pthread_mutex_t hook_info_lock;
+    vector<RegisterInfo> register_info;
+    vector<IgnoreInfo> ignore_info;
+
+    HookContext() : env(nullptr), args{nullptr}, process(nullptr), pid(-1), info_flags(0),
+    hook_info_lock(PTHREAD_MUTEX_INITIALIZER) {}
 
     void run_modules_pre();
     void run_modules_post();
@@ -73,6 +91,13 @@ struct HookContext {
     void unload_zygisk();
     void sanitize_fds();
     bool exempt_fd(int fd);
+
+    // Compatibility shim
+    void plt_hook_register(const char *regex, const char *symbol, void *fn, void **backup);
+    void plt_hook_exclude(const char *regex, const char *symbol);
+    void plt_hook_process_regex();
+
+    bool plt_hook_commit();
 };
 
 #undef DCL_PRE_POST
@@ -292,77 +317,64 @@ bool ZygiskModule::RegisterModuleImpl(ApiTable *api, long *module) {
     api->base.impl->mod = { module };
 
     // Fill in API accordingly with module API version
-    switch (api_version) {
-        case 4:
-            api->v4.exemptFd = [](int fd) { return g_ctx != nullptr && g_ctx->exempt_fd(fd); };
-            api->v4.pltHookRegisterInode = PltHookRegister;
-            api->v4.pltHookExcludeInode = PltHookExclude;
-            [[fallthrough]];
-        case 3:
-        case 2:
-            api->v2.getModuleDir = [](ZygiskModule *m) { return m->getModuleDir(); };
-            api->v2.getFlags = [](auto) { return ZygiskModule::getFlags(); };
-            [[fallthrough]];
-        case 1:
-            api->v1.hookJniNativeMethods = hookJniNativeMethods;
-            api->v1.pltHookRegister = PltHookRegister;
-            api->v1.pltHookExclude = PltHookExclude;
-            api->v1.pltHookCommit = CommitPltHook;
-            api->v1.connectCompanion = [](ZygiskModule *m) { return m->connectCompanion(); };
-            api->v1.setOption = [](ZygiskModule *m, auto opt) { m->setOption(opt); };
-            break;
-        default:
-            // Unknown version number
-            return false;
+    if (api_version >= 1) {
+        api->v1.hookJniNativeMethods = hookJniNativeMethods;
+        api->v1.pltHookRegister = [](auto a, auto b, auto c, auto d) {
+            if (g_ctx) g_ctx->plt_hook_register(a, b, c, d);
+        };
+        api->v1.pltHookExclude = [](auto a, auto b) {
+            if (g_ctx) g_ctx->plt_hook_exclude(a, b);
+        };
+        api->v1.pltHookCommit = []() { return g_ctx && g_ctx->plt_hook_commit(); };
+        api->v1.connectCompanion = [](ZygiskModule *m) { return m->connectCompanion(); };
+        api->v1.setOption = [](ZygiskModule *m, auto opt) { m->setOption(opt); };
+    }
+    if (api_version >= 2) {
+        api->v2.getModuleDir = [](ZygiskModule *m) { return m->getModuleDir(); };
+        api->v2.getFlags = [](auto) { return ZygiskModule::getFlags(); };
+    }
+    if (api_version >= 4) {
+        api->v4.pltHookRegister = [](dev_t dev, ino_t inode, const char *symbol, void *fn, void **backup) {
+            if (dev == 0 || inode == 0 || symbol == nullptr || fn == nullptr)
+                return;
+            lsplt::RegisterHook(dev, inode, symbol, fn, backup);
+        };
+        api->v4.exemptFd = [](int fd) { return g_ctx && g_ctx->exempt_fd(fd); };
     }
 
     return true;
 }
 
-void ZygiskModule::PltHookRegister(const char* regex, const char *symbol, void *callback, void **backup) {
-    if (regex == nullptr || symbol == nullptr || callback == nullptr)
+void HookContext::plt_hook_register(const char *regex, const char *symbol, void *fn, void **backup) {
+    if (regex == nullptr || symbol == nullptr || fn == nullptr)
         return;
     regex_t re;
     if (regcomp(&re, regex, REG_NOSUB) != 0)
         return;
-    mutex_guard lock(hook_lock);
-    register_info.emplace_back(RegisterInfo{re, 0, symbol, callback, backup});
+    mutex_guard lock(hook_info_lock);
+    register_info.emplace_back(RegisterInfo{re, symbol, fn, backup});
 }
 
-void ZygiskModule::PltHookRegister(ino_t inode, const char *symbol, void *callback, void **backup) {
-    if (inode == 0 || symbol == nullptr || callback == nullptr)
-        return;
-    mutex_guard lock(hook_lock);
-    register_info.emplace_back(RegisterInfo{{}, inode, symbol, callback, backup});
-}
-
-void ZygiskModule::PltHookExclude(const char* regex, const char *symbol) {
+void HookContext::plt_hook_exclude(const char *regex, const char *symbol) {
     if (!regex) return;
     regex_t re;
     if (regcomp(&re, regex, REG_NOSUB) != 0)
         return;
-    mutex_guard lock(hook_lock);
-    ignore_info.emplace_back(IgnoreInfo{re, 0, symbol ? symbol : ""});
+    mutex_guard lock(hook_info_lock);
+    ignore_info.emplace_back(IgnoreInfo{re, symbol ?: ""});
 }
 
-void ZygiskModule::PltHookExclude(ino_t inode, const char *symbol) {
-    if (inode == 0) return;
-    mutex_guard lock(hook_lock);
-    ignore_info.emplace_back(IgnoreInfo{{}, inode, symbol ? symbol : ""});
-}
-
-bool ZygiskModule::CommitPltHook() {
-    mutex_guard lock(hook_lock);
-    for (auto &map: lsplt::MapInfo::Scan()) {
-        if (map.offset != 0) continue;
+void HookContext::plt_hook_process_regex() {
+    if (register_info.empty())
+        return;
+    for (auto &map : lsplt::MapInfo::Scan()) {
+        if (map.offset != 0 || !map.is_private || !(map.perms & PROT_READ)) continue;
         for (auto &reg: register_info) {
-            if ((reg.inode != 0 && reg.inode != map.inode)||
-                (reg.inode == 0 && regexec(&reg.regex, map.path.c_str(), 0, nullptr, 0) != 0))
+            if (regexec(&reg.regex, map.path.data(), 0, nullptr, 0) != 0)
                 continue;
             bool ignored = false;
             for (auto &ign: ignore_info) {
-                if ((ign.inode != 0 && ign.inode != map.inode) ||
-                    (ign.inode == 0 && regexec(&ign.regex, map.path.c_str(), 0, nullptr, 0) != 0))
+                if (regexec(&ign.regex, map.path.data(), 0, nullptr, 0) != 0)
                     continue;
                 if (ign.symbol.empty() || ign.symbol == reg.symbol) {
                     ignored = true;
@@ -374,10 +386,18 @@ bool ZygiskModule::CommitPltHook() {
             }
         }
     }
-    register_info.clear();
-    ignore_info.clear();
+}
+
+bool HookContext::plt_hook_commit() {
+    {
+        mutex_guard lock(hook_info_lock);
+        plt_hook_process_regex();
+        register_info.clear();
+        ignore_info.clear();
+    }
     return lsplt::CommitHook();
 }
+
 
 bool ZygiskModule::valid() const {
     if (mod.api_version == nullptr)
