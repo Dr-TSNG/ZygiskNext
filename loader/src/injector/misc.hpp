@@ -1,12 +1,14 @@
 #pragma once
 
-#include <pthread.h>
-#include "logging.h"
 #include <dirent.h>
-#include <stdio.h>
-
-#include <string_view>
+#include <functional>
 #include <memory>
+#include <mntent.h>
+#include <pthread.h>
+#include <stdio.h>
+#include <string_view>
+
+#include "logging.h"
 
 #define DISALLOW_COPY_AND_MOVE(clazz) \
 clazz(const clazz &) = delete; \
@@ -92,6 +94,8 @@ struct StringCmp {
  * Use our own implementation for faster conversion.
  */
 int parse_int(std::string_view s);
+
+void parse_mnt(const char* file, const std::function<bool(mntent*)>& fn);
 
 template <typename T>
 static inline T align_to(T v, int a) {

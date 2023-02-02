@@ -193,7 +193,7 @@ DCL_HOOK_FUNC(int, unshare, int flags) {
         // Simply avoid doing any unmounts for SysUI to avoid potential issues.
         (g_ctx->info_flags & PROCESS_IS_SYS_UI) == 0) {
         if (g_ctx->flags[DO_REVERT_UNMOUNT]) {
-            // FIXME: revert_unmount();
+            revert_unmount();
         }
 
         /* Zygisksu changed: No umount app_process */
