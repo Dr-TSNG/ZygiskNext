@@ -14,7 +14,6 @@
 
 #include "dl.h"
 #include "daemon.h"
-#include "elf_util.h"
 #include "zygisk.hpp"
 #include "memory.hpp"
 #include "module.hpp"
@@ -743,11 +742,8 @@ void hook_functions() {
     if (old_jniRegisterNativeMethods == nullptr) {
         do {
             LOGD("jniRegisterNativeMethods not hooked, using fallback\n");
-
-            SandHook::ElfImg art("libandroid_runtime.so");
-
-            auto *GetRuntime = art.getSymbAddress<void*(*)()>("_ZN7android14AndroidRuntime10getRuntimeEv");
-
+            constexpr char sig[] = "_ZN7android14AndroidRuntime10getRuntimeEv";
+            auto *GetRuntime = (void*(*)()) dlsym(RTLD_DEFAULT, sig);
             if (GetRuntime == nullptr) {
                 LOGE("GetRuntime is nullptr");
                 break;
