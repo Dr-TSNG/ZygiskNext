@@ -42,7 +42,7 @@ androidComponents.onVariants { variant ->
             expand(
                 "moduleId" to moduleId,
                 "moduleName" to moduleName,
-                "versionName" to verName,
+                "versionName" to "$verName ($verCode)",
                 "versionCode" to verCode,
             )
         }

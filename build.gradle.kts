@@ -1,4 +1,5 @@
 import com.android.build.gradle.LibraryExtension
+import java.io.ByteArrayOutputStream
 
 plugins {
     id("com.android.application") apply false
@@ -10,14 +11,28 @@ buildscript {
         maven("https://plugins.gradle.org/m2/")
     }
     dependencies {
+        classpath("org.eclipse.jgit:org.eclipse.jgit:6.4.0.202211300538-r")
         classpath("org.mozilla.rust-android-gradle:plugin:0.9.3")
     }
 }
 
+fun String.execute(currentWorkingDir: File = file("./")): String {
+    val byteOut = ByteArrayOutputStream()
+    project.exec {
+        workingDir = currentWorkingDir
+        commandLine = split("\\s".toRegex())
+        standardOutput = byteOut
+    }
+    return String(byteOut.toByteArray()).trim()
+}
+
+val gitCommitCount = "git rev-list HEAD --count".execute().toInt()
+val gitCommitHash = "git rev-parse --verify --short HEAD".execute()
+
 val moduleId by extra("zygisksu")
 val moduleName by extra("Zygisk on KernelSU")
-val verName by extra("v4.0.0")
-val verCode by extra(4000)
+val verName by extra("v4-0.1.0")
+val verCode by extra(gitCommitCount)
 
 val androidMinSdkVersion by extra(29)
 val androidTargetSdkVersion by extra(33)
