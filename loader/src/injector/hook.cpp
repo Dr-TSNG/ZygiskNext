@@ -1,18 +1,20 @@
 #include <android/dlext.h>
 #include <sys/mount.h>
 #include <dlfcn.h>
-#include <bitset>
-#include <sys/prctl.h>
-#include <fcntl.h>
-#include <unistd.h>
 #include <regex.h>
+#include <bitset>
+#include <list>
 
 #include <lsplt.hpp>
 
-#include <daemon.h>
-#include <dirent.h>
+#include <fcntl.h>
+#include <sys/prctl.h>
+#include <sys/stat.h>
+#include <unistd.h>
 
 #include "dl.h"
+#include "daemon.h"
+#include "elf_util.h"
 #include "zygisk.hpp"
 #include "memory.hpp"
 #include "module.hpp"
@@ -54,7 +56,7 @@ struct HookContext {
     } args;
 
     const char *process;
-    vector<ZygiskModule> modules;
+    list<ZygiskModule> modules;
 
     int pid;
     bitset<FLAG_MAX> flags;
@@ -81,6 +83,7 @@ struct HookContext {
     HookContext() : env(nullptr), args{nullptr}, process(nullptr), pid(-1), info_flags(0),
     hook_info_lock(PTHREAD_MUTEX_INITIALIZER) {}
 
+    /* Zygisksu changed: Load module fds */
     void run_modules_pre();
     void run_modules_post();
     DCL_PRE_POST(fork)
@@ -104,7 +107,7 @@ struct HookContext {
 #undef DCL_PRE_POST
 
 // Global variables
-vector<tuple<dev_t, ino_t, const char *, void **>> *xhook_list;
+vector<tuple<dev_t, ino_t, const char *, void **>> *plt_hook_list;
 map<string, vector<JNINativeMethod>, StringCmp> *jni_hook_list;
 hash_map<xstring, tree_map<xstring, tree_map<xstring, void *>>> *jni_method_map;
 
@@ -129,7 +132,7 @@ if (methods[i].name == #method##sv) {                                           
         }                                                                                    \
     }                                                                                        \
     if (j == method##_methods_num) {                                                         \
-        LOGE("unknown signature of %s#" #method ": %s\n", className, methods[i].signature); \
+        LOGE("unknown signature of %s#" #method ": %s\n", className, methods[i].signature);  \
     }                                                                                        \
     continue;                                                                                \
 }
@@ -189,15 +192,20 @@ DCL_HOOK_FUNC(int, unshare, int flags) {
         // For some unknown reason, unmounting app_process in SysUI can break.
         // This is reproducible on the official AVD running API 26 and 27.
         // Simply avoid doing any unmounts for SysUI to avoid potential issues.
-        g_ctx->process && g_ctx->process != "com.android.systemui"sv) {
+        (g_ctx->info_flags & PROCESS_IS_SYS_UI) == 0) {
         if (g_ctx->flags[DO_REVERT_UNMOUNT]) {
-            // revert_unmount();
+            // FIXME: revert_unmount();
         }
+
+        /* Zygisksu changed: No umount app_process */
+
         // Restore errno back to 0
         errno = 0;
     }
     return res;
 }
+
+/* Zygisksu changed: No android_log_close hook */
 
 // Last point before process secontext changes
 DCL_HOOK_FUNC(int, selinux_android_setcontext,
@@ -239,6 +247,7 @@ void vtable_entry(void *self, JNIEnv* env) {
     reinterpret_cast<decltype(&onVmCreated)>(gAppRuntimeVTable[N])(self, env);
 }
 
+/* Zygisksu changed: AndroidRuntime setArgv0 before native bridge loaded */
 void hookVirtualTable(void *self) {
     LOGD("hook AndroidRuntime virtual table\n");
 
@@ -415,10 +424,12 @@ bool ZygiskModule::valid() const {
     }
 }
 
+/* Zygisksu changed: Use own zygiskd */
 int ZygiskModule::connectCompanion() const {
     return zygiskd::ConnectCompanion(id);
 }
 
+/* Zygisksu changed: Use own zygiskd */
 int ZygiskModule::getModuleDir() const {
     return zygiskd::GetModuleDir(id);
 }
@@ -535,10 +546,10 @@ void HookContext::fork_post() {
     unload_zygisk();
 }
 
+/* Zygisksu changed: Load module fds */
 void HookContext::run_modules_pre() {
     auto ms = zygiskd::ReadModules();
     auto size = ms.size();
-    modules.reserve(size);
     for (size_t i = 0; i < size; i++) {
         auto& m = ms[i];
         if (void* handle = DlopenMem(m.memfd, RTLD_NOW);
@@ -569,6 +580,7 @@ void HookContext::run_modules_post() {
     }
 }
 
+/* Zygisksu changed: Load module fds */
 void HookContext::app_specialize_pre() {
     flags[APP_SPECIALIZE] = true;
     run_modules_pre();
@@ -584,6 +596,7 @@ void HookContext::app_specialize_post() {
     // Cleanups
     env->ReleaseStringUTFChars(args.app->nice_name, process);
     g_ctx = nullptr;
+    /* Zygisksu changed: No android_log_close */
 }
 
 void HookContext::unload_zygisk() {
@@ -628,6 +641,7 @@ void HookContext::nativeSpecializeAppProcess_post() {
     unload_zygisk();
 }
 
+/* Zygisksu changed: No system_server status write back */
 void HookContext::nativeForkSystemServer_pre() {
     LOGV("pre  forkSystemServer\n");
     flags[SERVER_FORK_AND_SPECIALIZE] = true;
@@ -654,10 +668,8 @@ void HookContext::nativeForkAndSpecialize_pre() {
     LOGV("pre  forkAndSpecialize [%s]\n", process);
 
     flags[APP_FORK_AND_SPECIALIZE] = true;
-    if (args.app->fds_to_ignore == nullptr) {
-        // The field fds_to_ignore don't exist before Android 8.0, which FDs are not checked
-        flags[SKIP_FD_SANITIZATION] = true;
-    }
+    /* Zygisksu changed: No args.app->fds_to_ignore check since we are Android 10+ */
+    flags[SKIP_FD_SANITIZATION] = true;
 
     fork_pre();
     if (pid == 0) {
@@ -676,58 +688,58 @@ void HookContext::nativeForkAndSpecialize_post() {
 
 } // namespace
 
-static bool hook_refresh() {
+static bool hook_commit() {
     if (lsplt::CommitHook()) {
         return true;
     } else {
-        LOGE("xhook failed\n");
+        LOGE("plt_hook failed\n");
         return false;
     }
 }
 
 static void hook_register(dev_t dev, ino_t inode, const char *symbol, void *new_func, void **old_func) {
     if (!lsplt::RegisterHook(dev, inode, symbol, new_func, old_func)) {
-        LOGE("Failed to register hook \"%s\"\n", symbol);
+        LOGE("Failed to register plt_hook \"%s\"\n", symbol);
         return;
     }
-    xhook_list->emplace_back(dev, inode, symbol, old_func);
+    plt_hook_list->emplace_back(dev, inode, symbol, old_func);
 }
 
-#define XHOOK_REGISTER_SYM(DEV, INO, SYM, NAME) \
-    hook_register(DEV, INO, SYM, (void*) new_##NAME, (void **) &old_##NAME)
+#define PLT_HOOK_REGISTER_SYM(DEV, INODE, SYM, NAME) \
+    hook_register(DEV, INODE, SYM, (void*) new_##NAME, (void **) &old_##NAME)
 
-#define XHOOK_REGISTER(DEV, INO, NAME) \
-    XHOOK_REGISTER_SYM(DEV, INO, #NAME, NAME)
-
-#include "elf_util.h"
+#define PLT_HOOK_REGISTER(DEV, INODE, NAME) \
+    PLT_HOOK_REGISTER_SYM(DEV, INODE, #NAME, NAME)
 
 void hook_functions() {
-    default_new(xhook_list);
+    default_new(plt_hook_list);
     default_new(jni_hook_list);
     default_new(jni_method_map);
 
-    dev_t dev = 0;
-    ino_t inode = 0;
+    ino_t android_runtime_inode = 0;
+    dev_t android_runtime_dev = 0;
     for (auto &map : lsplt::MapInfo::Scan()) {
         if (map.path.ends_with("libandroid_runtime.so")) {
-            dev = map.dev;
-            inode = map.inode;
+            android_runtime_inode = map.inode;
+            android_runtime_dev = map.dev;
             break;
         }
     }
 
-    XHOOK_REGISTER(dev, inode, fork);
-    XHOOK_REGISTER(dev, inode, unshare);
-    XHOOK_REGISTER(dev, inode, jniRegisterNativeMethods);
-    XHOOK_REGISTER(dev, inode, selinux_android_setcontext);
-    hook_refresh();
+    PLT_HOOK_REGISTER(android_runtime_dev, android_runtime_inode, fork);
+    PLT_HOOK_REGISTER(android_runtime_dev, android_runtime_inode, unshare);
+    PLT_HOOK_REGISTER(android_runtime_dev, android_runtime_inode, jniRegisterNativeMethods);
+    PLT_HOOK_REGISTER(android_runtime_dev, android_runtime_inode, selinux_android_setcontext);
+    /* Zygisksu changed: No android_log_close hook */
+    hook_commit();
 
     // Remove unhooked methods
-    xhook_list->erase(
-            std::remove_if(xhook_list->begin(), xhook_list->end(),
+    plt_hook_list->erase(
+            std::remove_if(plt_hook_list->begin(), plt_hook_list->end(),
             [](auto &t) { return *std::get<3>(t) == nullptr;}),
-            xhook_list->end());
+            plt_hook_list->end());
 
+    /* Zygisksu changed: AndroidRuntime setArgv0 before native bridge loaded */
     if (old_jniRegisterNativeMethods == nullptr) {
         do {
             LOGD("jniRegisterNativeMethods not hooked, using fallback\n");
@@ -773,16 +785,16 @@ static bool unhook_functions() {
     }
     delete jni_hook_list;
 
-    // Unhook xhook
-    for (const auto &[dev, inode, sym, old_func] : *xhook_list) {
+    // Unhook plt_hook
+    for (const auto &[dev, inode, sym, old_func] : *plt_hook_list) {
         if (!lsplt::RegisterHook(dev, inode, sym, *old_func, nullptr)) {
-            LOGE("Failed to register xhook [%s]\n", sym);
+            LOGE("Failed to register plt_hook [%s]\n", sym);
             success = false;
         }
     }
-    delete xhook_list;
-    if (!hook_refresh()) {
-        LOGE("Failed to restore xhook\n");
+    delete plt_hook_list;
+    if (!hook_commit()) {
+        LOGE("Failed to restore plt_hook\n");
         success = false;
     }
 
