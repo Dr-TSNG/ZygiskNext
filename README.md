@@ -5,9 +5,10 @@ Zygisk loader for KernelSU, which allows Zygisk modules to run without Magisk en
 ## Development road map
 
 - [x] Basic Zygisk loader
-- [ ] Stabilize injector
+- [x] Stabilize injector
 - [ ] Separate zygiskd process
 - [ ] Handle 64 bit only devices
+- [ ] DenyList
 
 ## Running on Magisk
 

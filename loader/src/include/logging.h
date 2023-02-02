@@ -5,7 +5,11 @@
 #include <string.h>
 
 #ifndef LOG_TAG
-#define LOG_TAG    "zygisksu"
+#if defined(__LP64__)
+# define LOG_TAG "zygisksu64"
+#else
+# define LOG_TAG "zygisksu32"
+#endif
 #endif
 
 #ifdef LOG_DISABLED
