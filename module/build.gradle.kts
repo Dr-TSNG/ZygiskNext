@@ -95,7 +95,7 @@ androidComponents.onVariants { variant ->
             exec {
                 commandLine(
                     "adb", "shell", "echo",
-                    """su -c \"/data/adb/ksud module install /data/local/tmp/$zipFileName\"""",
+                    "/data/adb/ksud module install /data/local/tmp/$zipFileName",
                     "> /data/local/tmp/install.sh"
                 )
             }
