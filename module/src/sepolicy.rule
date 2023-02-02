@@ -1,2 +1,12 @@
 allow * tmpfs * *
+
+type magisk_file file_type
+typeattribute magisk_file mlstrustedobject
+allow magisk_file file *
+allow magisk_file dir *
+allow magisk_file fifo_file *
+allow magisk_file chr_file *
+allow magisk_file lnk_file *
+allow magisk_file sock_file *
+
 allow system_server system_server process execmem
