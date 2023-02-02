@@ -4,7 +4,6 @@
 #include <sys/mman.h>
 
 #pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-builtins"
 #include <parallel_hashmap/phmap.h>
 #pragma clang diagnostic pop
 

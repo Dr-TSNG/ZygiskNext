@@ -15,7 +15,8 @@ static void zygisk_cleanup_wait() {
     }
 }
 
-extern "C" __used void entry(void *handle) {
+extern "C" [[gnu::visibility("default")]]
+void entry(void *handle) {
     LOGD("Load injector successfully");
     self_handle = handle;
     hook_functions();
@@ -27,4 +28,3 @@ static inline bool should_load_modules(uint32_t flags) {
     return (flags & UNMOUNT_MASK) != UNMOUNT_MASK &&
            (flags & PROCESS_IS_MAGISK_APP) != PROCESS_IS_MAGISK_APP;
 }
-

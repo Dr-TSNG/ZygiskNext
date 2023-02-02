@@ -7,7 +7,7 @@ APP_STL        := none
 
 ifneq ($(NDK_DEBUG),1)
 APP_CFLAGS     += -Oz -flto
-APP_CFLAGS     += -Wno-unused -Wno-unused-parameter -Werror
+APP_CFLAGS     += -Wno-unused -Wno-unused-parameter
 APP_CFLAGS     += -fvisibility=hidden -fvisibility-inlines-hidden
 APP_CFLAGS     += -fno-unwind-tables -fno-asynchronous-unwind-tables
 APP_LDFLAGS    += -Wl,--exclude-libs,ALL -flto -Wl,--gc-sections -Wl,--strip-all
