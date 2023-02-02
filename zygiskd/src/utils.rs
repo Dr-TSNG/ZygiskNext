@@ -28,7 +28,7 @@ pub fn get_native_bridge() -> String {
 }
 
 pub fn restore_native_bridge() -> Result<()> {
-    Command::new("/data/adb/ksu/bin/resetprop")
+    Command::new("resetprop")
         .arg(constants::PROP_NATIVE_BRIDGE)
         .arg(get_native_bridge())
         .spawn()?.wait()?;

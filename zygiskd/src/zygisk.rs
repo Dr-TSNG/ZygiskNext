@@ -182,7 +182,7 @@ fn create_daemon_socket(is64: bool) -> Result<UnixListener> {
 fn handle_daemon_action(mut stream: UnixStream, context: &Context) -> Result<()> {
     let action = stream.read_u8()?;
     let action = DaemonSocketAction::try_from(action)?;
-    log::debug!("New daemon action {:?}", action);
+    log::trace!("New daemon action {:?}", action);
     match action {
         DaemonSocketAction::PingHeartbeat => {
             restore_native_bridge()?;
