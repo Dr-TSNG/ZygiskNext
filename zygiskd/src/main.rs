@@ -9,10 +9,15 @@ use anyhow::{bail, Result};
 use log::LevelFilter;
 use nix::libc;
 
+#[cfg(debug_assertions)]
+static MAX_LOG_LEVEL: LevelFilter = LevelFilter::Trace;
+#[cfg(not(debug_assertions))]
+static MAX_LOG_LEVEL: LevelFilter = LevelFilter::Info;
+
 fn init_android_logger(tag: &str) {
     android_logger::init_once(
         android_logger::Config::default()
-            .with_max_level(LevelFilter::Trace)
+            .with_max_level(MAX_LOG_LEVEL)
             .with_tag(tag),
     );
 }
