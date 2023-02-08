@@ -6,8 +6,9 @@ Warning: The current version of Zygisksu is UNSTABLE. You may suffer boot loop o
 
 ## Requirements
 
-+ Minimal KernelSU version: 15
-+ Minimal ksud version: 7b32c0e
++ Minimal KernelSU version: 10575
++ Minimal ksud version: 10200
++ Full SELinux patch support (If non-gki kernel)
 
 ## Compatibility
 
@@ -22,6 +23,7 @@ Warning: The current version of Zygisksu is UNSTABLE. You may suffer boot loop o
 - [x] [Inject] Basic Zygisk loader
 - [x] [Inject] Stabilize injector
 - [x] [Inject] Unload
+- [x] [Daemon] Linker namespace
 - [ ] [Daemon] Separate zygiskd process
 - [ ] [Daemon] Handle 64 bit only devices
 - [ ] [Daemon] Handle zygote death

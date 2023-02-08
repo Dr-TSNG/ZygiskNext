@@ -1,6 +1,7 @@
 #![allow(dead_code)]
 
 mod constants;
+mod dl;
 mod utils;
 mod watchdog;
 mod zygisk;

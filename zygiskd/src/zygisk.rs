@@ -1,6 +1,6 @@
 use crate::constants::DaemonSocketAction;
 use crate::utils::{restore_native_bridge, UnixStreamExt};
-use crate::{constants, utils};
+use crate::{constants, dl, utils};
 use anyhow::{bail, Result};
 use memfd::Memfd;
 use nix::{
@@ -151,14 +151,7 @@ fn create_memfd(name: &str, so_path: &PathBuf) -> Result<Memfd> {
 fn preload_module(memfd: &Memfd) -> Result<Option<ZygiskCompanionEntryFn>> {
     unsafe {
         let path = format!("/proc/self/fd/{}", memfd.as_raw_fd());
-        let filename = std::ffi::CString::new(path)?;
-        let handle = libc::dlopen(filename.as_ptr(), libc::RTLD_LAZY);
-        if handle.is_null() {
-            let e = std::ffi::CStr::from_ptr(libc::dlerror())
-                .to_string_lossy()
-                .into_owned();
-            bail!("dlopen failed: {}", e);
-        }
+        let handle = dl::dlopen(&path, libc::RTLD_NOW)?;
         let symbol = std::ffi::CString::new("zygisk_companion_entry")?;
         let entry = dlsym(handle, symbol.as_ptr());
         if entry.is_null() {
