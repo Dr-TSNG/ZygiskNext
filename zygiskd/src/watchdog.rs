@@ -9,7 +9,14 @@ use std::{fs, thread};
 
 static mut LOCK_FILE: Option<fs::File> = None;
 
-pub fn check_permission() -> Result<()> {
+pub fn entry() -> Result<()> {
+    log::info!("Start zygisksu watchdog");
+    check_permission()?;
+    ensure_single_instance()?;
+    spawn_daemon()
+}
+
+fn check_permission() -> Result<()> {
     log::info!("Check permission");
     let uid = getuid();
     if uid.as_raw() != 0 {
@@ -31,7 +38,7 @@ pub fn check_permission() -> Result<()> {
     Ok(())
 }
 
-pub fn ensure_single_instance() -> Result<()> {
+fn ensure_single_instance() -> Result<()> {
     log::info!("Ensure single instance");
     let metadata = fs::metadata(constants::PATH_ZYGISKSU_DIR);
     if metadata.is_err() || !metadata.unwrap().is_dir() {
@@ -50,9 +57,9 @@ pub fn ensure_single_instance() -> Result<()> {
     Ok(())
 }
 
-pub fn spawn_daemon() -> Result<()> {
-    let daemon32 = Command::new(constants::PATH_ZYGISKD32).spawn()?;
-    let daemon64 = Command::new(constants::PATH_ZYGISKD64).spawn()?;
+fn spawn_daemon() -> Result<()> {
+    let daemon32 = Command::new(constants::PATH_ZYGISKD32).arg("daemon").spawn();
+    let daemon64 = Command::new(constants::PATH_ZYGISKD64).arg("daemon").spawn();
     let (sender, receiver) = mpsc::channel();
     let spawn = |mut daemon: Child| {
         let sender = sender.clone();
@@ -63,8 +70,8 @@ pub fn spawn_daemon() -> Result<()> {
             sender.send(()).unwrap();
         });
     };
-    spawn(daemon32);
-    spawn(daemon64);
+    if let Ok(it) = daemon32 { spawn(it) }
+    if let Ok(it) = daemon64 { spawn(it) }
     let _ = receiver.recv();
     bail!("Daemon process died");
 }

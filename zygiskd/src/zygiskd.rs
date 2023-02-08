@@ -1,30 +1,29 @@
 use crate::constants::DaemonSocketAction;
 use crate::utils::{restore_native_bridge, UnixStreamExt};
-use crate::{constants, dl, utils};
+use crate::{constants, utils};
 use anyhow::{bail, Result};
 use memfd::Memfd;
 use nix::{
-    libc::{self, dlsym},
-    unistd::getppid,
+    fcntl::{fcntl, FcntlArg, FdFlag},
+    libc::self,
 };
 use passfd::FdPassingExt;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use std::thread;
-use std::ffi::{c_char, c_void};
+use std::ffi::c_char;
 use std::fs;
 use std::os::unix::{
     net::{UnixListener, UnixStream},
     prelude::AsRawFd,
 };
+use std::os::unix::process::CommandExt;
 use std::path::PathBuf;
 use std::process::Command;
-
-type ZygiskCompanionEntryFn = unsafe extern "C" fn(i32);
 
 struct Module {
     name: String,
     memfd: Memfd,
-    companion_entry: Option<ZygiskCompanionEntryFn>,
+    companion: Mutex<Option<UnixStream>>,
 }
 
 struct Context {
@@ -32,8 +31,9 @@ struct Context {
     modules: Vec<Module>,
 }
 
-pub fn start(is64: bool) -> Result<()> {
-    check_parent()?;
+pub fn entry(is64: bool) -> Result<()> {
+    unsafe { libc::prctl(libc::PR_SET_PDEATHSIG, libc::SIGKILL) };
+
     let arch = get_arch(is64)?;
     log::debug!("Daemon architecture: {arch}");
 
@@ -60,15 +60,6 @@ pub fn start(is64: bool) -> Result<()> {
         });
     }
 
-    Ok(())
-}
-
-fn check_parent() -> Result<()> {
-    let parent = fs::read_to_string(format!("/proc/{}/cmdline", getppid().as_raw()))?;
-    let parent = parent.split('/').last().unwrap().trim_end_matches('\0');
-    if parent != "zygiskwd" {
-        bail!("Daemon is not started by watchdog: {parent}");
-    }
     Ok(())
 }
 
@@ -111,18 +102,16 @@ fn load_modules(arch: &str) -> Result<Vec<Module>> {
                 continue;
             }
         };
-        let companion_entry = match preload_module(&memfd) {
-            Ok(entry) => entry,
+        let companion = match spawn_companion(&name, &memfd) {
+            Ok(companion) => companion,
             Err(e) => {
-                log::warn!("  Failed to preload `{name}`: {e}");
+                log::warn!("  Failed to spawn companion for `{name}`: {e}");
                 continue;
             }
         };
-        let module = Module {
-            name,
-            memfd,
-            companion_entry,
-        };
+
+        let companion = Mutex::new(companion);
+        let module = Module { name, memfd, companion };
         modules.push(module);
     }
 
@@ -148,20 +137,6 @@ fn create_memfd(name: &str, so_path: &PathBuf) -> Result<Memfd> {
     Ok(memfd)
 }
 
-fn preload_module(memfd: &Memfd) -> Result<Option<ZygiskCompanionEntryFn>> {
-    unsafe {
-        let path = format!("/proc/self/fd/{}", memfd.as_raw_fd());
-        let handle = dl::dlopen(&path, libc::RTLD_NOW)?;
-        let symbol = std::ffi::CString::new("zygisk_companion_entry")?;
-        let entry = dlsym(handle, symbol.as_ptr());
-        if entry.is_null() {
-            return Ok(None);
-        }
-        let fnptr = std::mem::transmute::<*mut c_void, ZygiskCompanionEntryFn>(entry);
-        Ok(Some(fnptr))
-    }
-}
-
 fn create_daemon_socket(is64: bool) -> Result<UnixListener> {
     utils::set_socket_create_context("u:r:zygote:s0")?;
     let suffix = if is64 { "zygiskd64" } else { "zygiskd32" };
@@ -169,6 +144,29 @@ fn create_daemon_socket(is64: bool) -> Result<UnixListener> {
     let listener = utils::abstract_namespace_socket(&name)?;
     log::debug!("Daemon socket: {name}");
     Ok(listener)
+}
+
+fn spawn_companion(name: &str, memfd: &Memfd) -> Result<Option<UnixStream>> {
+    let (mut daemon, companion) = UnixStream::pair()?;
+    // Remove FD_CLOEXEC flag
+    fcntl(companion.as_raw_fd(), FcntlArg::F_SETFD(FdFlag::empty()))?;
+
+    let process = std::env::args().next().unwrap();
+    let nice_name = process.split('/').last().unwrap();
+    Command::new(&process)
+        .arg0(format!("{}-{}", nice_name, name))
+        .arg("companion")
+        .arg(format!("{}", companion.as_raw_fd()))
+        .spawn()?;
+    drop(companion);
+
+    daemon.write_string(name)?;
+    daemon.send_fd(memfd.as_raw_fd())?;
+    match daemon.read_u8()? {
+        0 => Ok(None),
+        1 => Ok(Some(daemon)),
+        _ => bail!("Invalid companion response"),
+    }
 }
 
 fn handle_daemon_action(mut stream: UnixStream, context: &Context) -> Result<()> {
@@ -207,13 +205,15 @@ fn handle_daemon_action(mut stream: UnixStream, context: &Context) -> Result<()>
         DaemonSocketAction::RequestCompanionSocket => {
             let index = stream.read_usize()?;
             let module = &context.modules[index];
-            log::debug!("New companion request from module {}", module.name);
-
-            // FIXME: Spawn a new process
-            match module.companion_entry {
-                Some(entry) => {
-                    stream.write_u8(1)?;
-                    unsafe { entry(stream.as_raw_fd()); }
+            let mut companion = module.companion.lock().unwrap();
+            match companion.as_ref() {
+                Some(sock) => {
+                    if let Err(_) = sock.send_fd(stream.as_raw_fd()) {
+                        log::error!("Companion of module `{}` crashed", module.name);
+                        companion.take();
+                        stream.write_u8(0)?;
+                    }
+                    // Ok: Send by companion
                 }
                 None => {
                     stream.write_u8(0)?;

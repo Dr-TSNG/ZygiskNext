@@ -98,10 +98,6 @@ namespace zygiskd {
         }
         socket_utils::write_u8(fd, (uint8_t) SocketAction::GetModuleDir);
         socket_utils::write_usize(fd, index);
-        if (socket_utils::read_u8(fd) == 1) {
-            return fd;
-        } else {
-            return -1;
-        }
+        return socket_utils::recv_fd(fd);
     }
 }

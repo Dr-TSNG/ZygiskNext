@@ -9,4 +9,4 @@ export NATIVE_BRIDGE=$(getprop ro.dalvik.vm.native.bridge)
 
 log -p i -t "zygisksu" "Start watchdog"
 resetprop ro.dalvik.vm.native.bridge libzygiskloader.so
-exec "$MODDIR/bin/zygiskwd" >/dev/null 2>&1
+exec "$MODDIR/bin/zygiskwd" "watchdog" >/dev/null 2>&1

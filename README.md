@@ -12,11 +12,7 @@ Warning: The current version of Zygisksu is UNSTABLE. You may suffer boot loop o
 
 ## Compatibility
 
-- [x] LSPosed
-- [x] Storage Isolation
-- [ ] IFW Enhance
-- [ ] Universal SafetyNet Fix
-- [ ] Shamiko
+Should work with everything except those rely on Magisk internal behaviors.
 
 ## Development road map
 
@@ -24,8 +20,8 @@ Warning: The current version of Zygisksu is UNSTABLE. You may suffer boot loop o
 - [x] [Inject] Stabilize injector
 - [x] [Inject] Unload
 - [x] [Daemon] Linker namespace
-- [ ] [Daemon] Separate zygiskd process
-- [ ] [Daemon] Handle 64 bit only devices
+- [x] [Daemon] Separate zygiskd process
+- [x] [Daemon] Handle 64 bit only devices
 - [ ] [Daemon] Handle zygote death
 
 ## Running on Magisk
