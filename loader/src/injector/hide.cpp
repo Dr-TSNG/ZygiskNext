@@ -11,11 +11,10 @@ static void lazy_unmount(const char* mountpoint) {
         LOGD("Unmounted (%s)", mountpoint);
 }
 
-#define OVERLAY_MNT(dir) (mentry->mnt_type == "overlay"sv && std::string_view(mentry->mnt_dir).starts_with("/" #dir))
-
 void revert_unmount() {
     parse_mnt("/proc/self/mounts", [](mntent* mentry) {
-        if (OVERLAY_MNT("system") || OVERLAY_MNT("vendor") || OVERLAY_MNT("product") || OVERLAY_MNT("system_ext")) {
+        if (mentry->mnt_fsname == "/data/adb/ksu/modules"sv ||
+            std::string_view(mentry->mnt_opts).find("/data/adb/ksu/modules") != std::string_view::npos) {
             lazy_unmount(mentry->mnt_fsname);
         }
         return true;
