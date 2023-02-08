@@ -204,7 +204,17 @@ DCL_HOOK_FUNC(int, unshare, int flags) {
     return res;
 }
 
-/* Zygisksu changed: No android_log_close hook */
+// Close logd_fd if necessary to prevent crashing
+// For more info, check comments in zygisk_log_write
+DCL_HOOK_FUNC(void, android_log_close) {
+    if (g_ctx == nullptr) {
+        // Happens during un-managed fork like nativeForkApp, nativeForkUsap
+        logging::setfd(-1);
+    } else if (!g_ctx->flags[SKIP_FD_SANITIZATION]) {
+        logging::setfd(-1);
+    }
+    old_android_log_close();
+}
 
 // Last point before process secontext changes
 DCL_HOOK_FUNC(int, selinux_android_setcontext,
@@ -595,7 +605,7 @@ void HookContext::app_specialize_post() {
     // Cleanups
     env->ReleaseStringUTFChars(args.app->nice_name, process);
     g_ctx = nullptr;
-    /* Zygisksu changed: No android_log_close */
+    logging::setfd(-1);
 }
 
 void HookContext::unload_zygisk() {
@@ -668,7 +678,9 @@ void HookContext::nativeForkAndSpecialize_pre() {
 
     flags[APP_FORK_AND_SPECIALIZE] = true;
     /* Zygisksu changed: No args.app->fds_to_ignore check since we are Android 10+ */
-    flags[SKIP_FD_SANITIZATION] = true;
+    if (logging::getfd() != -1) {
+        exempted_fds.push_back(logging::getfd());
+    }
 
     fork_pre();
     if (pid == 0) {
@@ -729,7 +741,7 @@ void hook_functions() {
     PLT_HOOK_REGISTER(android_runtime_dev, android_runtime_inode, unshare);
     PLT_HOOK_REGISTER(android_runtime_dev, android_runtime_inode, jniRegisterNativeMethods);
     PLT_HOOK_REGISTER(android_runtime_dev, android_runtime_inode, selinux_android_setcontext);
-    /* Zygisksu changed: No android_log_close hook */
+    PLT_HOOK_REGISTER_SYM(android_runtime_dev, android_runtime_inode, "__android_log_close", android_log_close);
     hook_commit();
 
     // Remove unhooked methods

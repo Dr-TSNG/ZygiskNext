@@ -1,8 +1,6 @@
 # shellcheck disable=SC2034
 SKIPUNZIP=1
 
-ZYGISK_API="@ZYGISK_API@"
-
 if [ $BOOTMODE ] && [ "$KSU" == "true" ]; then
   ui_print "- Installing from KernelSU app"
 else
@@ -13,10 +11,16 @@ else
 fi
 
 VERSION=$(grep_prop version "${TMPDIR}/module.prop")
-ui_print "- Installing Zygisksu $VERSION (ZYGISK API $ZYGISK_API)"
+ui_print "- Installing Zygisksu $VERSION"
 
 # check KernelSU
-# ui_print "- KernelSU version: $KSU_VER ($KSU_VER_CODE)"
+ui_print "- KernelSU version: $KSU_VER ($KSU_VER_CODE)"
+if [ "$KSU_VER_CODE" -lt 10200 ]; then
+  ui_print "*********************************************************"
+  ui_print "! KernelSU version is too old!"
+  ui_print "! Please update KernelSU to latest version"
+  abort    "*********************************************************"
+fi
 
 # check android
 if [ "$API" -lt 29 ]; then
@@ -39,11 +43,20 @@ if [ ! -f "$TMPDIR/verify.sh" ]; then
   ui_print "*********************************************************"
   ui_print "! Unable to extract verify.sh!"
   ui_print "! This zip may be corrupted, please try downloading again"
-  abort "*********************************************************"
+  abort    "*********************************************************"
 fi
 . "$TMPDIR/verify.sh"
-extract "$ZIPFILE" 'customize.sh' "$TMPDIR/.vunzip"
-extract "$ZIPFILE" 'verify.sh' "$TMPDIR/.vunzip"
+extract "$ZIPFILE" 'customize.sh'  "$TMPDIR/.vunzip"
+extract "$ZIPFILE" 'verify.sh'     "$TMPDIR/.vunzip"
+extract "$ZIPFILE" 'sepolicy.rule' "$TMPDIR"
+
+ui_print "- Checking SELinux patches"
+if ! /data/adb/ksud sepolicy check "$TMPDIR/sepolicy.rule"; then
+  ui_print "*********************************************************"
+  ui_print "! Unable to apply SELinux patches!"
+  ui_print "! Your kernel may not support SELinux patch fully"
+  abort    "*********************************************************"
+fi
 
 ui_print "- Extracting module files"
 extract "$ZIPFILE" 'daemon.sh'       "$MODPATH"

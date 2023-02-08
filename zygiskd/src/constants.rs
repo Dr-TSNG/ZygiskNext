@@ -15,6 +15,7 @@ pub const PATH_DAEMON_LOCK: &str = concatcp!(PATH_ZYGISKSU_DIR, "/zygiskd.lock")
 #[repr(u8)]
 pub enum DaemonSocketAction {
     PingHeartbeat,
+    RequestLogcatFd,
     ReadNativeBridge,
     ReadModules,
     RequestCompanionSocket,

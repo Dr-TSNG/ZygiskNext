@@ -42,8 +42,9 @@ void Constructor() {
 
     std::string native_bridge;
     do {
-        LOGD("Ping heartbeat");
         if (!zygiskd::PingHeartbeat()) break;
+
+        logging::setfd(zygiskd::RequestLogcatFd());
 
         LOGI("Read native bridge");
         native_bridge = zygiskd::ReadNativeBridge();
@@ -63,32 +64,37 @@ void Constructor() {
         reinterpret_cast<void (*)(void*)>(entry)(handle);
     } while (false);
 
-    if (native_bridge.empty() || native_bridge == "0") return;
-    LOGI("Load original native bridge: %s", native_bridge.data());
-    sOriginalBridge = dlopen(native_bridge.data(), RTLD_NOW);
-    if (sOriginalBridge == nullptr) {
-        LOGE("dlopen failed: %s", dlerror());
-        return;
-    }
+    do {
+        if (native_bridge.empty() || native_bridge == "0") break;
 
-    auto* original_native_bridge_itf = dlsym(sOriginalBridge, "NativeBridgeItf");
-    if (original_native_bridge_itf == nullptr) {
-        LOGE("dlsym failed: %s", dlerror());
-        return;
-    }
+        LOGI("Load original native bridge: %s", native_bridge.data());
+        sOriginalBridge = dlopen(native_bridge.data(), RTLD_NOW);
+        if (sOriginalBridge == nullptr) {
+            LOGE("dlopen failed: %s", dlerror());
+            break;
+        }
 
-    long sdk = 0;
-    char value[PROP_VALUE_MAX + 1];
-    if (__system_property_get("ro.build.version.sdk", value) > 0) {
-        sdk = strtol(value, nullptr, 10);
-    }
+        auto* original_native_bridge_itf = dlsym(sOriginalBridge, "NativeBridgeItf");
+        if (original_native_bridge_itf == nullptr) {
+            LOGE("dlsym failed: %s", dlerror());
+            break;
+        }
 
-    auto callbacks_size = 0;
-    if (sdk >= __ANDROID_API_R__) {
-        callbacks_size = sizeof(NativeBridgeCallbacks<__ANDROID_API_R__>);
-    } else if (sdk == __ANDROID_API_Q__) {
-        callbacks_size = sizeof(NativeBridgeCallbacks<__ANDROID_API_Q__>);
-    }
+        long sdk = 0;
+        char value[PROP_VALUE_MAX + 1];
+        if (__system_property_get("ro.build.version.sdk", value) > 0) {
+            sdk = strtol(value, nullptr, 10);
+        }
 
-    memcpy(NativeBridgeItf, original_native_bridge_itf, callbacks_size);
+        auto callbacks_size = 0;
+        if (sdk >= __ANDROID_API_R__) {
+            callbacks_size = sizeof(NativeBridgeCallbacks<__ANDROID_API_R__>);
+        } else if (sdk == __ANDROID_API_Q__) {
+            callbacks_size = sizeof(NativeBridgeCallbacks<__ANDROID_API_Q__>);
+        }
+
+        memcpy(NativeBridgeItf, original_native_bridge_itf, callbacks_size);
+    } while (false);
+
+    logging::setfd(-1);
 }

@@ -1,3 +1,4 @@
+#include "daemon.h"
 #include "logging.h"
 #include "zygisk.hpp"
 #include "module.hpp"
@@ -17,8 +18,10 @@ static void zygisk_cleanup_wait() {
 
 extern "C" [[gnu::visibility("default")]]
 void entry(void *handle) {
-    LOGD("Load injector successfully");
+    logging::setfd(zygiskd::RequestLogcatFd());
     self_handle = handle;
+
+    LOGD("Load injector successfully");
     hook_functions();
 }
 

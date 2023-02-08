@@ -8,10 +8,9 @@ use nix::{
     unistd::getppid,
 };
 use passfd::FdPassingExt;
-use std::io::Write;
 use std::sync::Arc;
 use std::thread;
-use std::ffi::c_void;
+use std::ffi::{c_char, c_void};
 use std::fs;
 use std::os::unix::{
     net::{UnixListener, UnixStream},
@@ -187,15 +186,28 @@ fn handle_daemon_action(mut stream: UnixStream, context: &Context) -> Result<()>
         DaemonSocketAction::PingHeartbeat => {
             restore_native_bridge()?;
         }
+        DaemonSocketAction::RequestLogcatFd => {
+            loop {
+                let level = match stream.read_u8() {
+                    Ok(level) => level,
+                    Err(_) => break,
+                };
+                let tag = stream.read_string()?;
+                let tag = std::ffi::CString::new(tag)?;
+                let message = stream.read_string()?;
+                let message = std::ffi::CString::new(message)?;
+                unsafe {
+                    __android_log_print(level as i32, tag.as_ptr(), message.as_ptr());
+                }
+            }
+        }
         DaemonSocketAction::ReadNativeBridge => {
-            stream.write_usize(context.native_bridge.len())?;
-            stream.write_all(context.native_bridge.as_bytes())?;
+            stream.write_string(&context.native_bridge)?;
         }
         DaemonSocketAction::ReadModules => {
             stream.write_usize(context.modules.len())?;
             for module in context.modules.iter() {
-                stream.write_usize(module.name.len())?;
-                stream.write_all(module.name.as_bytes())?;
+                stream.write_string(&module.name)?;
                 stream.send_fd(module.memfd.as_raw_fd())?;
             }
         }
@@ -224,4 +236,8 @@ fn handle_daemon_action(mut stream: UnixStream, context: &Context) -> Result<()>
         }
     }
     Ok(())
+}
+
+extern "C" {
+    fn __android_log_print(prio: i32, tag: *const c_char, fmt: *const c_char, ...) -> i32;
 }

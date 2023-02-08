@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <string_view>
 
 #include "logging.h"
 
@@ -21,4 +22,6 @@ namespace socket_utils {
     int recv_fd(int fd);
 
     bool write_usize(int fd, size_t val);
+
+    bool write_string(int fd, std::string_view str);
 }

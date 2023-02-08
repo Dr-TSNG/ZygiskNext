@@ -110,6 +110,10 @@ namespace socket_utils {
         return write_exact<uint8_t>(fd, val);
     }
 
+    bool write_string(int fd, std::string_view str) {
+        return write_usize(fd, str.size()) && str.size() == xwrite(fd, str.data(), str.size());
+    }
+
     int recv_fd(int sockfd) {
         char cmsgbuf[CMSG_SPACE(sizeof(int))];
 

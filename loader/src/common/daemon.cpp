@@ -29,7 +29,6 @@ namespace zygiskd {
     }
 
     bool PingHeartbeat() {
-        LOGD("Daemon socket: %s", kZygiskSocket.data());
         UniqueFd fd = Connect(5);
         if (fd == -1) {
             PLOGE("Connect to zygiskd");
@@ -37,6 +36,16 @@ namespace zygiskd {
         }
         socket_utils::write_u8(fd, (uint8_t) SocketAction::PingHeartBeat);
         return true;
+    }
+
+    int RequestLogcatFd() {
+        int fd = Connect(1);
+        if (fd == -1) {
+            PLOGE("RequestLogcatFd");
+            return -1;
+        }
+        socket_utils::write_u8(fd, (uint8_t) SocketAction::RequestLogcatFd);
+        return fd;
     }
 
     std::string ReadNativeBridge() {

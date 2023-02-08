@@ -49,7 +49,6 @@ androidComponents.onVariants { variant ->
         from("$projectDir/src") {
             include("customize.sh", "daemon.sh")
             val tokens = mapOf(
-                "ZYGISK_API" to (verCode / 1000).toString(),
                 "DEBUG" to if (buildTypeLowered == "debug") "true" else "false"
             )
             filter<ReplaceTokens>("tokens" to tokens)

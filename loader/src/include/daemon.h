@@ -52,6 +52,7 @@ namespace zygiskd {
 
     enum class SocketAction {
         PingHeartBeat,
+        RequestLogcatFd,
         ReadNativeBridge,
         ReadModules,
         RequestCompanionSocket,
@@ -59,6 +60,8 @@ namespace zygiskd {
     };
 
     bool PingHeartbeat();
+
+    int RequestLogcatFd();
 
     std::string ReadNativeBridge();
 
