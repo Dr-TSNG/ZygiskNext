@@ -43,7 +43,7 @@ fn main() {
     let cli = Args::parse();
     let result = match cli.command {
         Commands::Watchdog => watchdog::entry(),
-        Commands::Daemon => zygiskd::entry(lp_select!(false, true)),
+        Commands::Daemon => zygiskd::entry(),
         Commands::Companion { fd } => companion::entry(fd),
     };
 

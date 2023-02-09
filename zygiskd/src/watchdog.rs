@@ -1,4 +1,4 @@
-use crate::constants;
+use crate::{constants, utils};
 use anyhow::{bail, Result};
 use nix::fcntl::{flock, FlockArg};
 use nix::unistd::{getgid, getuid};
@@ -6,6 +6,8 @@ use std::os::unix::prelude::AsRawFd;
 use std::process::{Child, Command};
 use std::sync::mpsc;
 use std::{fs, thread};
+use std::path::Path;
+use std::time::Duration;
 
 static mut LOCK_FILE: Option<fs::File> = None;
 
@@ -61,7 +63,9 @@ fn spawn_daemon() -> Result<()> {
     let daemon32 = Command::new(constants::PATH_ZYGISKD32).arg("daemon").spawn();
     let daemon64 = Command::new(constants::PATH_ZYGISKD64).arg("daemon").spawn();
     let (sender, receiver) = mpsc::channel();
-    let spawn = |mut daemon: Child| {
+    let mut waiting = vec![];
+    let mut spawn = |mut daemon: Child, socket: &'static str| {
+        waiting.push(socket);
         let sender = sender.clone();
         thread::spawn(move || {
             let result = daemon.wait().unwrap();
@@ -70,8 +74,22 @@ fn spawn_daemon() -> Result<()> {
             sender.send(()).unwrap();
         });
     };
-    if let Ok(it) = daemon32 { spawn(it) }
-    if let Ok(it) = daemon64 { spawn(it) }
+    if let Ok(it) = daemon32 { spawn(it, "/dev/socket/zygote_secondary") }
+    if let Ok(it) = daemon64 { spawn(it, "/dev/socket/zygote") }
+
+    waiting.into_iter().for_each(|socket| wait_zygote(socket));
+    log::info!("Zygote ready, restore native bridge");
+    utils::restore_native_bridge()?;
+
     let _ = receiver.recv();
     bail!("Daemon process died");
+}
+
+fn wait_zygote(socket: &str) -> () {
+    let path = Path::new(socket);
+    loop {
+        if path.exists() { return; }
+        log::debug!("{socket} not exists, wait for 1s...");
+        thread::sleep(Duration::from_secs(1));
+    }
 }

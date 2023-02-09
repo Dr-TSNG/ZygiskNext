@@ -1,6 +1,6 @@
 use crate::constants::DaemonSocketAction;
-use crate::utils::{restore_native_bridge, UnixStreamExt};
-use crate::{constants, utils};
+use crate::utils::UnixStreamExt;
+use crate::{constants, lp_select, utils};
 use anyhow::{bail, Result};
 use memfd::Memfd;
 use nix::{
@@ -31,10 +31,10 @@ struct Context {
     modules: Vec<Module>,
 }
 
-pub fn entry(is64: bool) -> Result<()> {
+pub fn entry() -> Result<()> {
     unsafe { libc::prctl(libc::PR_SET_PDEATHSIG, libc::SIGKILL) };
 
-    let arch = get_arch(is64)?;
+    let arch = get_arch()?;
     log::debug!("Daemon architecture: {arch}");
 
     log::info!("Load modules");
@@ -47,7 +47,7 @@ pub fn entry(is64: bool) -> Result<()> {
     let context = Arc::new(context);
 
     log::info!("Create socket");
-    let listener = create_daemon_socket(is64)?;
+    let listener = create_daemon_socket()?;
 
     log::info!("Handle zygote connections");
     for stream in listener.incoming() {
@@ -63,18 +63,16 @@ pub fn entry(is64: bool) -> Result<()> {
     Ok(())
 }
 
-fn get_arch(is64: bool) -> Result<&'static str> {
+fn get_arch() -> Result<&'static str> {
     let output = Command::new("getprop").arg("ro.product.cpu.abi").output()?;
     let system_arch = String::from_utf8(output.stdout)?;
-    let is_arm = system_arch.contains("arm");
-    let is_x86 = system_arch.contains("x86");
-    match (is_arm, is_x86, is64) {
-        (true, _, false) => Ok("armeabi-v7a"),
-        (true, _, true) => Ok("arm64-v8a"),
-        (_, true, false) => Ok("x86"),
-        (_, true, true) => Ok("x86_64"),
-        _ => bail!("Unsupported system architecture: {}", system_arch),
+    if system_arch.contains("arm") {
+        return Ok(lp_select!("armeabi-v7a", "arm64-v8a"))
     }
+    if system_arch.contains("x86") {
+        return Ok(lp_select!("x86", "x86_64"))
+    }
+    bail!("Unsupported system architecture: {}", system_arch);
 }
 
 fn load_modules(arch: &str) -> Result<Vec<Module>> {
@@ -137,9 +135,9 @@ fn create_memfd(name: &str, so_path: &PathBuf) -> Result<Memfd> {
     Ok(memfd)
 }
 
-fn create_daemon_socket(is64: bool) -> Result<UnixListener> {
+fn create_daemon_socket() -> Result<UnixListener> {
     utils::set_socket_create_context("u:r:zygote:s0")?;
-    let suffix = if is64 { "zygiskd64" } else { "zygiskd32" };
+    let suffix = lp_select!("zygiskd32", "zygiskd64");
     let name = String::from(suffix) + constants::SOCKET_PLACEHOLDER;
     let listener = utils::abstract_namespace_socket(&name)?;
     log::debug!("Daemon socket: {name}");
@@ -175,7 +173,7 @@ fn handle_daemon_action(mut stream: UnixStream, context: &Context) -> Result<()>
     log::trace!("New daemon action {:?}", action);
     match action {
         DaemonSocketAction::PingHeartbeat => {
-            restore_native_bridge()?;
+            // Do nothing
         }
         DaemonSocketAction::RequestLogcatFd => {
             loop {
