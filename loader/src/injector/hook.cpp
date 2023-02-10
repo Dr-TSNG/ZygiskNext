@@ -145,6 +145,7 @@ namespace {
 
 jclass gClassRef;
 jmethodID class_getName;
+decltype(JNINativeInterface::RegisterNatives) old_RegisterNatives = nullptr;
 string get_class_name(JNIEnv *env, jclass clazz) {
     if (!gClassRef) {
         jclass cls = env->FindClass("java/lang/Class");
@@ -172,11 +173,29 @@ jint env_RegisterNatives(
     return old_functions->RegisterNatives(env, clazz, newMethods.get() ?: methods, numMethods);
 }
 
-DCL_HOOK_FUNC(int, jniRegisterNativeMethods,
-        JNIEnv *env, const char *className, const JNINativeMethod *methods, int numMethods) {
-    LOGV("jniRegisterNativeMethods [%s]\n", className);
-    auto newMethods = hookAndSaveJNIMethods(className, methods, numMethods);
-    return old_jniRegisterNativeMethods(env, className, newMethods.get() ?: methods, numMethods);
+DCL_HOOK_FUNC(void, androidSetCreateThreadFunc, void* func) {
+    LOGD("androidSetCreateThreadFunc\n");
+    do {
+        auto get_created_java_vms = reinterpret_cast<jint (*)(JavaVM **, jsize, jsize *)>(
+                dlsym(RTLD_DEFAULT, "JNI_GetCreatedJavaVMs"));
+        if (!get_created_java_vms) break;
+        JavaVM *vm = nullptr;
+        jsize num = 0;
+        jint res = get_created_java_vms(&vm, 1, &num);
+        if (res != JNI_OK || vm == nullptr) break;
+        JNIEnv *env = nullptr;
+        res = vm->GetEnv(reinterpret_cast<void **>(&env), JNI_VERSION_1_6);
+        if (res != JNI_OK || env == nullptr) break;
+        new_functions = new JNINativeInterface();
+        memcpy(new_functions, env->functions, sizeof(*new_functions));
+        old_RegisterNatives = new_functions->RegisterNatives;
+        new_functions->RegisterNatives = &env_RegisterNatives;
+
+        // Replace the function table in JNIEnv to hook RegisterNatives
+        old_functions = env->functions;
+        env->functions = new_functions;
+    } while(false);
+    old_androidSetCreateThreadFunc(func);
 }
 
 // Skip actual fork and return cached result if applicable
@@ -225,58 +244,6 @@ DCL_HOOK_FUNC(int, selinux_android_setcontext,
     return old_selinux_android_setcontext(uid, isSystemServer, seinfo, pkgname);
 }
 
-// -----------------------------------------------------------------
-
-// The original android::AppRuntime virtual table
-void **gAppRuntimeVTable;
-
-// This method is a trampoline for hooking JNIEnv->RegisterNatives
-void onVmCreated(void *self, JNIEnv* env) {
-    LOGD("AppRuntime::onVmCreated\n");
-
-    // Restore virtual table
-    auto new_table = *reinterpret_cast<void***>(self);
-    *reinterpret_cast<void***>(self) = gAppRuntimeVTable;
-    delete[] new_table;
-
-    new_functions = new JNINativeInterface();
-    memcpy(new_functions, env->functions, sizeof(*new_functions));
-    new_functions->RegisterNatives = &env_RegisterNatives;
-
-    // Replace the function table in JNIEnv to hook RegisterNatives
-    old_functions = env->functions;
-    env->functions = new_functions;
-}
-
-template<int N>
-void vtable_entry(void *self, JNIEnv* env) {
-    // The first invocation will be onVmCreated. It will also restore the vtable.
-    onVmCreated(self, env);
-    // Call original function
-    reinterpret_cast<decltype(&onVmCreated)>(gAppRuntimeVTable[N])(self, env);
-}
-
-/* Zygisksu changed: AndroidRuntime setArgv0 before native bridge loaded */
-void hookVirtualTable(void *self) {
-    LOGD("hook AndroidRuntime virtual table\n");
-
-    // We don't know which entry is onVmCreated, so overwrite every one
-    // We also don't know the size of the vtable, but 8 is more than enough
-    auto new_table = new void*[8];
-    new_table[0] = reinterpret_cast<void*>(&vtable_entry<0>);
-    new_table[1] = reinterpret_cast<void*>(&vtable_entry<1>);
-    new_table[2] = reinterpret_cast<void*>(&vtable_entry<2>);
-    new_table[3] = reinterpret_cast<void*>(&vtable_entry<3>);
-    new_table[4] = reinterpret_cast<void*>(&vtable_entry<4>);
-    new_table[5] = reinterpret_cast<void*>(&vtable_entry<5>);
-    new_table[6] = reinterpret_cast<void*>(&vtable_entry<6>);
-    new_table[7] = reinterpret_cast<void*>(&vtable_entry<7>);
-
-    // Swizzle C++ vtable to hook virtual function
-    gAppRuntimeVTable = *reinterpret_cast<void***>(self);
-    *reinterpret_cast<void***>(self) = new_table;
-}
-
 #undef DCL_HOOK_FUNC
 
 // -----------------------------------------------------------------
@@ -312,7 +279,7 @@ void hookJniNativeMethods(JNIEnv *env, const char *clz, JNINativeMethod *methods
     if (hooks.empty())
         return;
 
-    old_jniRegisterNativeMethods(env, clz, hooks.data(), hooks.size());
+    old_RegisterNatives(env, env->FindClass(clz), hooks.data(), hooks.size());
 }
 
 ZygiskModule::ZygiskModule(int id, void *handle, void *entry)
@@ -739,35 +706,16 @@ void hook_functions() {
 
     PLT_HOOK_REGISTER(android_runtime_dev, android_runtime_inode, fork);
     PLT_HOOK_REGISTER(android_runtime_dev, android_runtime_inode, unshare);
-    PLT_HOOK_REGISTER(android_runtime_dev, android_runtime_inode, jniRegisterNativeMethods);
     PLT_HOOK_REGISTER(android_runtime_dev, android_runtime_inode, selinux_android_setcontext);
+    PLT_HOOK_REGISTER(android_runtime_dev, android_runtime_inode, androidSetCreateThreadFunc);
     PLT_HOOK_REGISTER_SYM(android_runtime_dev, android_runtime_inode, "__android_log_close", android_log_close);
     hook_commit();
 
     // Remove unhooked methods
     plt_hook_list->erase(
             std::remove_if(plt_hook_list->begin(), plt_hook_list->end(),
-            [](auto &t) { return *std::get<3>(t) == nullptr;}),
+                           [](auto &t) { return *std::get<3>(t) == nullptr;}),
             plt_hook_list->end());
-
-    /* Zygisksu changed: AndroidRuntime setArgv0 before native bridge loaded */
-    if (old_jniRegisterNativeMethods == nullptr) {
-        do {
-            LOGD("jniRegisterNativeMethods not hooked, using fallback\n");
-            constexpr char sig[] = "_ZN7android14AndroidRuntime10getRuntimeEv";
-            auto *GetRuntime = (void*(*)()) dlsym(RTLD_DEFAULT, sig);
-            if (GetRuntime == nullptr) {
-                LOGE("GetRuntime is nullptr");
-                break;
-            }
-            hookVirtualTable(GetRuntime());
-        } while (false);
-
-        // We still need old_jniRegisterNativeMethods as other code uses it
-        // android::AndroidRuntime::registerNativeMethods(_JNIEnv*, const char*, const JNINativeMethod*, int)
-        constexpr char sig[] = "_ZN7android14AndroidRuntime21registerNativeMethodsEP7_JNIEnvPKcPK15JNINativeMethodi";
-        *(void **) &old_jniRegisterNativeMethods = dlsym(RTLD_DEFAULT, sig);
-    }
 }
 
 static bool unhook_functions() {
@@ -785,8 +733,8 @@ static bool unhook_functions() {
 
     // Unhook JNI methods
     for (const auto &[clz, methods] : *jni_hook_list) {
-        if (!methods.empty() && old_jniRegisterNativeMethods(
-                g_ctx->env, clz.data(), methods.data(), methods.size()) != 0) {
+        if (!methods.empty() && old_RegisterNatives(
+                g_ctx->env, g_ctx->env->FindClass(clz.data()), methods.data(), methods.size()) != 0) {
             LOGE("Failed to restore JNI hook of class [%s]\n", clz.data());
             success = false;
         }
