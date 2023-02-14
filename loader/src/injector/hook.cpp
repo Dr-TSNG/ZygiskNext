@@ -112,8 +112,8 @@ hash_map<xstring, tree_map<xstring, tree_map<xstring, void *>>> *jni_method_map;
 
 // Current context
 HookContext *g_ctx;
-const JNINativeInterface *old_functions;
-JNINativeInterface *new_functions;
+const JNINativeInterface *old_functions = nullptr;
+JNINativeInterface *new_functions = nullptr;
 
 } // namespace
 
@@ -143,16 +143,8 @@ if (methods[i].name == #method##sv) {                                           
 
 namespace {
 
-jclass gClassRef;
-jmethodID class_getName;
-decltype(JNINativeInterface::RegisterNatives) old_RegisterNatives = nullptr;
 string get_class_name(JNIEnv *env, jclass clazz) {
-    if (!gClassRef) {
-        jclass cls = env->FindClass("java/lang/Class");
-        gClassRef = (jclass) env->NewGlobalRef(cls);
-        env->DeleteLocalRef(cls);
-        class_getName = env->GetMethodID(gClassRef, "getName", "()Ljava/lang/String;");
-    }
+    static auto class_getName = env->GetMethodID(env->FindClass("java/lang/Class"), "getName", "()Ljava/lang/String;");
     auto nameRef = (jstring) env->CallObjectMethod(clazz, class_getName);
     const char *name = env->GetStringUTFChars(nameRef, nullptr);
     string className(name);
@@ -178,7 +170,23 @@ DCL_HOOK_FUNC(void, androidSetCreateThreadFunc, void* func) {
     do {
         auto get_created_java_vms = reinterpret_cast<jint (*)(JavaVM **, jsize, jsize *)>(
                 dlsym(RTLD_DEFAULT, "JNI_GetCreatedJavaVMs"));
-        if (!get_created_java_vms) break;
+        if (!get_created_java_vms) {
+            for (auto &map: lsplt::MapInfo::Scan()) {
+                if (!map.path.ends_with("/libnativehelper.so")) continue;
+                void *h = dlopen(map.path.data(), RTLD_LAZY);
+                if (!h) {
+                    LOGW("cannot dlopen libnativehelper.so: %s\n", dlerror());
+                    break;
+                }
+                get_created_java_vms = reinterpret_cast<decltype(get_created_java_vms)>(dlsym(h, "JNI_GetCreatedJavaVMs"));
+                dlclose(h);
+                break;
+            }
+            if (!get_created_java_vms) {
+                LOGW("JNI_GetCreatedJavaVMs not found\n");
+                break;
+            }
+        }
         JavaVM *vm = nullptr;
         jsize num = 0;
         jint res = get_created_java_vms(&vm, 1, &num);
@@ -186,15 +194,14 @@ DCL_HOOK_FUNC(void, androidSetCreateThreadFunc, void* func) {
         JNIEnv *env = nullptr;
         res = vm->GetEnv(reinterpret_cast<void **>(&env), JNI_VERSION_1_6);
         if (res != JNI_OK || env == nullptr) break;
-        new_functions = new JNINativeInterface();
+        default_new(new_functions);
         memcpy(new_functions, env->functions, sizeof(*new_functions));
-        old_RegisterNatives = new_functions->RegisterNatives;
         new_functions->RegisterNatives = &env_RegisterNatives;
 
         // Replace the function table in JNIEnv to hook RegisterNatives
         old_functions = env->functions;
         env->functions = new_functions;
-    } while(false);
+    } while (false);
     old_androidSetCreateThreadFunc(func);
 }
 
@@ -279,7 +286,7 @@ void hookJniNativeMethods(JNIEnv *env, const char *clz, JNINativeMethod *methods
     if (hooks.empty())
         return;
 
-    old_RegisterNatives(env, env->FindClass(clz), hooks.data(), hooks.size());
+    old_functions->RegisterNatives(env, env->FindClass(clz), hooks.data(), static_cast<int>(hooks.size()));
 }
 
 ZygiskModule::ZygiskModule(int id, void *handle, void *entry)
@@ -468,11 +475,11 @@ void HookContext::sanitize_fds() {
             if (exempted_fds.empty())
                 return nullptr;
 
-            jintArray array = env->NewIntArray(off + exempted_fds.size());
+            jintArray array = env->NewIntArray(static_cast<int>(off + exempted_fds.size()));
             if (array == nullptr)
                 return nullptr;
 
-            env->SetIntArrayRegion(array, off, exempted_fds.size(), exempted_fds.data());
+            env->SetIntArrayRegion(array, off, static_cast<int>(exempted_fds.size()), exempted_fds.data());
             for (int fd : exempted_fds) {
                 if (fd >= 0 && fd < MAX_FD_SIZE) {
                     allowed_fds[fd] = true;
@@ -724,17 +731,14 @@ static bool unhook_functions() {
     // Restore JNIEnv
     if (g_ctx->env->functions == new_functions) {
         g_ctx->env->functions = old_functions;
-        if (gClassRef) {
-            g_ctx->env->DeleteGlobalRef(gClassRef);
-            gClassRef = nullptr;
-            class_getName = nullptr;
-        }
+        delete new_functions;
     }
 
     // Unhook JNI methods
     for (const auto &[clz, methods] : *jni_hook_list) {
-        if (!methods.empty() && old_RegisterNatives(
-                g_ctx->env, g_ctx->env->FindClass(clz.data()), methods.data(), methods.size()) != 0) {
+        if (!methods.empty() && g_ctx->env->RegisterNatives(
+                g_ctx->env->FindClass(clz.data()), methods.data(),
+                static_cast<int>(methods.size())) != 0) {
             LOGE("Failed to restore JNI hook of class [%s]\n", clz.data());
             success = false;
         }
