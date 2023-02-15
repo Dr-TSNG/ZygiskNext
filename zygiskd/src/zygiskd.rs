@@ -77,7 +77,7 @@ fn get_arch() -> Result<&'static str> {
 
 fn load_modules(arch: &str) -> Result<Vec<Module>> {
     let mut modules = Vec::new();
-    let dir = match fs::read_dir(constants::PATH_KSU_MODULE_DIR) {
+    let dir = match fs::read_dir(constants::PATH_MODULE_DIR) {
         Ok(dir) => dir,
         Err(e) => {
             log::warn!("Failed reading modules directory: {}", e);
@@ -137,8 +137,8 @@ fn create_memfd(name: &str, so_path: &PathBuf) -> Result<Memfd> {
 
 fn create_daemon_socket() -> Result<UnixListener> {
     utils::set_socket_create_context("u:r:zygote:s0")?;
-    let suffix = lp_select!("zygiskd32", "zygiskd64");
-    let name = String::from(suffix) + constants::SOCKET_PLACEHOLDER;
+    let prefix = lp_select!("zygiskd32", "zygiskd64");
+    let name = String::from(prefix) + constants::SOCKET_PLACEHOLDER;
     let listener = utils::abstract_namespace_socket(&name)?;
     log::debug!("Daemon socket: {name}");
     Ok(listener)
@@ -221,7 +221,7 @@ fn handle_daemon_action(mut stream: UnixStream, context: &Context) -> Result<()>
         DaemonSocketAction::GetModuleDir => {
             let index = stream.read_usize()?;
             let module = &context.modules[index];
-            let dir = format!("{}/{}", constants::PATH_KSU_MODULE_DIR, module.name);
+            let dir = format!("{}/{}", constants::PATH_MODULE_DIR, module.name);
             let dir = fs::File::open(dir)?;
             stream.send_fd(dir.as_raw_fd())?;
         }

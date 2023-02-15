@@ -1,15 +1,14 @@
 use crate::{constants, utils};
 use anyhow::{bail, Result};
-use nix::fcntl::{flock, FlockArg};
 use nix::unistd::{getgid, getuid};
-use std::os::unix::prelude::AsRawFd;
 use std::process::{Child, Command};
 use std::sync::mpsc;
 use std::{fs, thread};
+use std::os::unix::net::UnixListener;
 use std::path::Path;
 use std::time::Duration;
 
-static mut LOCK_FILE: Option<fs::File> = None;
+static mut LOCK: Option<UnixListener> = None;
 
 pub fn entry() -> Result<()> {
     log::info!("Start zygisksu watchdog");
@@ -32,7 +31,6 @@ fn check_permission() -> Result<()> {
 
     let context = fs::read_to_string("/proc/self/attr/current")?;
     let context = context.trim_end_matches('\0');
-    //TODO: remove magisk context after debug finished
     if context != "u:r:su:s0" && context != "u:r:magisk:s0" {
         bail!("SELinux context incorrect: {context}");
     }
@@ -42,19 +40,10 @@ fn check_permission() -> Result<()> {
 
 fn ensure_single_instance() -> Result<()> {
     log::info!("Ensure single instance");
-    let metadata = fs::metadata(constants::PATH_ZYGISKSU_DIR);
-    if metadata.is_err() || !metadata.unwrap().is_dir() {
-        bail!("Zygisksu is not installed");
-    }
-    unsafe {
-        match fs::File::create(constants::PATH_DAEMON_LOCK) {
-            Ok(file) => LOCK_FILE = Some(file),
-            Err(e) => bail!("Failed to open lock file: {e}"),
-        };
-        let fd = LOCK_FILE.as_ref().unwrap().as_raw_fd();
-        if let Err(e) = flock(fd, FlockArg::LockExclusiveNonblock) {
-            bail!("Failed to acquire lock: {e}. Maybe another instance is running?");
-        }
+    let name = String::from("zygiskwd") + constants::SOCKET_PLACEHOLDER;
+    match utils::abstract_namespace_socket(&name) {
+        Ok(socket) => unsafe { LOCK = Some(socket) },
+        Err(e) => bail!("Failed to acquire lock: {e}. Maybe another instance is running?")
     }
     Ok(())
 }

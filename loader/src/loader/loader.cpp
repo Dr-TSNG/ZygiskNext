@@ -43,9 +43,9 @@ void Constructor() {
     std::string native_bridge;
     do {
         if (!zygiskd::PingHeartbeat()) break;
-
+#ifdef NDEBUG
         logging::setfd(zygiskd::RequestLogcatFd());
-
+#endif
         LOGI("Read native bridge");
         native_bridge = zygiskd::ReadNativeBridge();
 

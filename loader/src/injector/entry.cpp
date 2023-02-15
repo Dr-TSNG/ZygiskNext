@@ -18,7 +18,9 @@ static void zygisk_cleanup_wait() {
 
 extern "C" [[gnu::visibility("default")]]
 void entry(void *handle) {
+#ifdef NDEBUG
     logging::setfd(zygiskd::RequestLogcatFd());
+#endif
     self_handle = handle;
 
     LOGD("Load injector successfully");

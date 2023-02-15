@@ -1,7 +1,6 @@
 #!/system/bin/sh
 
 DEBUG=@DEBUG@
-MODDIR=${0%/*}
 
 # shellcheck disable=SC2155
 export NATIVE_BRIDGE=$(getprop ro.dalvik.vm.native.bridge)
@@ -9,4 +8,4 @@ export NATIVE_BRIDGE=$(getprop ro.dalvik.vm.native.bridge)
 
 log -p i -t "zygisksu" "Start watchdog"
 resetprop ro.dalvik.vm.native.bridge libzygiskloader.so
-exec "$MODDIR/bin/zygiskwd" "watchdog" >/dev/null 2>&1
+exec "bin/zygiskwd" "watchdog" >/dev/null 2>&1

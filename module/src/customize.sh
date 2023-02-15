@@ -63,7 +63,6 @@ extract "$ZIPFILE" 'daemon.sh'       "$MODPATH"
 extract "$ZIPFILE" 'module.prop'     "$MODPATH"
 extract "$ZIPFILE" 'post-fs-data.sh' "$MODPATH"
 extract "$ZIPFILE" 'sepolicy.rule'   "$MODPATH"
-extract "$ZIPFILE" 'service.sh'      "$MODPATH"
 
 HAS32BIT=false && [ -d "/system/lib" ] && HAS32BIT=true
 HAS64BIT=false && [ -d "/system/lib64" ] && HAS64BIT=true

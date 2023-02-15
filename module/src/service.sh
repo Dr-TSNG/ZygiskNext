@@ -1,1 +1,0 @@
-#!/system/bin/sh
