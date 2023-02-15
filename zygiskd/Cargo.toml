@@ -10,12 +10,15 @@ android_logger = "0.12.0"
 anyhow = { version = "1.0.68", features = ["backtrace"] }
 clap = { version = "4.1.4", features = ["derive"] }
 const_format = "0.2.5"
+lazy_static = "1.4.0"
 log = "0.4.17"
 memfd = "0.6.2"
 nix = "0.26.2"
 num_enum = "0.5.9"
 passfd = "0.1.5"
 rand = "0.8.5"
+
+binder = { path = "src/external/binder_rs/binder" }
 
 [profile.release]
 strip = true

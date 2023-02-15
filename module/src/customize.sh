@@ -1,6 +1,8 @@
 # shellcheck disable=SC2034
 SKIPUNZIP=1
 
+DEBUG=@DEBUG@
+
 if [ $BOOTMODE ] && [ "$KSU" == "true" ]; then
   ui_print "- Installing from KernelSU app"
 else
@@ -14,8 +16,8 @@ VERSION=$(grep_prop version "${TMPDIR}/module.prop")
 ui_print "- Installing Zygisksu $VERSION"
 
 # check KernelSU
-ui_print "- KernelSU version: $KSU_VER ($KSU_VER_CODE)"
-if [ "$KSU_VER_CODE" -lt 10200 ]; then
+ui_print "- KernelSU version: $KSU_KERNEL_VER_CODE (kernel) + $KSU_VER_CODE (ksud)"
+if [ "$KSU_KERNEL_VER_CODE" -lt 10575 ]; then
   ui_print "*********************************************************"
   ui_print "! KernelSU version is too old!"
   ui_print "! Please update KernelSU to latest version"
@@ -25,7 +27,7 @@ fi
 # check android
 if [ "$API" -lt 29 ]; then
   ui_print "! Unsupported sdk: $API"
-  abort "! Minimal supported sdk is 29 (Android 10.0)"
+  abort "! Minimal supported sdk is 29 (Android 10)"
 else
   ui_print "- Device sdk: $API"
 fi
@@ -51,7 +53,7 @@ extract "$ZIPFILE" 'verify.sh'     "$TMPDIR/.vunzip"
 extract "$ZIPFILE" 'sepolicy.rule' "$TMPDIR"
 
 ui_print "- Checking SELinux patches"
-if ! /data/adb/ksud sepolicy check "$TMPDIR/sepolicy.rule"; then
+if ! check_sepolicy "$TMPDIR/sepolicy.rule"; then
   ui_print "*********************************************************"
   ui_print "! Unable to apply SELinux patches!"
   ui_print "! Your kernel may not support SELinux patch fully"
@@ -110,17 +112,19 @@ else
   fi
 fi
 
-ui_print "- Hex patching"
-SOCKET_PATCH=$(tr -dc 'a-f0-9' </dev/urandom | head -c 18)
-if [ "$HAS32BIT" = true ]; then
-  sed -i "s/socket_placeholder/$SOCKET_PATCH/g" "$MODPATH/bin/zygiskd32"
-  sed -i "s/socket_placeholder/$SOCKET_PATCH/g" "$MODPATH/system/lib/libinjector.so"
-  sed -i "s/socket_placeholder/$SOCKET_PATCH/g" "$MODPATH/system/lib/libzygiskloader.so"
-fi
-if [ "$HAS64BIT" = true ]; then
-  sed -i "s/socket_placeholder/$SOCKET_PATCH/g" "$MODPATH/bin/zygiskd64"
-  sed -i "s/socket_placeholder/$SOCKET_PATCH/g" "$MODPATH/system/lib64/libinjector.so"
-  sed -i "s/socket_placeholder/$SOCKET_PATCH/g" "$MODPATH/system/lib64/libzygiskloader.so"
+if [ $DEBUG = false ]; then
+  ui_print "- Hex patching"
+  SOCKET_PATCH=$(tr -dc 'a-f0-9' </dev/urandom | head -c 18)
+  if [ "$HAS32BIT" = true ]; then
+    sed -i "s/socket_placeholder/$SOCKET_PATCH/g" "$MODPATH/bin/zygiskd32"
+    sed -i "s/socket_placeholder/$SOCKET_PATCH/g" "$MODPATH/system/lib/libinjector.so"
+    sed -i "s/socket_placeholder/$SOCKET_PATCH/g" "$MODPATH/system/lib/libzygiskloader.so"
+  fi
+  if [ "$HAS64BIT" = true ]; then
+    sed -i "s/socket_placeholder/$SOCKET_PATCH/g" "$MODPATH/bin/zygiskd64"
+    sed -i "s/socket_placeholder/$SOCKET_PATCH/g" "$MODPATH/system/lib64/libinjector.so"
+    sed -i "s/socket_placeholder/$SOCKET_PATCH/g" "$MODPATH/system/lib64/libzygiskloader.so"
+  fi
 fi
 
 ui_print "- Setting permissions"

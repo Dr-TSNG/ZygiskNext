@@ -20,6 +20,7 @@ cargo {
     val isDebug = gradle.startParameter.taskNames.any { it.toLowerCase().contains("debug") }
     profile = if (isDebug) "debug" else "release"
     exec = { spec, _ ->
+        spec.environment("ANDROID_NDK_HOME", android.ndkDirectory.path)
         spec.environment("VERSION_CODE", verCode)
         spec.environment("VERSION_NAME", verName)
     }

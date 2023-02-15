@@ -1,4 +1,3 @@
-use crate::constants;
 use anyhow::Result;
 use nix::unistd::gettid;
 use std::{fs, io::{Read, Write}, os::unix::net::UnixStream, process::Command};
@@ -27,10 +26,10 @@ pub fn get_native_bridge() -> String {
     std::env::var("NATIVE_BRIDGE").unwrap_or_default()
 }
 
-pub fn restore_native_bridge() -> Result<()> {
+pub fn set_property(name: &str, value: &str) -> Result<()> {
     Command::new("resetprop")
-        .arg(constants::PROP_NATIVE_BRIDGE)
-        .arg(get_native_bridge())
+        .arg(name)
+        .arg(value)
         .spawn()?.wait()?;
     Ok(())
 }

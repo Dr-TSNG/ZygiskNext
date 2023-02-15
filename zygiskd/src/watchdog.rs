@@ -1,12 +1,13 @@
 use crate::{constants, utils};
 use anyhow::{bail, Result};
-use nix::unistd::{getgid, getuid};
+use nix::unistd::{getgid, getuid, Pid};
 use std::process::{Child, Command};
 use std::sync::mpsc;
 use std::{fs, thread};
 use std::os::unix::net::UnixListener;
-use std::path::Path;
 use std::time::Duration;
+use binder::IBinder;
+use nix::sys::signal::{kill, Signal};
 
 static mut LOCK: Option<UnixListener> = None;
 
@@ -49,36 +50,56 @@ fn ensure_single_instance() -> Result<()> {
 }
 
 fn spawn_daemon() -> Result<()> {
-    let daemon32 = Command::new(constants::PATH_ZYGISKD32).arg("daemon").spawn();
-    let daemon64 = Command::new(constants::PATH_ZYGISKD64).arg("daemon").spawn();
-    let (sender, receiver) = mpsc::channel();
-    let mut waiting = vec![];
-    let mut spawn = |mut daemon: Child, socket: &'static str| {
-        waiting.push(socket);
-        let sender = sender.clone();
-        thread::spawn(move || {
-            let result = daemon.wait().unwrap();
-            log::error!("Daemon process {} died: {}", daemon.id(), result);
-            drop(daemon);
-            sender.send(()).unwrap();
-        });
-    };
-    if let Ok(it) = daemon32 { spawn(it, "/dev/socket/zygote_secondary") }
-    if let Ok(it) = daemon64 { spawn(it, "/dev/socket/zygote") }
-
-    waiting.into_iter().for_each(|socket| wait_zygote(socket));
-    log::info!("Zygote ready, restore native bridge");
-    utils::restore_native_bridge()?;
-
-    let _ = receiver.recv();
-    bail!("Daemon process died");
-}
-
-fn wait_zygote(socket: &str) -> () {
-    let path = Path::new(socket);
+    let mut lives = 5;
     loop {
-        if path.exists() { return; }
-        log::debug!("{socket} not exists, wait for 1s...");
-        thread::sleep(Duration::from_secs(1));
+        let daemon32 = Command::new(constants::PATH_ZYGISKD32).arg("daemon").spawn();
+        let daemon64 = Command::new(constants::PATH_ZYGISKD64).arg("daemon").spawn();
+        let mut child_ids = vec![];
+        let (sender, receiver) = mpsc::channel();
+        let mut spawn = |mut daemon: Child| {
+            child_ids.push(daemon.id());
+            let sender = sender.clone();
+            thread::spawn(move || {
+                let result = daemon.wait().unwrap();
+                log::error!("Daemon process {} died: {}", daemon.id(), result);
+                drop(daemon);
+                let _ = sender.send(());
+            });
+        };
+        if let Ok(it) = daemon32 { spawn(it) }
+        if let Ok(it) = daemon64 { spawn(it) }
+
+        let mut binder = loop {
+            if receiver.try_recv().is_ok() {
+                bail!("Daemon died before system server ready");
+            }
+            match binder::get_service("activity") {
+                Some(binder) => break binder,
+                None => {
+                    log::trace!("System server not ready, wait for 1s...");
+                    thread::sleep(Duration::from_secs(1));
+                }
+            };
+        };
+        log::info!("System server ready, restore native bridge");
+        utils::set_property(constants::PROP_NATIVE_BRIDGE, &utils::get_native_bridge())?;
+
+        loop {
+            if receiver.try_recv().is_ok() || binder.ping_binder().is_err() { break; }
+            thread::sleep(Duration::from_secs(1))
+        }
+        for child in child_ids {
+            let _ = kill(Pid::from_raw(child as i32), Signal::SIGKILL);
+        }
+
+        lives -= 1;
+        if lives == 0 {
+            bail!("Too many crashes, abort");
+        }
+
+        log::error!("Restarting zygote...");
+        utils::set_property(constants::PROP_NATIVE_BRIDGE, constants::ZYGISK_LOADER)?;
+        utils::set_property(constants::PROP_SVC_ZYGOTE, "restart")?;
+        thread::sleep(Duration::from_secs(2));
     }
 }

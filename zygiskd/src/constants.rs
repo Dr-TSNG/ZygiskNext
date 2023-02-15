@@ -23,6 +23,8 @@ macro_rules! lp_select {
 }
 
 pub const PROP_NATIVE_BRIDGE: &str = "ro.dalvik.vm.native.bridge";
+pub const PROP_SVC_ZYGOTE: &str = "init.svc.zygote";
+pub const ZYGISK_LOADER: &str = "libzygiskloader.so";
 
 pub const SOCKET_PLACEHOLDER: &str = "socket_placeholder";
 
