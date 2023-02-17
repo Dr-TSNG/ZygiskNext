@@ -31,7 +31,7 @@ val gitCommitHash = "git rev-parse --verify --short HEAD".execute()
 
 val moduleId by extra("zygisksu")
 val moduleName by extra("Zygisk on KernelSU")
-val verName by extra("v4-0.4.0")
+val verName by extra("v4-0.4.1")
 val verCode by extra(gitCommitCount)
 
 val androidMinSdkVersion by extra(29)
