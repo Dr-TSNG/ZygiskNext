@@ -3,26 +3,32 @@ SKIPUNZIP=1
 
 DEBUG=@DEBUG@
 
-if [ $BOOTMODE ] && [ "$KSU" == "true" ]; then
+if [ "$BOOTMODE" ] && [ "$KSU" ]; then
   ui_print "- Installing from KernelSU app"
+  ui_print "- KernelSU version: $KSU_KERNEL_VER_CODE (kernel) + $KSU_VER_CODE (ksud)"
+  if [ "$KSU_KERNEL_VER_CODE" ] && [ "$KSU_KERNEL_VER_CODE" -lt 10575 ]; then
+    ui_print "*********************************************************"
+    ui_print "! KernelSU version is too old!"
+    ui_print "! Please update KernelSU to latest version"
+    abort    "*********************************************************"
+  fi
+elif [ "$BOOTMODE" ] && [ "$MAGISK_VER_CODE" ]; then
+  ui_print "- Installing from Magisk app"
+  if [ "$MAGISK_VER_CODE" -lt 25000 ]; then
+    ui_print "*********************************************************"
+    ui_print "! Magisk version is too old!"
+    ui_print "! Please update Magisk to latest version"
+    abort    "*********************************************************"
+  fi
 else
   ui_print "*********************************************************"
-  ui_print "! Install from recovery or Magisk is NOT supported"
-  ui_print "! Please install from KernelSU app"
-  abort "*********************************************************"
+  ui_print "! Install from recovery is not supported"
+  ui_print "! Please install from KernelSU or Magisk app"
+  abort    "*********************************************************"
 fi
 
 VERSION=$(grep_prop version "${TMPDIR}/module.prop")
 ui_print "- Installing Zygisksu $VERSION"
-
-# check KernelSU
-ui_print "- KernelSU version: $KSU_KERNEL_VER_CODE (kernel) + $KSU_VER_CODE (ksud)"
-if [ "$KSU_KERNEL_VER_CODE" -lt 10575 ]; then
-  ui_print "*********************************************************"
-  ui_print "! KernelSU version is too old!"
-  ui_print "! Please update KernelSU to latest version"
-  abort    "*********************************************************"
-fi
 
 # check android
 if [ "$API" -lt 29 ]; then
@@ -52,19 +58,24 @@ extract "$ZIPFILE" 'customize.sh'  "$TMPDIR/.vunzip"
 extract "$ZIPFILE" 'verify.sh'     "$TMPDIR/.vunzip"
 extract "$ZIPFILE" 'sepolicy.rule' "$TMPDIR"
 
-ui_print "- Checking SELinux patches"
-if ! check_sepolicy "$TMPDIR/sepolicy.rule"; then
-  ui_print "*********************************************************"
-  ui_print "! Unable to apply SELinux patches!"
-  ui_print "! Your kernel may not support SELinux patch fully"
-  abort    "*********************************************************"
+if [ "$KSU" ]; then
+  ui_print "- Checking SELinux patches"
+  if ! check_sepolicy "$TMPDIR/sepolicy.rule"; then
+    ui_print "*********************************************************"
+    ui_print "! Unable to apply SELinux patches!"
+    ui_print "! Your kernel may not support SELinux patch fully"
+    abort    "*********************************************************"
+  fi
 fi
 
 ui_print "- Extracting module files"
 extract "$ZIPFILE" 'daemon.sh'       "$MODPATH"
 extract "$ZIPFILE" 'module.prop'     "$MODPATH"
 extract "$ZIPFILE" 'post-fs-data.sh' "$MODPATH"
-extract "$ZIPFILE" 'sepolicy.rule'   "$MODPATH"
+extract "$ZIPFILE" 'service.sh'      "$MODPATH"
+if [ "$KSU" ]; then
+  extract "$ZIPFILE" 'sepolicy.rule' "$MODPATH"
+fi
 
 HAS32BIT=false && [ -d "/system/lib" ] && HAS32BIT=true
 HAS64BIT=false && [ -d "/system/lib64" ] && HAS64BIT=true

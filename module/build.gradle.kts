@@ -106,7 +106,7 @@ androidComponents.onVariants { variant ->
     val installMagiskTask = task<Exec>("installMagisk$variantCapped") {
         group = "module"
         dependsOn(pushTask)
-        commandLine("adb", "shell", "su", "-c", "KSU=true magisk --install-module /data/local/tmp/$zipFileName")
+        commandLine("adb", "shell", "su", "-c", "magisk --install-module /data/local/tmp/$zipFileName")
     }
 
     task<Exec>("installKsuAndReboot$variantCapped") {
