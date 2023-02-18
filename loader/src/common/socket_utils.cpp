@@ -90,6 +90,10 @@ namespace socket_utils {
         return read_exact_or<uint8_t>(fd, 0);
     }
 
+    uint32_t read_u32(int fd) {
+        return read_exact_or<uint32_t>(fd, 0);
+    }
+
     size_t read_usize(int fd) {
         return read_exact_or<size_t>(fd, 0);
     }
@@ -108,6 +112,10 @@ namespace socket_utils {
 
     bool write_u8(int fd, uint8_t val) {
         return write_exact<uint8_t>(fd, val);
+    }
+
+    bool write_u32(int fd, uint32_t val) {
+        return write_exact<uint32_t>(fd, val);
     }
 
     bool write_string(int fd, std::string_view str) {

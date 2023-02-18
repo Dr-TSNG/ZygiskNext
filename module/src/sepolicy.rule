@@ -10,3 +10,6 @@ allow * magisk_file lnk_file *
 allow * magisk_file sock_file *
 
 allow system_server system_server process execmem
+allow zygote mnt_vendor_file dir search
+allow zygote system_file dir mounton
+allow zygote labeledfs filesystem mount

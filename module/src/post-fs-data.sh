@@ -21,4 +21,4 @@ if [ $(which magisk) ] && [ ".." -ef "/data/adb/modules" ]; then
   done
 fi
 
-unshare -m sh -c "./daemon.sh $@&"
+sh -c "./daemon.sh $@&"

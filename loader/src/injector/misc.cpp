@@ -35,6 +35,31 @@ void parse_mnt(const char* file, const std::function<bool(mntent*)>& fn) {
     }
 }
 
+std::list<std::string> split_str(std::string_view s, std::string_view delimiter) {
+    std::list<std::string> ret;
+    size_t pos = 0;
+    while (pos < s.size()) {
+        auto next = s.find(delimiter, pos);
+        if (next == std::string_view::npos) {
+            ret.emplace_back(s.substr(pos));
+            break;
+        }
+        ret.emplace_back(s.substr(pos, next - pos));
+        pos = next + delimiter.size();
+    }
+    return ret;
+}
+
+std::string join_str(const std::list<std::string>& list, std::string_view delimiter) {
+    std::string ret;
+    for (auto& s : list) {
+        if (!ret.empty())
+            ret += delimiter;
+        ret += s;
+    }
+    return ret;
+}
+
 sDIR make_dir(DIR *dp) {
     return sDIR(dp, [](DIR *dp){ return dp ? closedir(dp) : 1; });
 }

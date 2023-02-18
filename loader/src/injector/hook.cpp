@@ -566,15 +566,13 @@ void HookContext::run_modules_post() {
 /* Zygisksu changed: Load module fds */
 void HookContext::app_specialize_pre() {
     flags[APP_SPECIALIZE] = true;
+    info_flags = zygiskd::GetProcessFlags(g_ctx->args.app->uid);
     run_modules_pre();
 }
 
 
 void HookContext::app_specialize_post() {
     run_modules_post();
-    if (info_flags & PROCESS_IS_MAGISK_APP) {
-        setenv("ZYGISK_ENABLED", "1", 1);
-    }
 
     // Cleanups
     env->ReleaseStringUTFChars(args.app->nice_name, process);

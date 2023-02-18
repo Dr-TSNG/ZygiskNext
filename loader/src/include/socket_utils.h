@@ -13,11 +13,15 @@ namespace socket_utils {
 
     uint8_t read_u8(int fd);
 
+    uint32_t read_u32(int fd);
+
     size_t read_usize(int fd);
 
     std::string read_string(int fd);
 
     bool write_u8(int fd, uint8_t val);
+
+    bool write_u32(int fd, uint32_t val);
 
     int recv_fd(int fd);
 

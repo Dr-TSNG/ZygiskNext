@@ -54,6 +54,7 @@ namespace zygiskd {
         PingHeartBeat,
         RequestLogcatFd,
         ReadNativeBridge,
+        GetProcessFlags,
         ReadModules,
         RequestCompanionSocket,
         GetModuleDir,
@@ -66,6 +67,8 @@ namespace zygiskd {
     std::string ReadNativeBridge();
 
     std::vector<Module> ReadModules();
+
+    uint32_t GetProcessFlags(uid_t uid);
 
     int ConnectCompanion(size_t index);
 

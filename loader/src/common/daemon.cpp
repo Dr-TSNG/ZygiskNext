@@ -58,6 +58,17 @@ namespace zygiskd {
         return socket_utils::read_string(fd);
     }
 
+    uint32_t GetProcessFlags(uid_t uid) {
+        UniqueFd fd = Connect(1);
+        if (fd == -1) {
+            PLOGE("GetProcessFlags");
+            return 0;
+        }
+        socket_utils::write_u8(fd, (uint8_t) SocketAction::GetProcessFlags);
+        socket_utils::write_u32(fd, uid);
+        return socket_utils::read_u32(fd);
+    }
+
     std::vector<Module> ReadModules() {
         std::vector<Module> modules;
         UniqueFd fd = Connect(1);
