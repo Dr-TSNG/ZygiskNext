@@ -111,10 +111,9 @@ namespace {
         PROCESS_GRANTED_ROOT = zygisk::StateFlag::PROCESS_GRANTED_ROOT,
         PROCESS_ON_DENYLIST = zygisk::StateFlag::PROCESS_ON_DENYLIST,
 
-        PROCESS_IS_SYS_UI = (1u << 30),
-        PROCESS_IS_KSU_APP = (1u << 31),
+        PROCESS_IS_SYS_UI = (1u << 31),
 
-        PRIVATE_MASK = (PROCESS_IS_SYS_UI | PROCESS_IS_KSU_APP)
+        PRIVATE_MASK = PROCESS_IS_SYS_UI
     };
 
     struct api_abi_base {

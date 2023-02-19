@@ -1,6 +1,6 @@
 use crate::constants::DaemonSocketAction;
 use crate::utils::UnixStreamExt;
-use crate::{constants, lp_select, utils};
+use crate::{constants, lp_select, root_impl, utils};
 use anyhow::{bail, Result};
 use memfd::Memfd;
 use nix::{
@@ -67,10 +67,10 @@ fn get_arch() -> Result<&'static str> {
     let output = Command::new("getprop").arg("ro.product.cpu.abi").output()?;
     let system_arch = String::from_utf8(output.stdout)?;
     if system_arch.contains("arm") {
-        return Ok(lp_select!("armeabi-v7a", "arm64-v8a"))
+        return Ok(lp_select!("armeabi-v7a", "arm64-v8a"));
     }
     if system_arch.contains("x86") {
-        return Ok(lp_select!("x86", "x86_64"))
+        return Ok(lp_select!("x86", "x86_64"));
     }
     bail!("Unsupported system architecture: {}", system_arch);
 }
@@ -192,6 +192,18 @@ fn handle_daemon_action(mut stream: UnixStream, context: &Context) -> Result<()>
         }
         DaemonSocketAction::ReadNativeBridge => {
             stream.write_string(&context.native_bridge)?;
+        }
+        DaemonSocketAction::GetProcessFlags => {
+            let uid = stream.read_u32()? as i32;
+            let mut flags = 0u32;
+            if root_impl::uid_on_allowlist(uid) {
+                flags |= constants::PROCESS_GRANTED_ROOT;
+            }
+            if root_impl::uid_on_denylist(uid) {
+                flags |= constants::PROCESS_ON_DENYLIST;
+            }
+            // TODO: PROCESS_IS_SYSUI?
+            stream.write_u32(flags)?;
         }
         DaemonSocketAction::ReadModules => {
             stream.write_usize(context.modules.len())?;

@@ -38,7 +38,13 @@ pub enum DaemonSocketAction {
     PingHeartbeat,
     RequestLogcatFd,
     ReadNativeBridge,
+    GetProcessFlags,
     ReadModules,
     RequestCompanionSocket,
     GetModuleDir,
 }
+
+// Zygisk process flags
+pub const PROCESS_GRANTED_ROOT: u32 = 1 << 0;
+pub const PROCESS_ON_DENYLIST: u32 = 1 << 1;
+pub const PROCESS_IS_SYSUI: u32 = 1 << 31;

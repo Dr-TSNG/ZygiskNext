@@ -40,6 +40,7 @@ pub trait UnixStreamExt {
     fn read_usize(&mut self) -> Result<usize>;
     fn read_string(&mut self) -> Result<String>;
     fn write_u8(&mut self, value: u8) -> Result<()>;
+    fn write_u32(&mut self, value: u32) -> Result<()>;
     fn write_usize(&mut self, value: usize) -> Result<()>;
     fn write_string(&mut self, value: &str) -> Result<()>;
 }
@@ -71,6 +72,11 @@ impl UnixStreamExt for UnixStream {
     }
 
     fn write_u8(&mut self, value: u8) -> Result<()> {
+        self.write_all(&value.to_ne_bytes())?;
+        Ok(())
+    }
+
+    fn write_u32(&mut self, value: u32) -> Result<()> {
         self.write_all(&value.to_ne_bytes())?;
         Ok(())
     }

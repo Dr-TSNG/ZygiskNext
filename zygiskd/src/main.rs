@@ -3,6 +3,7 @@
 mod companion;
 mod constants;
 mod dl;
+mod root_impl;
 mod utils;
 mod watchdog;
 mod zygiskd;

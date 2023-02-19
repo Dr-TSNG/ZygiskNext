@@ -26,10 +26,3 @@ void entry(void *handle) {
     LOGD("Load injector successfully");
     hook_functions();
 }
-
-// The following code runs in zygote/app process
-
-static inline bool should_load_modules(uint32_t flags) {
-    return (flags & UNMOUNT_MASK) != UNMOUNT_MASK &&
-           (flags & PROCESS_IS_MAGISK_APP) != PROCESS_IS_MAGISK_APP;
-}
