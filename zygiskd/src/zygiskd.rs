@@ -93,7 +93,7 @@ fn load_modules(arch: &str) -> Result<Vec<Module>> {
             continue;
         }
         log::info!("  Loading module `{name}`...");
-        let memfd = match create_memfd(&name, &so_path) {
+        let memfd = match create_memfd(&so_path) {
             Ok(memfd) => memfd,
             Err(e) => {
                 log::warn!("  Failed to create memfd for `{name}`: {e}");
@@ -116,10 +116,9 @@ fn load_modules(arch: &str) -> Result<Vec<Module>> {
     Ok(modules)
 }
 
-fn create_memfd(name: &str, so_path: &PathBuf) -> Result<Memfd> {
+fn create_memfd(so_path: &PathBuf) -> Result<Memfd> {
     let opts = memfd::MemfdOptions::default().allow_sealing(true);
-    let memfd = opts.create(name)?;
-
+    let memfd = opts.create("jit-cache")?;
     let file = fs::File::open(so_path)?;
     let mut reader = std::io::BufReader::new(file);
     let mut writer = memfd.as_file();
