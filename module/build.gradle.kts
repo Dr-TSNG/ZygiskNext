@@ -12,6 +12,7 @@ val moduleName: String by rootProject.extra
 val verCode: Int by rootProject.extra
 val verName: String by rootProject.extra
 val minKsuVersion: Int by rootProject.extra
+val minKsudVersion: Int by rootProject.extra
 val maxKsuVersion: Int by rootProject.extra
 val minMagiskVersion: Int by rootProject.extra
 
@@ -54,6 +55,7 @@ androidComponents.onVariants { variant ->
             val tokens = mapOf(
                 "DEBUG" to if (buildTypeLowered == "debug") "true" else "false",
                 "MIN_KSU_VERSION" to "$minKsuVersion",
+                "MIN_KSUD_VERSION" to "$minKsudVersion",
                 "MAX_KSU_VERSION" to "$maxKsuVersion",
                 "MIN_MAGISK_VERSION" to "$minMagiskVersion",
             )
