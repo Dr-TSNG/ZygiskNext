@@ -1,10 +1,15 @@
 use const_format::concatcp;
+use konst::primitive::parse_i32;
+use konst::unwrap_ctx;
 use log::LevelFilter;
 use num_enum::TryFromPrimitive;
 
 pub const VERSION_NAME: &str = env!("VERSION_NAME");
 pub const VERSION_CODE: &str = env!("VERSION_CODE");
 pub const VERSION_FULL: &str = concatcp!(VERSION_NAME, " (", VERSION_CODE, ")");
+pub const MIN_KSU_VERSION: i32 = unwrap_ctx!(parse_i32(env!("MIN_KSU_VERSION")));
+pub const MAX_KSU_VERSION: i32 = unwrap_ctx!(parse_i32(env!("MAX_KSU_VERSION")));
+pub const MIN_MAGISK_VERSION: i32 = unwrap_ctx!(parse_i32(env!("MIN_MAGISK_VERSION")));
 
 #[cfg(debug_assertions)]
 pub const MAX_LOG_LEVEL: LevelFilter = LevelFilter::Trace;

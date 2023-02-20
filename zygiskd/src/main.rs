@@ -8,6 +8,7 @@ mod utils;
 mod watchdog;
 mod zygiskd;
 
+use anyhow::Result;
 use clap::{Subcommand, Parser};
 
 #[derive(Parser, Debug)]
@@ -36,19 +37,23 @@ fn init_android_logger(tag: &str) {
     );
 }
 
+fn start() -> Result<()> {
+    root_impl::setup()?;
+    let cli = Args::parse();
+    match cli.command {
+        Commands::Watchdog => watchdog::entry()?,
+        Commands::Daemon => zygiskd::entry()?,
+        Commands::Companion { fd } => companion::entry(fd)?,
+    };
+    Ok(())
+}
+
 fn main() {
     let process = std::env::args().next().unwrap();
     let nice_name = process.split('/').last().unwrap();
     init_android_logger(nice_name);
 
-    let cli = Args::parse();
-    let result = match cli.command {
-        Commands::Watchdog => watchdog::entry(),
-        Commands::Daemon => zygiskd::entry(),
-        Commands::Companion { fd } => companion::entry(fd),
-    };
-
-    if let Err(e) = &result {
+    if let Err(e) = start() {
         log::error!("Crashed: {}\n{}", e, e.backtrace());
     }
 }

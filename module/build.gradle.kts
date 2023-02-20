@@ -11,6 +11,9 @@ val moduleId: String by rootProject.extra
 val moduleName: String by rootProject.extra
 val verCode: Int by rootProject.extra
 val verName: String by rootProject.extra
+val minKsuVersion: Int by rootProject.extra
+val maxKsuVersion: Int by rootProject.extra
+val minMagiskVersion: Int by rootProject.extra
 
 android.buildFeatures {
     androidResources = false
@@ -49,7 +52,10 @@ androidComponents.onVariants { variant ->
         from("$projectDir/src") {
             include("customize.sh", "daemon.sh")
             val tokens = mapOf(
-                "DEBUG" to if (buildTypeLowered == "debug") "true" else "false"
+                "DEBUG" to if (buildTypeLowered == "debug") "true" else "false",
+                "MIN_KSU_VERSION" to "$minKsuVersion",
+                "MAX_KSU_VERSION" to "$maxKsuVersion",
+                "MIN_MAGISK_VERSION" to "$minMagiskVersion",
             )
             filter<ReplaceTokens>("tokens" to tokens)
             filter<FixCrLfFilter>("eol" to FixCrLfFilter.CrLf.newInstance("lf"))
