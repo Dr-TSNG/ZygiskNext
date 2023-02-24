@@ -7,7 +7,7 @@ fi
 
 cd "$MODDIR"
 
-if [ $(which magisk) ] && [ ".." -ef "/data/adb/modules" ]; then
+if [ "$(which magisk)" ] && [ ".." -ef "/data/adb/modules" ]; then
   for file in ../*; do
     if [ -d "$file" ] && [ -d "$file/zygisk" ] && ! [ -f "$file/disable" ]; then
       if [ -f "$file/service.sh" ]; then

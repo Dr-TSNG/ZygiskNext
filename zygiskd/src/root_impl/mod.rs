@@ -13,6 +13,9 @@ static ROOT_IMPL: OnceCell<RootImpl> = OnceCell::new();
 
 pub fn setup() -> Result<()> {
     if kernelsu::is_kernel_su()? {
+        if let Ok(true) = magisk::is_magisk() {
+            bail!("Multiple root implementation");
+        }
         let _ = ROOT_IMPL.set(RootImpl::KernelSU);
     } else if magisk::is_magisk()? {
         let _ = ROOT_IMPL.set(RootImpl::Magisk);

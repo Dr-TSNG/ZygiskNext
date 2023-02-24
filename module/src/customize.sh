@@ -28,6 +28,12 @@ if [ "$BOOTMODE" ] && [ "$KSU" ]; then
     ui_print "! Please update KernelSU Manager to latest version"
     abort    "*********************************************************"
   fi
+  if [ "$(which magisk)" ]; then
+    ui_print "*********************************************************"
+    ui_print "! Multiple root implementation is NOT supported!"
+    ui_print "! Please uninstall Magisk before installing Zygisksu"
+    abort    "*********************************************************"
+  fi
 elif [ "$BOOTMODE" ] && [ "$MAGISK_VER_CODE" ]; then
   ui_print "- Installing from Magisk app"
   if [ "$MAGISK_VER_CODE" -lt "$MIN_MAGISK_VERSION" ]; then
