@@ -6,9 +6,10 @@ Also works as standalone loader for Magisk on purpose of getting rid of LD_PRELO
 
 ## Requirements
 
-+ Minimal KernelSU version: 10575
-+ Minimal ksud version: 10616
++ Minimal KernelSU version: 10654
++ Minimal ksud version: 10647
 + Full SELinux patch support (If non-gki kernel)
++ No multiple root implementation installed
 
 ## Compatibility
 
