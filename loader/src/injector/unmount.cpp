@@ -10,7 +10,7 @@ static void lazy_unmount(const char* mountpoint) {
     if (umount2(mountpoint, MNT_DETACH) != -1) {
         LOGD("Unmounted (%s)", mountpoint);
     } else {
-        PLOGE("Failed to unmount: %s (%s)", strerror(errno), mountpoint);
+        LOGW("Failed to unmount: %s (%s)", strerror(errno), mountpoint);
     }
 }
 
@@ -45,11 +45,9 @@ void revert_unmount() {
 
     parse_mnt("/proc/self/mounts", [&](mntent* mentry) {
         if (mentry->mnt_type == "overlay"sv) {
-            for (auto it = backups.begin(); it != backups.end(); it++) {
-                backups.remove_if([&](auto& mnt) {
-                    return mnt.first == mentry->mnt_dir && mnt.second == mentry->mnt_opts;
-                });
-            }
+            backups.remove_if([&](auto& mnt) {
+                return mnt.first == mentry->mnt_dir && mnt.second == mentry->mnt_opts;
+            });
         }
         return true;
     });
