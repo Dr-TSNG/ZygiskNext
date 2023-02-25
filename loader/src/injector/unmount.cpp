@@ -6,35 +6,46 @@
 
 using namespace std::string_view_literals;
 
-static void lazy_unmount(const char* mountpoint) {
-    if (umount2(mountpoint, MNT_DETACH) != -1) {
-        LOGD("Unmounted (%s)", mountpoint);
-    } else {
-        LOGW("Failed to unmount: %s (%s)", strerror(errno), mountpoint);
+namespace {
+    constexpr auto KSU_MODULE_DIR = "/data/adb/ksu/modules"sv;
+
+    void lazy_unmount(const char* mountpoint) {
+        if (umount2(mountpoint, MNT_DETACH) != -1) {
+            LOGD("Unmounted (%s)", mountpoint);
+        } else {
+            LOGW("Failed to unmount: %s (%s)", strerror(errno), mountpoint);
+        }
     }
 }
 
 #define PARSE_OPT(name, flag)   \
-    if (opt == name) {          \
+    if (opt == (name)) {        \
         flags |= (flag);        \
         return true;            \
     }
 
 void revert_unmount() {
+    std::string ksu_loop;
     std::vector<std::string> targets;
     std::list<std::pair<std::string, std::string>> backups;
 
-    targets.emplace_back("/data/adb/ksu/modules");
+    targets.emplace_back(KSU_MODULE_DIR);
     parse_mnt("/proc/self/mounts", [&](mntent* mentry) {
-        if (str_starts(mentry->mnt_fsname, "/data/adb/")) {
-            targets.emplace_back(mentry->mnt_dir);
+        if (mentry->mnt_dir == KSU_MODULE_DIR) {
+            ksu_loop = mentry->mnt_fsname;
         }
         if (mentry->mnt_type == "overlay"sv) {
-            if (str_contains(mentry->mnt_opts, "/data/adb/ksu/modules")) {
+            if (str_contains(mentry->mnt_opts, KSU_MODULE_DIR)) {
                 targets.emplace_back(mentry->mnt_dir);
             } else {
                 backups.emplace_back(mentry->mnt_dir, mentry->mnt_opts);
             }
+        }
+        return true;
+    });
+    parse_mnt("/proc/self/mounts", [&](mntent* mentry) {
+        if (mentry->mnt_fsname == ksu_loop) {
+            targets.emplace_back(mentry->mnt_dir);
         }
         return true;
     });
