@@ -13,7 +13,7 @@ namespace {
         if (umount2(mountpoint, MNT_DETACH) != -1) {
             LOGD("Unmounted (%s)", mountpoint);
         } else {
-            LOGW("Failed to unmount: %s (%s)", strerror(errno), mountpoint);
+            PLOGE("Unmount (%s)", mountpoint);
         }
     }
 }
@@ -29,11 +29,18 @@ void revert_unmount() {
     std::vector<std::string> targets;
     std::list<std::pair<std::string, std::string>> backups;
 
+    // Unmount ksu module dir last
     targets.emplace_back(KSU_MODULE_DIR);
     parse_mnt("/proc/self/mounts", [&](mntent* mentry) {
         if (mentry->mnt_dir == KSU_MODULE_DIR) {
             ksu_loop = mentry->mnt_fsname;
+            return;
         }
+        // Unmount everything on /data/adb except ksu module dir
+        if (str_starts(mentry->mnt_dir, "/data/adb")) {
+            targets.emplace_back(mentry->mnt_dir);
+        }
+        // Unmount ksu overlays
         if (mentry->mnt_type == "overlay"sv) {
             if (str_contains(mentry->mnt_opts, KSU_MODULE_DIR)) {
                 targets.emplace_back(mentry->mnt_dir);
@@ -41,19 +48,20 @@ void revert_unmount() {
                 backups.emplace_back(mentry->mnt_dir, mentry->mnt_opts);
             }
         }
-        return true;
     });
+    // Unmount everything from ksu loop except ksu module dir
     parse_mnt("/proc/self/mounts", [&](mntent* mentry) {
-        if (mentry->mnt_fsname == ksu_loop) {
+        if (mentry->mnt_fsname == ksu_loop && mentry->mnt_dir != KSU_MODULE_DIR) {
             targets.emplace_back(mentry->mnt_dir);
         }
-        return true;
     });
 
+    // Do unmount
     for (auto& s: reversed(targets)) {
         lazy_unmount(s.data());
     }
 
+    // Affirm unmounted system overlays
     parse_mnt("/proc/self/mounts", [&](mntent* mentry) {
         if (mentry->mnt_type == "overlay"sv) {
             backups.remove_if([&](auto& mnt) {
@@ -63,6 +71,7 @@ void revert_unmount() {
         return true;
     });
 
+    // Restore system overlays
     for (auto& mnt: backups) {
         auto opts = split_str(mnt.second, ",");
         unsigned long flags = 0;
@@ -76,7 +85,7 @@ void revert_unmount() {
         if (mount("overlay", mnt.first.data(), "overlay", flags, mnt_data.data()) != -1) {
             LOGD("Remounted (%s)", mnt.first.data());
         } else {
-            LOGW("Failed to remount: %s (%s, %s)", strerror(errno), mnt.first.data(), mnt_data.data());
+            PLOGE("Remount (%s, %s)", mnt.first.data(), mnt_data.data());
         }
     }
 }

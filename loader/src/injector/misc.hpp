@@ -126,7 +126,7 @@ struct StringCmp {
  */
 int parse_int(std::string_view s);
 
-void parse_mnt(const char* file, const std::function<bool(mntent*)>& fn);
+void parse_mnt(const char* file, const std::function<void(mntent*)>& fn);
 
 std::list<std::string> split_str(std::string_view s, std::string_view delimiter);
 

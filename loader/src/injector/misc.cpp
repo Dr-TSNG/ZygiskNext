@@ -23,14 +23,13 @@ int parse_int(std::string_view s) {
     return val;
 }
 
-void parse_mnt(const char* file, const std::function<bool(mntent*)>& fn) {
+void parse_mnt(const char* file, const std::function<void(mntent*)>& fn) {
     auto fp = sFILE(setmntent(file, "re"), endmntent);
     if (fp) {
         mntent mentry{};
         char buf[PATH_MAX];
         while (getmntent_r(fp.get(), &mentry, buf, sizeof(buf))) {
-            if (!fn(&mentry))
-                break;
+            fn(&mentry);
         }
     }
 }
