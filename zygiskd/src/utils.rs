@@ -6,6 +6,17 @@ use std::os::unix::net::UnixListener;
 use nix::sys::socket::{AddressFamily, SockFlag, SockType, UnixAddr};
 use rand::distributions::{Alphanumeric, DistString};
 
+#[cfg(target_pointer_width = "64")]
+#[macro_export]
+macro_rules! lp_select {
+    ($lp32:expr, $lp64:expr) => { $lp64 };
+}
+#[cfg(target_pointer_width = "32")]
+#[macro_export]
+macro_rules! lp_select {
+    ($lp32:expr, $lp64:expr) => { $lp32 };
+}
+
 pub fn random_string() -> String {
     Alphanumeric.sample_string(&mut rand::thread_rng(), 8)
 }

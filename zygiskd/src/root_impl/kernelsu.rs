@@ -1,4 +1,3 @@
-use anyhow::{bail, Result};
 use nix::libc::prctl;
 use crate::constants::{MIN_KSU_VERSION, MAX_KSU_VERSION};
 
@@ -8,14 +7,20 @@ const CMD_GET_VERSION: usize = 2;
 const CMD_GET_ALLOW_LIST: usize = 5;
 const CMD_GET_DENY_LIST: usize = 6;
 
-pub fn is_kernel_su() -> Result<bool> {
+pub enum Version {
+    Supported,
+    TooOld,
+    Abnormal,
+}
+
+pub fn get_kernel_su() -> Option<Version> {
     let mut version = 0;
     unsafe { prctl(KERNEL_SU_OPTION, CMD_GET_VERSION, &mut version as *mut i32) };
-    return match version {
-        0 => Ok(false),
-        MIN_KSU_VERSION..=MAX_KSU_VERSION => Ok(true),
-        1..=MIN_KSU_VERSION => bail!("KernelSU version too old: {}", version),
-        _ => bail!("KernelSU version abnormal: {}", version)
+    match version {
+        0 => None,
+        MIN_KSU_VERSION..=MAX_KSU_VERSION => Some(Version::Supported),
+        1..=MIN_KSU_VERSION => Some(Version::TooOld),
+        _ => Some(Version::Abnormal)
     }
 }
 

@@ -6,7 +6,7 @@ edition = "2021"
 rust-version = "1.67"
 
 [dependencies]
-android_logger = "0.12.0"
+android_logger = "0.13.0"
 anyhow = { version = "1.0.68", features = ["backtrace"] }
 clap = { version = "4.1.4", features = ["derive"] }
 const_format = "0.2.5"

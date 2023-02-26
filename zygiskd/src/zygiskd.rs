@@ -77,7 +77,7 @@ fn get_arch() -> Result<&'static str> {
 
 fn load_modules(arch: &str) -> Result<Vec<Module>> {
     let mut modules = Vec::new();
-    let dir = match fs::read_dir(constants::PATH_MODULE_DIR) {
+    let dir = match fs::read_dir(constants::PATH_MODULES_DIR) {
         Ok(dir) => dir,
         Err(e) => {
             log::warn!("Failed reading modules directory: {}", e);
@@ -232,7 +232,7 @@ fn handle_daemon_action(mut stream: UnixStream, context: &Context) -> Result<()>
         DaemonSocketAction::GetModuleDir => {
             let index = stream.read_usize()?;
             let module = &context.modules[index];
-            let dir = format!("{}/{}", constants::PATH_MODULE_DIR, module.name);
+            let dir = format!("{}/{}", constants::PATH_MODULES_DIR, module.name);
             let dir = fs::File::open(dir)?;
             stream.send_fd(dir.as_raw_fd())?;
         }

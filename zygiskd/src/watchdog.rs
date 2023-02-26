@@ -1,21 +1,35 @@
-use crate::{constants, utils};
+use crate::{constants, root_impl, utils};
 use anyhow::{bail, Result};
 use nix::unistd::{getgid, getuid, Pid};
 use std::process::{Child, Command};
 use std::sync::mpsc;
-use std::{fs, thread};
+use std::{fs, io, thread};
+use std::ffi::CString;
+use std::io::{BufRead, Write};
 use std::os::unix::net::UnixListener;
 use std::time::Duration;
 use binder::IBinder;
+use nix::errno::Errno;
+use nix::libc;
 use nix::sys::signal::{kill, Signal};
+use once_cell::sync::OnceCell;
 
-static mut LOCK: Option<UnixListener> = None;
+static LOCK: OnceCell<UnixListener> = OnceCell::new();
+static PROP_SECTIONS: OnceCell<[String; 2]> = OnceCell::new();
 
 pub fn entry() -> Result<()> {
     log::info!("Start zygisksu watchdog");
     check_permission()?;
     ensure_single_instance()?;
-    spawn_daemon()
+    mount_prop()?;
+    if check_and_set_hint()? == false {
+        log::warn!("Requirements not met, exiting");
+        utils::set_property(constants::PROP_NATIVE_BRIDGE, &utils::get_native_bridge())?;
+        return Ok(())
+    }
+    let end = spawn_daemon();
+    set_prop_hint(constants::STATUS_CRASHED)?;
+    end
 }
 
 fn check_permission() -> Result<()> {
@@ -43,10 +57,81 @@ fn ensure_single_instance() -> Result<()> {
     log::info!("Ensure single instance");
     let name = String::from("zygiskwd") + constants::SOCKET_PLACEHOLDER;
     match utils::abstract_namespace_socket(&name) {
-        Ok(socket) => unsafe { LOCK = Some(socket) },
+        Ok(socket) => { let _ = LOCK.set(socket); }
         Err(e) => bail!("Failed to acquire lock: {e}. Maybe another instance is running?")
     }
     Ok(())
+}
+
+fn mount_prop() -> Result<()> {
+    let module_prop = fs::File::open(constants::PATH_MODULE_PROP)?;
+    let mut section = 0;
+    let mut sections: [String; 2] = [String::new(), String::new()];
+    let lines = io::BufReader::new(module_prop).lines();
+    for line in lines {
+        let line = line?;
+        if line.starts_with("description=") {
+            sections[0].push_str("description=");
+            sections[1].push_str(line.trim_start_matches("description="));
+            sections[1].push('\n');
+            section = 1;
+        } else {
+            sections[section].push_str(&line);
+            sections[section].push('\n');
+        }
+    }
+    let _ = PROP_SECTIONS.set(sections);
+
+    fs::create_dir(constants::PATH_TMP_DIR)?;
+
+    // FIXME: sys_mount cannot be compiled on 32 bit
+    unsafe {
+        let r = libc::mount(
+            CString::new("tmpfs")?.as_ptr(),
+            CString::new(constants::PATH_TMP_DIR)?.as_ptr(),
+            CString::new("tmpfs")?.as_ptr(),
+            0,
+            CString::new("mode=755")?.as_ptr() as *const libc::c_void,
+        );
+        Errno::result(r)?;
+        let _file = fs::File::create(constants::PATH_TMP_PROP)?;
+        let r = libc::mount(
+            CString::new(constants::PATH_TMP_PROP)?.as_ptr(),
+            CString::new(constants::PATH_MODULE_PROP)?.as_ptr(),
+            std::ptr::null(),
+            libc::MS_BIND,
+            std::ptr::null(),
+        );
+        Errno::result(r)?;
+    }
+
+    Ok(())
+}
+
+fn set_prop_hint(hint: &str) -> Result<()> {
+    let mut file = fs::File::create(constants::PATH_TMP_PROP)?;
+    let sections = PROP_SECTIONS.get().unwrap();
+    file.write_all(sections[0].as_bytes())?;
+    file.write_all(b"[")?;
+    file.write_all(hint.as_bytes())?;
+    file.write_all(b"] ")?;
+    file.write_all(sections[1].as_bytes())?;
+    Ok(())
+}
+
+fn check_and_set_hint() -> Result<bool> {
+    let root_impl = root_impl::get_impl();
+    match root_impl {
+        root_impl::RootImpl::None => set_prop_hint(constants::STATUS_ROOT_IMPL_NONE)?,
+        root_impl::RootImpl::TooOld => set_prop_hint(constants::STATUS_ROOT_IMPL_TOO_OLD)?,
+        root_impl::RootImpl::Abnormal => set_prop_hint(constants::STATUS_ROOT_IMPL_ABNORMAL)?,
+        root_impl::RootImpl::Multiple => set_prop_hint(constants::STATUS_ROOT_IMPL_MULTIPLE)?,
+        _ => {
+            set_prop_hint(constants::STATUS_LOADED)?;
+            return Ok(true);
+        }
+    }
+    Ok(false)
 }
 
 fn spawn_daemon() -> Result<()> {
@@ -99,7 +184,6 @@ fn spawn_daemon() -> Result<()> {
 
         log::error!("Restarting zygote...");
         utils::set_property(constants::PROP_NATIVE_BRIDGE, constants::ZYGISK_LOADER)?;
-        utils::set_property(constants::PROP_SVC_ZYGOTE, "restart")?;
-        thread::sleep(Duration::from_secs(2));
+        utils::set_property(constants::PROP_CTL_RESTART, "zygote")?;
     }
 }

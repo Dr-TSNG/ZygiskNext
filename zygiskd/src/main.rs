@@ -38,7 +38,7 @@ fn init_android_logger(tag: &str) {
 }
 
 fn start() -> Result<()> {
-    root_impl::setup()?;
+    root_impl::setup();
     let cli = Args::parse();
     match cli.command {
         Commands::Watchdog => watchdog::entry()?,

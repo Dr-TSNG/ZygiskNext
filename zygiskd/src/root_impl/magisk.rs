@@ -1,8 +1,12 @@
-use anyhow::{bail, Result};
 use std::process::{Command, Stdio};
 use crate::constants::MIN_MAGISK_VERSION;
 
-pub fn is_magisk() -> Result<bool> {
+pub enum Version {
+    Supported,
+    TooOld,
+}
+
+pub fn get_magisk() -> Option<Version> {
     let version: Option<i32> = Command::new("magisk")
         .arg("-V")
         .stdout(Stdio::piped())
@@ -10,13 +14,13 @@ pub fn is_magisk() -> Result<bool> {
         .and_then(|child| child.wait_with_output().ok())
         .and_then(|output| String::from_utf8(output.stdout).ok())
         .and_then(|output| output.trim().parse().ok());
-    if let Some(version) = version {
-        if version < MIN_MAGISK_VERSION {
-            bail!("Magisk version too old: {}", version);
+    version.map(|version| {
+        if version >= MIN_MAGISK_VERSION {
+            Version::Supported
+        } else {
+            Version::TooOld
         }
-        return Ok(true);
-    }
-    Ok(false)
+    })
 }
 
 pub fn uid_on_allowlist(uid: i32) -> bool {
