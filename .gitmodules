@@ -4,6 +4,3 @@
 [submodule "loader/src/external/parallel-hashmap"]
 	path = loader/src/external/parallel-hashmap
 	url = https://github.com/greg7mdp/parallel-hashmap
-[submodule "zygiskd/src/external/binder_rs"]
-	path = zygiskd/src/external/binder_rs
-	url = https://github.com/Kernel-SU/binder_rs
