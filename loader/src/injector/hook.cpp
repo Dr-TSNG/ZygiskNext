@@ -17,7 +17,7 @@
 #include "zygisk.hpp"
 #include "memory.hpp"
 #include "module.hpp"
-#include "misc.hpp"
+#include "files.hpp"
 
 using namespace std;
 using jni_hook::hash_map;
@@ -219,7 +219,11 @@ DCL_HOOK_FUNC(int, unshare, int flags) {
         // Simply avoid doing any unmounts for SysUI to avoid potential issues.
         (g_ctx->info_flags & PROCESS_IS_SYS_UI) == 0) {
         if (g_ctx->flags[DO_REVERT_UNMOUNT]) {
-            revert_unmount();
+            if (g_ctx->info_flags & PROCESS_ROOT_IS_KSU) {
+                revert_unmount_ksu();
+            } else if (g_ctx->info_flags & PROCESS_ROOT_IS_MAGISK) {
+                revert_unmount_magisk();
+            }
         }
 
         /* Zygisksu changed: No umount app_process */

@@ -111,6 +111,8 @@ namespace {
         PROCESS_GRANTED_ROOT = zygisk::StateFlag::PROCESS_GRANTED_ROOT,
         PROCESS_ON_DENYLIST = zygisk::StateFlag::PROCESS_ON_DENYLIST,
 
+        PROCESS_ROOT_IS_KSU = (1u << 29),
+        PROCESS_ROOT_IS_MAGISK = (1u << 30),
         PROCESS_IS_SYS_UI = (1u << 31),
 
         PRIVATE_MASK = PROCESS_IS_SYS_UI

@@ -51,4 +51,6 @@ pub enum DaemonSocketAction {
 // Zygisk process flags
 pub const PROCESS_GRANTED_ROOT: u32 = 1 << 0;
 pub const PROCESS_ON_DENYLIST: u32 = 1 << 1;
+pub const PROCESS_ROOT_IS_KSU: u32 = 1 << 29;
+pub const PROCESS_ROOT_IS_MAGISK: u32 = 1 << 30;
 pub const PROCESS_IS_SYSUI: u32 = 1 << 31;

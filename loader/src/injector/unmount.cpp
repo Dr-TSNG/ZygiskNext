@@ -1,5 +1,7 @@
+#include <mntent.h>
 #include <sys/mount.h>
 
+#include "files.hpp"
 #include "logging.h"
 #include "misc.hpp"
 #include "zygisk.hpp"
@@ -7,7 +9,13 @@
 using namespace std::string_view_literals;
 
 namespace {
-    constexpr auto KSU_MODULE_DIR = "/data/adb/ksu/modules"sv;
+    constexpr auto KSU_MODULE_DIR = "/data/adb/ksu/modules";
+
+    struct overlay_backup {
+        std::string target;
+        std::string vfs_option;
+        std::string fs_option;
+    };
 
     void lazy_unmount(const char* mountpoint) {
         if (umount2(mountpoint, MNT_DETACH) != -1) {
@@ -24,37 +32,44 @@ namespace {
         return true;            \
     }
 
-void revert_unmount() {
+void revert_unmount_ksu() {
     std::string ksu_loop;
     std::vector<std::string> targets;
-    std::list<std::pair<std::string, std::string>> backups;
+    std::list<overlay_backup> backups;
 
     // Unmount ksu module dir last
     targets.emplace_back(KSU_MODULE_DIR);
-    parse_mnt("/proc/self/mounts", [&](mntent* mentry) {
-        if (mentry->mnt_dir == KSU_MODULE_DIR) {
-            ksu_loop = mentry->mnt_fsname;
-            return;
+
+    for (auto& info: parse_mount_info("self")) {
+        if (info.target == KSU_MODULE_DIR) {
+            ksu_loop = info.source;
+            continue;
         }
         // Unmount everything on /data/adb except ksu module dir
-        if (str_starts(mentry->mnt_dir, "/data/adb")) {
-            targets.emplace_back(mentry->mnt_dir);
+        if (info.target.starts_with("/data/adb")) {
+            targets.emplace_back(info.target);
         }
         // Unmount ksu overlays
-        if (mentry->mnt_type == "overlay"sv) {
-            if (str_contains(mentry->mnt_opts, KSU_MODULE_DIR)) {
-                targets.emplace_back(mentry->mnt_dir);
+        if (info.type == "overlay") {
+            LOGV("Overlay: %s (%s)", info.target.data(), info.fs_option.data());
+            if (str_contains(info.fs_option, KSU_MODULE_DIR)) {
+                targets.emplace_back(info.target);
             } else {
-                backups.emplace_back(mentry->mnt_dir, mentry->mnt_opts);
+                auto backup = overlay_backup{
+                        .target = info.target,
+                        .vfs_option = info.vfs_option,
+                        .fs_option = info.fs_option,
+                };
+                backups.emplace_back(backup);
             }
         }
-    });
-    // Unmount everything from ksu loop except ksu module dir
-    parse_mnt("/proc/self/mounts", [&](mntent* mentry) {
-        if (mentry->mnt_fsname == ksu_loop && mentry->mnt_dir != KSU_MODULE_DIR) {
-            targets.emplace_back(mentry->mnt_dir);
+    }
+    for (auto& info: parse_mount_info("self")) {
+        // Unmount everything from ksu loop except ksu module dir
+        if (info.source == ksu_loop && info.target != KSU_MODULE_DIR) {
+            targets.emplace_back(info.target);
         }
-    });
+    }
 
     // Do unmount
     for (auto& s: reversed(targets)) {
@@ -62,18 +77,18 @@ void revert_unmount() {
     }
 
     // Affirm unmounted system overlays
-    parse_mnt("/proc/self/mounts", [&](mntent* mentry) {
-        if (mentry->mnt_type == "overlay"sv) {
-            backups.remove_if([&](auto& mnt) {
-                return mnt.first == mentry->mnt_dir && mnt.second == mentry->mnt_opts;
+    for (auto& info: parse_mount_info("self")) {
+        if (info.type == "overlay") {
+            backups.remove_if([&](overlay_backup& mnt) {
+                return mnt.target == info.target && mnt.fs_option == info.fs_option;
             });
         }
-        return true;
-    });
+    }
 
     // Restore system overlays
     for (auto& mnt: backups) {
-        auto opts = split_str(mnt.second, ",");
+        auto opts = split_str(mnt.vfs_option, ",");
+        opts.splice(opts.end(), split_str(mnt.fs_option, ","));
         unsigned long flags = 0;
         opts.remove_if([&](auto& opt) {
             PARSE_OPT(MNTOPT_RO, MS_RDONLY)
@@ -82,10 +97,27 @@ void revert_unmount() {
             return false;
         });
         auto mnt_data = join_str(opts, ",");
-        if (mount("overlay", mnt.first.data(), "overlay", flags, mnt_data.data()) != -1) {
-            LOGD("Remounted (%s)", mnt.first.data());
+        if (mount("overlay", mnt.target.data(), "overlay", flags, mnt_data.data()) != -1) {
+            LOGD("Remounted (%s)", mnt.target.data());
         } else {
-            PLOGE("Remount (%s, %s)", mnt.first.data(), mnt_data.data());
+            PLOGE("Remount (%s, %s)", mnt.target.data(), mnt.fs_option.data());
         }
+    }
+}
+
+void revert_unmount_magisk() {
+    std::vector<std::string> targets;
+
+    // Unmount dummy skeletons and MAGISKTMP
+    // since mirror nodes are always mounted under skeleton, we don't have to specifically unmount
+    for (auto& info: parse_mount_info("self")) {
+        if (info.source == "magisk" || info.source == "worker" || // magisktmp tmpfs
+            info.root.starts_with("/adb/modules")) { // bind mount from data partition
+            targets.push_back(info.target);
+        }
+    }
+
+    for (auto& s: targets) {
+        lazy_unmount(s.data());
     }
 }

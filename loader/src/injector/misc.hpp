@@ -1,12 +1,8 @@
 #pragma once
 
-#include <dirent.h>
-#include <functional>
 #include <list>
 #include <memory>
-#include <mntent.h>
 #include <pthread.h>
-#include <stdio.h>
 #include <string>
 #include <string_view>
 
@@ -39,12 +35,6 @@ int new_daemon_thread(thread_entry entry, void *arg);
 static inline bool str_contains(std::string_view s, std::string_view ss) {
     return s.find(ss) != std::string_view::npos;
 }
-static inline bool str_starts(std::string_view s, std::string_view ss) {
-    return s.size() >= ss.size() && s.compare(0, ss.size(), ss) == 0;
-}
-static inline bool str_ends(std::string_view s, std::string_view ss) {
-    return s.size() >= ss.size() && s.compare(s.size() - ss.size(), std::string_view::npos, ss) == 0;
-}
 
 template<typename T, typename Impl>
 class stateless_allocator {
@@ -60,35 +50,6 @@ public:
     bool operator==(const stateless_allocator&) { return true; }
     bool operator!=(const stateless_allocator&) { return false; }
 };
-
-using sFILE = std::unique_ptr<FILE, decltype(&fclose)>;
-using sDIR = std::unique_ptr<DIR, decltype(&closedir)>;
-sDIR make_dir(DIR *dp);
-sFILE make_file(FILE *fp);
-
-static inline sDIR open_dir(const char *path) {
-    return make_dir(opendir(path));
-}
-
-static inline sDIR xopen_dir(const char *path) {
-    return make_dir(opendir(path));
-}
-
-static inline sDIR xopen_dir(int dirfd) {
-    return make_dir(fdopendir(dirfd));
-}
-
-static inline sFILE open_file(const char *path, const char *mode) {
-    return make_file(fopen(path, mode));
-}
-
-static inline sFILE xopen_file(const char *path, const char *mode) {
-    return make_file(fopen(path, mode));
-}
-
-static inline sFILE xopen_file(int fd, const char *mode) {
-    return make_file(fdopen(fd, mode));
-}
 
 template <typename T>
 class reversed_container {
@@ -125,8 +86,6 @@ struct StringCmp {
  * Use our own implementation for faster conversion.
  */
 int parse_int(std::string_view s);
-
-void parse_mnt(const char* file, const std::function<void(mntent*)>& fn);
 
 std::list<std::string> split_str(std::string_view s, std::string_view delimiter);
 

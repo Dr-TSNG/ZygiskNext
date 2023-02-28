@@ -201,6 +201,11 @@ fn handle_daemon_action(mut stream: UnixStream, context: &Context) -> Result<()>
             if root_impl::uid_on_denylist(uid) {
                 flags |= constants::PROCESS_ON_DENYLIST;
             }
+            match root_impl::get_impl() {
+                root_impl::RootImpl::KernelSU => flags |= constants::PROCESS_ROOT_IS_KSU,
+                root_impl::RootImpl::Magisk => flags |= constants::PROCESS_ROOT_IS_MAGISK,
+                _ => ()
+            }
             // TODO: PROCESS_IS_SYSUI?
             stream.write_u32(flags)?;
         }

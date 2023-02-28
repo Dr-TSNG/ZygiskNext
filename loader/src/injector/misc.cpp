@@ -23,17 +23,6 @@ int parse_int(std::string_view s) {
     return val;
 }
 
-void parse_mnt(const char* file, const std::function<void(mntent*)>& fn) {
-    auto fp = sFILE(setmntent(file, "re"), endmntent);
-    if (fp) {
-        mntent mentry{};
-        char buf[PATH_MAX];
-        while (getmntent_r(fp.get(), &mentry, buf, sizeof(buf))) {
-            fn(&mentry);
-        }
-    }
-}
-
 std::list<std::string> split_str(std::string_view s, std::string_view delimiter) {
     std::list<std::string> ret;
     size_t pos = 0;
@@ -57,12 +46,4 @@ std::string join_str(const std::list<std::string>& list, std::string_view delimi
         ret += s;
     }
     return ret;
-}
-
-sDIR make_dir(DIR *dp) {
-    return sDIR(dp, [](DIR *dp){ return dp ? closedir(dp) : 1; });
-}
-
-sFILE make_file(FILE *fp) {
-    return sFILE(fp, [](FILE *fp){ return fp ? fclose(fp) : 1; });
 }
