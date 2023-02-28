@@ -109,8 +109,8 @@ if [ "$ARCH" = "x86" ] || [ "$ARCH" = "x64" ]; then
     ui_print "- Extracting x86 libraries"
     extract "$ZIPFILE" 'bin/x86/zygiskd' "$MODPATH/bin" true
     mv "$MODPATH/bin/zygiskd" "$MODPATH/bin/zygiskd32"
-    extract "$ZIPFILE" 'lib/x86/libinjector.so' "$MODPATH/system/lib" true
-    extract "$ZIPFILE" 'lib/x86/libzygiskloader.so' "$MODPATH/system/lib" true
+    extract "$ZIPFILE" 'lib/x86/libzygisk_injector.so' "$MODPATH/system/lib" true
+    extract "$ZIPFILE" 'lib/x86/libzygisk_loader.so' "$MODPATH/system/lib" true
     ln -sf "zygiskd32" "$MODPATH/bin/zygiskwd"
   fi
 
@@ -118,8 +118,8 @@ if [ "$ARCH" = "x86" ] || [ "$ARCH" = "x64" ]; then
     ui_print "- Extracting x64 libraries"
     extract "$ZIPFILE" 'bin/x86_64/zygiskd' "$MODPATH/bin" true
     mv "$MODPATH/bin/zygiskd" "$MODPATH/bin/zygiskd64"
-    extract "$ZIPFILE" 'lib/x86_64/libinjector.so' "$MODPATH/system/lib64" true
-    extract "$ZIPFILE" 'lib/x86_64/libzygiskloader.so' "$MODPATH/system/lib64" true
+    extract "$ZIPFILE" 'lib/x86_64/libzygisk_injector.so' "$MODPATH/system/lib64" true
+    extract "$ZIPFILE" 'lib/x86_64/libzygisk_loader.so' "$MODPATH/system/lib64" true
     ln -sf "zygiskd64" "$MODPATH/bin/zygiskwd"
   fi
 else
@@ -127,8 +127,8 @@ else
     ui_print "- Extracting arm libraries"
     extract "$ZIPFILE" 'bin/armeabi-v7a/zygiskd' "$MODPATH/bin" true
     mv "$MODPATH/bin/zygiskd" "$MODPATH/bin/zygiskd32"
-    extract "$ZIPFILE" 'lib/armeabi-v7a/libinjector.so' "$MODPATH/system/lib" true
-    extract "$ZIPFILE" 'lib/armeabi-v7a/libzygiskloader.so' "$MODPATH/system/lib" true
+    extract "$ZIPFILE" 'lib/armeabi-v7a/libzygisk_injector.so' "$MODPATH/system/lib" true
+    extract "$ZIPFILE" 'lib/armeabi-v7a/libzygisk_loader.so' "$MODPATH/system/lib" true
     ln -sf "zygiskd32" "$MODPATH/bin/zygiskwd"
   fi
 
@@ -136,8 +136,8 @@ else
     ui_print "- Extracting arm64 libraries"
     extract "$ZIPFILE" 'bin/arm64-v8a/zygiskd' "$MODPATH/bin" true
     mv "$MODPATH/bin/zygiskd" "$MODPATH/bin/zygiskd64"
-    extract "$ZIPFILE" 'lib/arm64-v8a/libinjector.so' "$MODPATH/system/lib64" true
-    extract "$ZIPFILE" 'lib/arm64-v8a/libzygiskloader.so' "$MODPATH/system/lib64" true
+    extract "$ZIPFILE" 'lib/arm64-v8a/libzygisk_injector.so' "$MODPATH/system/lib64" true
+    extract "$ZIPFILE" 'lib/arm64-v8a/libzygisk_loader.so' "$MODPATH/system/lib64" true
     ln -sf "zygiskd64" "$MODPATH/bin/zygiskwd"
   fi
 fi
@@ -147,13 +147,13 @@ if [ $DEBUG = false ]; then
   SOCKET_PATCH=$(tr -dc 'a-f0-9' </dev/urandom | head -c 18)
   if [ "$HAS32BIT" = true ]; then
     sed -i "s/socket_placeholder/$SOCKET_PATCH/g" "$MODPATH/bin/zygiskd32"
-    sed -i "s/socket_placeholder/$SOCKET_PATCH/g" "$MODPATH/system/lib/libinjector.so"
-    sed -i "s/socket_placeholder/$SOCKET_PATCH/g" "$MODPATH/system/lib/libzygiskloader.so"
+    sed -i "s/socket_placeholder/$SOCKET_PATCH/g" "$MODPATH/system/lib/libzygisk_injector.so"
+    sed -i "s/socket_placeholder/$SOCKET_PATCH/g" "$MODPATH/system/lib/libzygisk_loader.so"
   fi
   if [ "$HAS64BIT" = true ]; then
     sed -i "s/socket_placeholder/$SOCKET_PATCH/g" "$MODPATH/bin/zygiskd64"
-    sed -i "s/socket_placeholder/$SOCKET_PATCH/g" "$MODPATH/system/lib64/libinjector.so"
-    sed -i "s/socket_placeholder/$SOCKET_PATCH/g" "$MODPATH/system/lib64/libzygiskloader.so"
+    sed -i "s/socket_placeholder/$SOCKET_PATCH/g" "$MODPATH/system/lib64/libzygisk_injector.so"
+    sed -i "s/socket_placeholder/$SOCKET_PATCH/g" "$MODPATH/system/lib64/libzygisk_loader.so"
   fi
 fi
 

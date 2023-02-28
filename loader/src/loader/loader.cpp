@@ -13,7 +13,7 @@ uint8_t NativeBridgeItf[sizeof(NativeBridgeCallbacks<__ANDROID_API_R__>) * 2]{0}
 
 namespace {
     constexpr auto kZygoteProcesses = {"zygote", "zygote32", "zygote64", "usap32", "usap64"};
-    constexpr auto kInjector = "/system/" LP_SELECT("lib", "lib64") "/libinjector.so";
+    constexpr auto kInjector = "/system/" LP_SELECT("lib", "lib64") "/libzygisk_injector.so";
 
     void* sOriginalBridge = nullptr;
 }

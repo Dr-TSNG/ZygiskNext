@@ -18,7 +18,7 @@ pub const MAX_LOG_LEVEL: LevelFilter = LevelFilter::Info;
 
 pub const PROP_NATIVE_BRIDGE: &str = "ro.dalvik.vm.native.bridge";
 pub const PROP_CTL_RESTART: &str = "ctl.restart";
-pub const ZYGISK_LOADER: &str = "libzygiskloader.so";
+pub const ZYGISK_LOADER: &str = "libzygisk_loader.so";
 
 pub const SOCKET_PLACEHOLDER: &str = "socket_placeholder";
 

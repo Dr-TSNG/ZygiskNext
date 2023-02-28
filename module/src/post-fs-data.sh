@@ -7,7 +7,7 @@ fi
 
 cd "$MODDIR"
 getprop ro.dalvik.vm.native.bridge > /dev/.native_bridge
-resetprop ro.dalvik.vm.native.bridge libzygiskloader.so
+resetprop ro.dalvik.vm.native.bridge libzygisk_loader.so
 
 if [ "$(which magisk)" ] && [ ".." -ef "/data/adb/modules" ]; then
   for file in ../*; do

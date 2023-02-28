@@ -117,7 +117,7 @@ void revert_unmount_magisk() {
         }
     }
 
-    for (auto& s: targets) {
+    for (auto& s: reversed(targets)) {
         lazy_unmount(s.data());
     }
 }
