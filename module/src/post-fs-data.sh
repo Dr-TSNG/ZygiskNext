@@ -6,7 +6,8 @@ if [ "$ZYGISK_ENABLED" ]; then
 fi
 
 cd "$MODDIR"
-export NATIVE_BRIDGE=$(getprop ro.dalvik.vm.native.bridge)
+getprop ro.dalvik.vm.native.bridge > /dev/.native_bridge
+resetprop ro.dalvik.vm.native.bridge libzygiskloader.so
 
 if [ "$(which magisk)" ] && [ ".." -ef "/data/adb/modules" ]; then
   for file in ../*; do
@@ -20,5 +21,3 @@ if [ "$(which magisk)" ] && [ ".." -ef "/data/adb/modules" ]; then
     fi
   done
 fi
-
-sh -c "./daemon.sh $@&"

@@ -91,7 +91,6 @@ if [ "$KSU" ]; then
 fi
 
 ui_print "- Extracting module files"
-extract "$ZIPFILE" 'daemon.sh'       "$MODPATH"
 extract "$ZIPFILE" 'module.prop'     "$MODPATH"
 extract "$ZIPFILE" 'post-fs-data.sh' "$MODPATH"
 extract "$ZIPFILE" 'sepolicy.rule'   "$MODPATH"

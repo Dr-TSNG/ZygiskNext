@@ -10,7 +10,6 @@ use nix::{
 use passfd::FdPassingExt;
 use std::sync::{Arc, Mutex};
 use std::thread;
-use std::ffi::c_char;
 use std::fs;
 use std::os::unix::{
     net::{UnixListener, UnixStream},
@@ -64,8 +63,7 @@ pub fn entry() -> Result<()> {
 }
 
 fn get_arch() -> Result<&'static str> {
-    let output = Command::new("getprop").arg("ro.product.cpu.abi").output()?;
-    let system_arch = String::from_utf8(output.stdout)?;
+    let system_arch = utils::get_property("ro.product.cpu.abi")?;
     if system_arch.contains("arm") {
         return Ok(lp_select!("armeabi-v7a", "arm64-v8a"));
     }
@@ -181,12 +179,8 @@ fn handle_daemon_action(mut stream: UnixStream, context: &Context) -> Result<()>
                     Err(_) => break,
                 };
                 let tag = stream.read_string()?;
-                let tag = std::ffi::CString::new(tag)?;
                 let message = stream.read_string()?;
-                let message = std::ffi::CString::new(message)?;
-                unsafe {
-                    __android_log_print(level as i32, tag.as_ptr(), message.as_ptr());
-                }
+                utils::log_raw(level as i32, &tag, &message)?;
             }
         }
         DaemonSocketAction::ReadNativeBridge => {
@@ -243,8 +237,4 @@ fn handle_daemon_action(mut stream: UnixStream, context: &Context) -> Result<()>
         }
     }
     Ok(())
-}
-
-extern "C" {
-    fn __android_log_print(prio: i32, tag: *const c_char, fmt: *const c_char, ...) -> i32;
 }

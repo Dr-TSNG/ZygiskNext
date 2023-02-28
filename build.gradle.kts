@@ -36,7 +36,7 @@ val verCode by extra(gitCommitCount)
 val minKsuVersion by extra(10654)
 val minKsudVersion by extra(10647)
 val maxKsuVersion by extra(20000)
-val minMagiskVersion by extra(25000)
+val minMagiskVersion by extra(25208)
 
 val androidMinSdkVersion by extra(29)
 val androidTargetSdkVersion by extra(33)

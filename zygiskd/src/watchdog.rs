@@ -25,7 +25,7 @@ pub fn entry() -> Result<()> {
     if check_and_set_hint()? == false {
         log::warn!("Requirements not met, exiting");
         utils::set_property(constants::PROP_NATIVE_BRIDGE, &utils::get_native_bridge())?;
-        return Ok(())
+        return Ok(());
     }
     let end = spawn_daemon();
     set_prop_hint(constants::STATUS_CRASHED)?;
@@ -64,10 +64,21 @@ fn ensure_single_instance() -> Result<()> {
 }
 
 fn mount_prop() -> Result<()> {
-    let module_prop = fs::File::open(constants::PATH_MODULE_PROP)?;
+    let module_prop = if let root_impl::RootImpl::Magisk = root_impl::get_impl() {
+        let magisk_path = Command::new("magisk").arg("--path").output()?;
+        let mut magisk_path = String::from_utf8(magisk_path.stdout)?;
+        magisk_path.pop(); // Removing '\n'
+        let cwd = std::env::current_dir()?;
+        let dir = cwd.file_name().unwrap().to_string_lossy();
+        format!("{magisk_path}/.magisk/modules/{dir}/{}", constants::PATH_MODULE_PROP)
+    } else {
+        constants::PATH_MODULE_PROP.to_string()
+    };
+    log::info!("Mount {module_prop}");
+    let module_prop_file = fs::File::open(&module_prop)?;
     let mut section = 0;
     let mut sections: [String; 2] = [String::new(), String::new()];
-    let lines = io::BufReader::new(module_prop).lines();
+    let lines = io::BufReader::new(module_prop_file).lines();
     for line in lines {
         let line = line?;
         if line.starts_with("description=") {
@@ -83,21 +94,13 @@ fn mount_prop() -> Result<()> {
     let _ = PROP_SECTIONS.set(sections);
 
     fs::create_dir(constants::PATH_TMP_DIR)?;
+    fs::File::create(constants::PATH_TMP_PROP)?;
 
     // FIXME: sys_mount cannot be compiled on 32 bit
     unsafe {
         let r = libc::mount(
-            CString::new("tmpfs")?.as_ptr(),
-            CString::new(constants::PATH_TMP_DIR)?.as_ptr(),
-            CString::new("tmpfs")?.as_ptr(),
-            0,
-            CString::new("mode=755")?.as_ptr() as *const libc::c_void,
-        );
-        Errno::result(r)?;
-        let _file = fs::File::create(constants::PATH_TMP_PROP)?;
-        let r = libc::mount(
             CString::new(constants::PATH_TMP_PROP)?.as_ptr(),
-            CString::new(constants::PATH_MODULE_PROP)?.as_ptr(),
+            CString::new(module_prop)?.as_ptr(),
             std::ptr::null(),
             libc::MS_BIND,
             std::ptr::null(),

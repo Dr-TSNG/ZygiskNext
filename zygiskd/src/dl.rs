@@ -76,7 +76,7 @@ pub unsafe fn dlopen(path: &str, flags: i32) -> Result<*mut c_void> {
     let result = android_dlopen_ext(filename, flags, &info);
     if result.is_null() {
         let e = std::ffi::CStr::from_ptr(libc::dlerror()).to_string_lossy();
-        bail!("dlopen failed: {}", e);
+        bail!(e);
     }
     Ok(result)
 }

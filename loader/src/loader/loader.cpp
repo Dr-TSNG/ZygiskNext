@@ -70,13 +70,13 @@ void Constructor() {
         LOGI("Load original native bridge: %s", native_bridge.data());
         sOriginalBridge = dlopen(native_bridge.data(), RTLD_NOW);
         if (sOriginalBridge == nullptr) {
-            LOGE("dlopen failed: %s", dlerror());
+            LOGE("%s", dlerror());
             break;
         }
 
         auto* original_native_bridge_itf = dlsym(sOriginalBridge, "NativeBridgeItf");
         if (original_native_bridge_itf == nullptr) {
-            LOGE("dlsym failed: %s", dlerror());
+            LOGE("%s", dlerror());
             break;
         }
 
