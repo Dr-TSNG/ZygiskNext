@@ -13,7 +13,7 @@ Also works as standalone loader for Magisk on purpose of getting rid of LD_PRELO
 ### KernelSU
 
 + Minimal KernelSU version: 10654
-+ Minimal ksud version: 10647
++ Minimal ksud version: 10670
 + Kernel has full SELinux patch support
 + For old kernels, you may need to manually add the following code to `sepolicy.rule`:  
   `allow zygote appdomain_tmpfs file *`  

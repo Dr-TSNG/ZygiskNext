@@ -11,7 +11,7 @@ cd "$MODDIR"
 export NATIVE_BRIDGE=$(cat /dev/.native_bridge)
 rm /dev/.native_bridge
 
-if [ "$(which magisk)" ] && [ ".." -ef "/data/adb/modules" ]; then
+if [ "$(which magisk)" ]; then
   for file in ../*; do
     if [ -d "$file" ] && [ -d "$file/zygisk" ] && ! [ -f "$file/disable" ]; then
       if [ -f "$file/service.sh" ]; then

@@ -9,7 +9,7 @@
 using namespace std::string_view_literals;
 
 namespace {
-    constexpr auto KSU_MODULE_DIR = "/data/adb/ksu/modules";
+    constexpr auto MODULE_DIR = "/data/adb/modules";
 
     struct overlay_backup {
         std::string target;
@@ -38,10 +38,10 @@ void revert_unmount_ksu() {
     std::list<overlay_backup> backups;
 
     // Unmount ksu module dir last
-    targets.emplace_back(KSU_MODULE_DIR);
+    targets.emplace_back(MODULE_DIR);
 
     for (auto& info: parse_mount_info("self")) {
-        if (info.target == KSU_MODULE_DIR) {
+        if (info.target == MODULE_DIR) {
             ksu_loop = info.source;
             continue;
         }
@@ -51,8 +51,7 @@ void revert_unmount_ksu() {
         }
         // Unmount ksu overlays
         if (info.type == "overlay") {
-            LOGV("Overlay: %s (%s)", info.target.data(), info.fs_option.data());
-            if (str_contains(info.fs_option, KSU_MODULE_DIR)) {
+            if (str_contains(info.fs_option, MODULE_DIR)) {
                 targets.emplace_back(info.target);
             } else {
                 auto backup = overlay_backup{
@@ -66,7 +65,7 @@ void revert_unmount_ksu() {
     }
     for (auto& info: parse_mount_info("self")) {
         // Unmount everything from ksu loop except ksu module dir
-        if (info.source == ksu_loop && info.target != KSU_MODULE_DIR) {
+        if (info.source == ksu_loop && info.target != MODULE_DIR) {
             targets.emplace_back(info.target);
         }
     }

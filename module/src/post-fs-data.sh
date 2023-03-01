@@ -9,7 +9,7 @@ cd "$MODDIR"
 getprop ro.dalvik.vm.native.bridge > /dev/.native_bridge
 resetprop ro.dalvik.vm.native.bridge libzygisk_loader.so
 
-if [ "$(which magisk)" ] && [ ".." -ef "/data/adb/modules" ]; then
+if [ "$(which magisk)" ]; then
   for file in ../*; do
     if [ -d "$file" ] && [ -d "$file/zygisk" ] && ! [ -f "$file/disable" ]; then
       if [ -f "$file/post-fs-data.sh" ]; then
