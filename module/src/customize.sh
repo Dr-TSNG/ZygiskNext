@@ -82,6 +82,10 @@ extract "$ZIPFILE" 'sepolicy.rule' "$TMPDIR"
 
 if [ "$KSU" ]; then
   ui_print "- Checking SELinux patches"
+  if [ "$(getprop ro.product.first_api_level)" -lt 31 ]; then
+    echo "allow zygote appdomain_tmpfs file *" >> "$TMPDIR/sepolicy.rule"
+    echo "allow zygote appdomain_tmpfs dir *"  >> "$TMPDIR/sepolicy.rule"
+  fi
   if ! check_sepolicy "$TMPDIR/sepolicy.rule"; then
     ui_print "*********************************************************"
     ui_print "! Unable to apply SELinux patches!"
@@ -93,8 +97,8 @@ fi
 ui_print "- Extracting module files"
 extract "$ZIPFILE" 'module.prop'     "$MODPATH"
 extract "$ZIPFILE" 'post-fs-data.sh' "$MODPATH"
-extract "$ZIPFILE" 'sepolicy.rule'   "$MODPATH"
 extract "$ZIPFILE" 'service.sh'      "$MODPATH"
+mv "$TMPDIR/sepolicy.rule" "$MODPATH"
 
 HAS32BIT=false && [ -d "/system/lib" ] && HAS32BIT=true
 HAS64BIT=false && [ -d "/system/lib64" ] && HAS64BIT=true
