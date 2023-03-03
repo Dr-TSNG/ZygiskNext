@@ -1,8 +1,6 @@
 mod kernelsu;
 mod magisk;
 
-use once_cell::sync::OnceCell;
-
 pub enum RootImpl {
     None,
     TooOld,
@@ -12,47 +10,50 @@ pub enum RootImpl {
     Magisk,
 }
 
-static ROOT_IMPL: OnceCell<RootImpl> = OnceCell::new();
+// FIXME: OnceCell bugs on 32 bit
+static mut ROOT_IMPL: RootImpl = RootImpl::None;
 
 pub fn setup() {
     let ksu_version = kernelsu::get_kernel_su();
     let magisk_version = magisk::get_magisk();
 
-    let _ = match (ksu_version, magisk_version) {
-        (None, None) => ROOT_IMPL.set(RootImpl::None),
-        (Some(_), Some(_)) => ROOT_IMPL.set(RootImpl::Multiple),
+    let impl_ = match (ksu_version, magisk_version) {
+        (None, None) => RootImpl::None,
+        (Some(_), Some(_)) => RootImpl::Multiple,
         (Some(ksu_version), None) => {
-            let val = match ksu_version {
+            match ksu_version {
                 kernelsu::Version::Supported => RootImpl::KernelSU,
                 kernelsu::Version::TooOld => RootImpl::TooOld,
                 kernelsu::Version::Abnormal => RootImpl::Abnormal,
-            };
-            ROOT_IMPL.set(val)
+            }
         }
         (None, Some(magisk_version)) => {
-            let val = match magisk_version {
+            match magisk_version {
                 magisk::Version::Supported => RootImpl::Magisk,
                 magisk::Version::TooOld => RootImpl::TooOld,
-            };
-            ROOT_IMPL.set(val)
+            }
         }
     };
+    unsafe { ROOT_IMPL = impl_; }
 }
 
 pub fn get_impl() -> &'static RootImpl {
-    ROOT_IMPL.get().unwrap()
+    unsafe { &ROOT_IMPL }
 }
 
+// FIXME: Without #[inline(never)], this function will lag forever
+#[inline(never)]
 pub fn uid_on_allowlist(uid: i32) -> bool {
-    match ROOT_IMPL.get().unwrap() {
+    match get_impl() {
         RootImpl::KernelSU => kernelsu::uid_on_allowlist(uid),
         RootImpl::Magisk => magisk::uid_on_allowlist(uid),
         _ => unreachable!(),
     }
 }
 
+#[inline(never)]
 pub fn uid_on_denylist(uid: i32) -> bool {
-    match ROOT_IMPL.get().unwrap() {
+    match get_impl() {
         RootImpl::KernelSU => kernelsu::uid_on_denylist(uid),
         RootImpl::Magisk => magisk::uid_on_denylist(uid),
         _ => unreachable!(),
