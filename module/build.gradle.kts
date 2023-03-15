@@ -21,6 +21,10 @@ android.buildFeatures {
     buildConfig = false
 }
 
+val zipAll = task("zipAll") {
+    group = "ZygiskOnKernelSU"
+}
+
 androidComponents.onVariants { variant ->
     val variantLowered = variant.name.toLowerCase()
     val variantCapped = variant.name.capitalize()
@@ -88,6 +92,8 @@ androidComponents.onVariants { variant ->
         destinationDirectory.set(file("$buildDir/outputs/release"))
         from(moduleDir)
     }
+
+    zipAll.dependsOn(zipTask)
 
     val pushTask = task<Exec>("push$variantCapped") {
         group = "module"
