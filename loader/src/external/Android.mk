@@ -16,5 +16,6 @@ include $(BUILD_STATIC_LIBRARY)
 # Header only library
 include $(CLEAR_VARS)
 LOCAL_MODULE:= libphmap
+LOCAL_CFLAGS := -Wno-unused-value
 LOCAL_EXPORT_C_INCLUDES := $(LOCAL_PATH)/parallel-hashmap
 include $(BUILD_STATIC_LIBRARY)

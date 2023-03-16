@@ -1,0 +1,88 @@
+name: CI
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ master ]
+    tags: [ v* ]
+  pull_request:
+  merge_group:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      CCACHE_COMPILERCHECK: "%compiler% -dumpmachine; %compiler% -dumpversion"
+      CCACHE_NOHASHDIR: "true"
+      CCACHE_HARDLINK: "true"
+      CCACHE_BASEDIR: "${{ github.workspace }}"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          submodules: "recursive"
+          fetch-depth: 0
+
+      - name: Setup Java
+        uses: actions/setup-java@v3
+        with:
+          distribution: "temurin"
+          java-version: "17"
+
+      - name: Setup Gradle
+        uses: gradle/gradle-build-action@v2
+        with:
+          gradle-home-cache-cleanup: true
+
+      - name: Setup rust-cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: zygiskd/src -> ../build/intermediates/rust
+          cache-targets: false
+          
+      - name: Setup Rust
+        run: |
+          rustup target add armv7-linux-androideabi
+          rustup target add aarch64-linux-android
+          rustup target add x86_64-linux-android
+          rustup target add i686-linux-android
+
+      - name: Set up ccache
+        uses: hendrikmuhs/ccache-action@v1.2
+        with:
+          max-size: 2G
+          key: ${{ runner.os }}
+          restore-keys: ${{ runner.os }}
+          save: ${{ github.event_name == 'push' && github.ref == 'refs/heads/master' }}
+
+      - name: Build with Gradle
+        run: |
+          echo 'org.gradle.parallel=true' >> gradle.properties
+          echo 'org.gradle.vfs.watch=true' >> gradle.properties
+          echo 'org.gradle.jvmargs=-Xmx2048m' >> gradle.properties
+          echo 'android.native.buildOutput=verbose' >> gradle.properties
+          sed -i 's/org.gradle.unsafe.configuration-cache=true//g' gradle.properties
+          ./gradlew zipRelease
+          ./gradlew zipDebug
+
+      - name: Prepare artifact
+        if: success()
+        id: prepareArtifact
+        run: |
+          releaseName=`ls module/build/outputs/release/Zygisk-on-KernelSU-v*-release.zip | awk -F '(/|.zip)' '{print $5}'` && echo "releaseName=$releaseName" >> $GITHUB_OUTPUT
+          debugName=`ls module/build/outputs/release/Zygisk-on-KernelSU-v*-debug.zip | awk -F '(/|.zip)' '{print $5}'` && echo "debugName=$debugName" >> $GITHUB_OUTPUT
+          unzip module/build/outputs/release/Zygisk-on-KernelSU-v*-release.zip -d zksu-release
+          unzip module/build/outputs/release/Zygisk-on-KernelSU-v*-debug.zip -d zksu-debug
+
+      - name: Upload release
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ steps.prepareArtifact.outputs.releaseName }}
+          path: "./zksu-release/*"
+
+      - name: Upload debug
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ steps.prepareArtifact.outputs.debugName }}
+          path: "./zksu-debug/*"
