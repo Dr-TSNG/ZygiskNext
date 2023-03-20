@@ -1,6 +1,6 @@
 use crate::constants::DaemonSocketAction;
 use crate::utils::UnixStreamExt;
-use crate::{constants, lp_select, root_impl, utils};
+use crate::{constants, lp_select, magic, root_impl, utils};
 use anyhow::{bail, Result};
 use memfd::Memfd;
 use nix::{
@@ -135,7 +135,7 @@ fn create_memfd(so_path: &PathBuf) -> Result<Memfd> {
 fn create_daemon_socket() -> Result<UnixListener> {
     utils::set_socket_create_context("u:r:zygote:s0")?;
     let prefix = lp_select!("zygiskd32", "zygiskd64");
-    let name = String::from(prefix) + constants::SOCKET_PLACEHOLDER;
+    let name = format!("{}{}", prefix, magic::MAGIC.as_str());
     let listener = utils::abstract_namespace_socket(&name)?;
     log::debug!("Daemon socket: {name}");
     Ok(listener)

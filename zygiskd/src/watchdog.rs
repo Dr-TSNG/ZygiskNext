@@ -1,4 +1,4 @@
-use crate::{constants, root_impl, utils};
+use crate::{constants, magic, root_impl, utils};
 use anyhow::{bail, Result};
 use nix::unistd::{getgid, getuid, Pid};
 use std::process::{Child, Command};
@@ -12,10 +12,10 @@ use binder::IBinder;
 use nix::errno::Errno;
 use nix::libc;
 use nix::sys::signal::{kill, Signal};
-use once_cell::sync::OnceCell;
+use crate::utils::LateInit;
 
-static LOCK: OnceCell<UnixListener> = OnceCell::new();
-static PROP_SECTIONS: OnceCell<[String; 2]> = OnceCell::new();
+static LOCK: LateInit<UnixListener> = LateInit::new();
+static PROP_SECTIONS: LateInit<[String; 2]> = LateInit::new();
 
 pub fn entry() -> Result<()> {
     log::info!("Start zygisksu watchdog");
@@ -55,9 +55,9 @@ fn check_permission() -> Result<()> {
 
 fn ensure_single_instance() -> Result<()> {
     log::info!("Ensure single instance");
-    let name = String::from("zygiskwd") + constants::SOCKET_PLACEHOLDER;
+    let name = format!("zygiskwd{}", magic::MAGIC.as_str());
     match utils::abstract_namespace_socket(&name) {
-        Ok(socket) => { let _ = LOCK.set(socket); }
+        Ok(socket) => LOCK.init(socket),
         Err(e) => bail!("Failed to acquire lock: {e}. Maybe another instance is running?")
     }
     Ok(())
@@ -91,15 +91,15 @@ fn mount_prop() -> Result<()> {
             sections[section].push('\n');
         }
     }
-    let _ = PROP_SECTIONS.set(sections);
+    PROP_SECTIONS.init(sections);
 
-    fs::create_dir(constants::PATH_TMP_DIR)?;
-    fs::File::create(constants::PATH_TMP_PROP)?;
+    fs::create_dir(magic::PATH_TMP_DIR.as_str())?;
+    fs::File::create(magic::PATH_TMP_PROP.as_str())?;
 
     // FIXME: sys_mount cannot be compiled on 32 bit
     unsafe {
         let r = libc::mount(
-            CString::new(constants::PATH_TMP_PROP)?.as_ptr(),
+            CString::new(magic::PATH_TMP_PROP.as_str())?.as_ptr(),
             CString::new(module_prop)?.as_ptr(),
             std::ptr::null(),
             libc::MS_BIND,
@@ -112,13 +112,12 @@ fn mount_prop() -> Result<()> {
 }
 
 fn set_prop_hint(hint: &str) -> Result<()> {
-    let mut file = fs::File::create(constants::PATH_TMP_PROP)?;
-    let sections = PROP_SECTIONS.get().unwrap();
-    file.write_all(sections[0].as_bytes())?;
+    let mut file = fs::File::create(magic::PATH_TMP_PROP.as_str())?;
+    file.write_all(PROP_SECTIONS[0].as_bytes())?;
     file.write_all(b"[")?;
     file.write_all(hint.as_bytes())?;
     file.write_all(b"] ")?;
-    file.write_all(sections[1].as_bytes())?;
+    file.write_all(PROP_SECTIONS[1].as_bytes())?;
     Ok(())
 }
 

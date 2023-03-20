@@ -5,6 +5,7 @@ use std::ffi::c_char;
 use std::os::fd::FromRawFd;
 use std::os::unix::net::UnixListener;
 use nix::sys::socket::{AddressFamily, SockFlag, SockType, UnixAddr};
+use once_cell::sync::OnceCell;
 use rand::distributions::{Alphanumeric, DistString};
 
 #[cfg(target_pointer_width = "64")]
@@ -16,6 +17,27 @@ macro_rules! lp_select {
 #[macro_export]
 macro_rules! lp_select {
     ($lp32:expr, $lp64:expr) => { $lp32 };
+}
+
+pub struct LateInit<T> {
+    cell: OnceCell<T>,
+}
+
+impl<T> LateInit<T> {
+    pub const fn new() -> Self {
+        LateInit { cell: OnceCell::new() }
+    }
+
+    pub fn init(&self, value: T) {
+        assert!(self.cell.set(value).is_ok())
+    }
+}
+
+impl<T> std::ops::Deref for LateInit<T> {
+    type Target = T;
+    fn deref(&self) -> &T {
+        self.cell.get().unwrap()
+    }
 }
 
 pub fn random_string() -> String {

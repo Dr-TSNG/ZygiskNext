@@ -19,15 +19,12 @@ pub const MAX_LOG_LEVEL: LevelFilter = LevelFilter::Info;
 pub const PROP_NATIVE_BRIDGE: &str = "ro.dalvik.vm.native.bridge";
 pub const PROP_CTL_RESTART: &str = "ctl.restart";
 pub const ZYGISK_LOADER: &str = "libzygisk_loader.so";
-
-pub const SOCKET_PLACEHOLDER: &str = "socket_placeholder";
+pub const ZYGISK_MAGIC: &str = "/system/zygisk_magic";
 
 pub const PATH_MODULES_DIR: &str = "..";
 pub const PATH_MODULE_PROP: &str = "module.prop";
 pub const PATH_ZYGISKD32: &str = "bin/zygiskd32";
 pub const PATH_ZYGISKD64: &str = "bin/zygiskd64";
-pub const PATH_TMP_DIR: &str = concatcp!("/dev/", SOCKET_PLACEHOLDER);
-pub const PATH_TMP_PROP: &str = concatcp!("/dev/", SOCKET_PLACEHOLDER, "/module.prop");
 
 pub const STATUS_LOADED: &str = "😋 Zygisksu is loaded";
 pub const STATUS_CRASHED: &str = "❌ Zygiskd has crashed";

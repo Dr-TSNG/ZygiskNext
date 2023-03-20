@@ -146,20 +146,9 @@ else
   fi
 fi
 
-if [ $DEBUG = false ]; then
-  ui_print "- Hex patching"
-  SOCKET_PATCH=$(tr -dc 'a-f0-9' </dev/urandom | head -c 18)
-  if [ "$HAS32BIT" = true ]; then
-    sed -i "s/socket_placeholder/$SOCKET_PATCH/g" "$MODPATH/bin/zygiskd32"
-    sed -i "s/socket_placeholder/$SOCKET_PATCH/g" "$MODPATH/system/lib/libzygisk_injector.so"
-    sed -i "s/socket_placeholder/$SOCKET_PATCH/g" "$MODPATH/system/lib/libzygisk_loader.so"
-  fi
-  if [ "$HAS64BIT" = true ]; then
-    sed -i "s/socket_placeholder/$SOCKET_PATCH/g" "$MODPATH/bin/zygiskd64"
-    sed -i "s/socket_placeholder/$SOCKET_PATCH/g" "$MODPATH/system/lib64/libzygisk_injector.so"
-    sed -i "s/socket_placeholder/$SOCKET_PATCH/g" "$MODPATH/system/lib64/libzygisk_loader.so"
-  fi
-fi
+ui_print "- Generating magic"
+MAGIC=$(tr -dc 'a-f0-9' </dev/urandom | head -c 18)
+echo -n "$MAGIC" > "$MODPATH/system/zygisk_magic"
 
 ui_print "- Setting permissions"
 chmod 0744 "$MODPATH/daemon.sh"

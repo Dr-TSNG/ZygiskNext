@@ -3,6 +3,7 @@
 mod companion;
 mod constants;
 mod dl;
+mod magic;
 mod root_impl;
 mod utils;
 mod watchdog;
@@ -39,6 +40,7 @@ fn init_android_logger(tag: &str) {
 
 fn start() -> Result<()> {
     root_impl::setup();
+    magic::setup()?;
     let cli = Args::parse();
     match cli.command {
         Commands::Watchdog => watchdog::entry()?,

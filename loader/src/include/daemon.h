@@ -10,7 +10,8 @@
 #else
 # define LP_SELECT(lp32, lp64) lp32
 #endif
-constexpr std::string_view kZygiskSocket = LP_SELECT("zygiskd32", "zygiskd64") "socket_placeholder";
+
+constexpr auto kZygiskMagic = "/system/zygisk_magic";
 
 class UniqueFd {
     using Fd = int;

@@ -8,19 +8,37 @@
 
 namespace zygiskd {
 
+    bool sMagicRead = false;
+    static std::string sSocketName;
+
+    void ReadMagic() {
+        sMagicRead = true;
+        char magic[PATH_MAX]{0};
+        auto fp = fopen(kZygiskMagic, "r");
+        if (fp == nullptr) {
+            PLOGE("Open magic file");
+            return;
+        }
+        fgets(magic, PATH_MAX, fp);
+        fclose(fp);
+        sSocketName.append(LP_SELECT("zygiskd32", "zygiskd64")).append(magic);
+        LOGD("Socket name: %s", sSocketName.data());
+    }
+
     int Connect(uint8_t retry) {
+        if (!sMagicRead) ReadMagic();
         int fd = socket(PF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, 0);
         struct sockaddr_un addr{
                 .sun_family = AF_UNIX,
                 .sun_path={0},
         };
-        strncpy(addr.sun_path + 1, kZygiskSocket.data(), kZygiskSocket.size());
+        strcpy(addr.sun_path + 1, sSocketName.data());
         socklen_t socklen = sizeof(sa_family_t) + strlen(addr.sun_path + 1) + 1;
 
         while (retry--) {
             int r = connect(fd, reinterpret_cast<struct sockaddr*>(&addr), socklen);
             if (r == 0) return fd;
-            LOGW("retrying to connect to zygiskd, sleep 1s");
+            LOGW("Retrying to connect to zygiskd, sleep 1s");
             sleep(1);
         }
 
