@@ -198,7 +198,7 @@ fn handle_daemon_action(mut stream: UnixStream, context: &Context) -> Result<()>
             match root_impl::get_impl() {
                 root_impl::RootImpl::KernelSU => flags |= constants::PROCESS_ROOT_IS_KSU,
                 root_impl::RootImpl::Magisk => flags |= constants::PROCESS_ROOT_IS_MAGISK,
-                _ => ()
+                _ => unreachable!(),
             }
             // TODO: PROCESS_IS_SYSUI?
             stream.write_u32(flags)?;

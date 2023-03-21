@@ -24,6 +24,7 @@ pub fn get_kernel_su() -> Option<Version> {
     }
 }
 
+#[inline(never)]
 pub fn uid_on_allowlist(uid: i32) -> bool {
     let mut size = 1024u32;
     let mut uids = vec![0; size as usize];
@@ -32,6 +33,7 @@ pub fn uid_on_allowlist(uid: i32) -> bool {
     uids.contains(&uid)
 }
 
+#[inline(never)]
 pub fn uid_on_denylist(uid: i32) -> bool {
     let mut size = 1024u32;
     let mut uids = vec![0; size as usize];
