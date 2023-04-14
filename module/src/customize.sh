@@ -82,10 +82,6 @@ extract "$ZIPFILE" 'sepolicy.rule' "$TMPDIR"
 
 if [ "$KSU" ]; then
   ui_print "- Checking SELinux patches"
-  if [ "$(getprop ro.product.first_api_level)" -lt 31 ]; then
-    echo "allow zygote appdomain_tmpfs file *" >> "$TMPDIR/sepolicy.rule"
-    echo "allow zygote appdomain_tmpfs dir *"  >> "$TMPDIR/sepolicy.rule"
-  fi
   if ! check_sepolicy "$TMPDIR/sepolicy.rule"; then
     ui_print "*********************************************************"
     ui_print "! Unable to apply SELinux patches!"

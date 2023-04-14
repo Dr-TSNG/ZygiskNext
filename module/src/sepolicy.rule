@@ -1,4 +1,6 @@
 allow * tmpfs * *
+allow zygote appdomain_tmpfs dir *
+allow zygote appdomain_tmpfs file *
 
 type magisk_file file_type
 typeattribute magisk_file mlstrustedobject
