@@ -1,7 +1,7 @@
 name: Bug report/反馈 Bug
 description: Report errors or unexpected behavior./反馈错误或异常行为。
 labels: [bug]
-title: "[Bug] "
+title: "[Bug] Short description/简单描述"
 body:
   - type: markdown
     attributes:
@@ -37,13 +37,13 @@ body:
   - type: textarea
     attributes:
       label: KernelSU Module List/KernelSU 模块列表
-      render: shell
+      render: Shell
     validations:
       required: true
   - type: input
     attributes:
       label: Zygisk on KernelSU version/Zygisk on KernelSU 版本
-      description:  Don't use 'latest'. Specify actual version, otherwise your issue will be closed./不要填用“最新版”。给出具体版本号，不然 issue 会被关闭。
+      description: Don't use 'latest'. Specify actual version, otherwise your issue will be closed./不要填用“最新版”。给出具体版本号，不然 issue 会被关闭。
     validations:
       required: true
   - type: input
