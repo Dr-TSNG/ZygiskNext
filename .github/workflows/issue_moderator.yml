@@ -1,0 +1,23 @@
+name: Issue moderator
+
+on:
+  issues:
+    types: [opened, edited, reopened]
+
+jobs:
+  autoclose:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check issue
+        uses: tachiyomiorg/issue-moderator-action@v1
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          auto-close-rules: |
+            [
+              {
+                "type": "title",
+                "regex": ".*(Short description|简单描述).*",
+                "message": "You did not fill out the description in the title/你没有填写标题"
+              }
+            ]
+          auto-close-ignore-label: do-not-autoclose
