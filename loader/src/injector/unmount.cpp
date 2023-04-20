@@ -10,12 +10,8 @@ using namespace std::string_view_literals;
 
 namespace {
     constexpr auto MODULE_DIR = "/data/adb/modules";
-
-    struct overlay_backup {
-        std::string target;
-        std::string vfs_option;
-        std::string fs_option;
-    };
+    constexpr auto KSU_OVERLAY_SOURCE = "KSU";
+    const std::vector<std::string> KSU_PARTITIONS{"/system", "/vendor", "/product", "/system_ext", "/odm", "/oem"};
 
     void lazy_unmount(const char* mountpoint) {
         if (umount2(mountpoint, MNT_DETACH) != -1) {
@@ -26,16 +22,9 @@ namespace {
     }
 }
 
-#define PARSE_OPT(name, flag)   \
-    if (opt == (name)) {        \
-        flags |= (flag);        \
-        return true;            \
-    }
-
 void revert_unmount_ksu() {
     std::string ksu_loop;
     std::vector<std::string> targets;
-    std::list<overlay_backup> backups;
 
     // Unmount ksu module dir last
     targets.emplace_back(MODULE_DIR);
@@ -50,17 +39,10 @@ void revert_unmount_ksu() {
             targets.emplace_back(info.target);
         }
         // Unmount ksu overlays
-        if (info.type == "overlay") {
-            if (str_contains(info.fs_option, MODULE_DIR)) {
-                targets.emplace_back(info.target);
-            } else {
-                auto backup = overlay_backup{
-                        .target = info.target,
-                        .vfs_option = info.vfs_option,
-                        .fs_option = info.fs_option,
-                };
-                backups.emplace_back(backup);
-            }
+        if (info.type == "overlay"
+            && info.source == KSU_OVERLAY_SOURCE
+            && std::find(KSU_PARTITIONS.begin(), KSU_PARTITIONS.end(), info.target) != KSU_PARTITIONS.end()) {
+            targets.emplace_back(info.target);
         }
     }
     for (auto& info: parse_mount_info("self")) {
@@ -73,34 +55,6 @@ void revert_unmount_ksu() {
     // Do unmount
     for (auto& s: reversed(targets)) {
         lazy_unmount(s.data());
-    }
-
-    // Affirm unmounted system overlays
-    for (auto& info: parse_mount_info("self")) {
-        if (info.type == "overlay") {
-            backups.remove_if([&](overlay_backup& mnt) {
-                return mnt.target == info.target && mnt.fs_option == info.fs_option;
-            });
-        }
-    }
-
-    // Restore system overlays
-    for (auto& mnt: backups) {
-        auto opts = split_str(mnt.vfs_option, ",");
-        opts.splice(opts.end(), split_str(mnt.fs_option, ","));
-        unsigned long flags = 0;
-        opts.remove_if([&](auto& opt) {
-            PARSE_OPT(MNTOPT_RO, MS_RDONLY)
-            PARSE_OPT(MNTOPT_NOSUID, MS_NOSUID)
-            PARSE_OPT("relatime", MS_RELATIME)
-            return false;
-        });
-        auto mnt_data = join_str(opts, ",");
-        if (mount("overlay", mnt.target.data(), "overlay", flags, mnt_data.data()) != -1) {
-            LOGD("Remounted (%s)", mnt.target.data());
-        } else {
-            PLOGE("Remount (%s, %s)", mnt.target.data(), mnt.fs_option.data());
-        }
     }
 }
 
