@@ -1,6 +1,6 @@
 use crate::constants::DaemonSocketAction;
 use crate::utils::UnixStreamExt;
-use crate::{constants, lp_select, magic, root_impl, utils};
+use crate::{constants, debug_select, lp_select, magic, root_impl, utils};
 use anyhow::{bail, Result};
 use memfd::Memfd;
 use nix::{
@@ -91,7 +91,7 @@ fn load_modules(arch: &str) -> Result<Vec<Module>> {
             continue;
         }
         log::info!("  Loading module `{name}`...");
-        let memfd = match create_memfd(&so_path) {
+        let memfd = match create_memfd(&so_path, &name) {
             Ok(memfd) => memfd,
             Err(e) => {
                 log::warn!("  Failed to create memfd for `{name}`: {e}");
@@ -114,9 +114,9 @@ fn load_modules(arch: &str) -> Result<Vec<Module>> {
     Ok(modules)
 }
 
-fn create_memfd(so_path: &PathBuf) -> Result<Memfd> {
+fn create_memfd(so_path: &PathBuf, debug_name: &str) -> Result<Memfd> {
     let opts = memfd::MemfdOptions::default().allow_sealing(true);
-    let memfd = opts.create("jit-cache")?;
+    let memfd = opts.create(debug_select!(debug_name, "jit-cache"))?;
     let file = fs::File::open(so_path)?;
     let mut reader = std::io::BufReader::new(file);
     let mut writer = memfd.as_file();

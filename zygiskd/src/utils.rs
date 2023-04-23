@@ -19,6 +19,17 @@ macro_rules! lp_select {
     ($lp32:expr, $lp64:expr) => { $lp32 };
 }
 
+#[cfg(debug_assertions)]
+#[macro_export]
+macro_rules! debug_select {
+    ($debug:expr, $release:expr) => { $debug };
+}
+#[cfg(not(debug_assertions))]
+#[macro_export]
+macro_rules! debug_select {
+    ($debug:expr, $release:expr) => { $release };
+}
+
 pub struct LateInit<T> {
     cell: OnceCell<T>,
 }
