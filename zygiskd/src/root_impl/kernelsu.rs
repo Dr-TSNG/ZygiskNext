@@ -5,7 +5,6 @@ const KERNEL_SU_OPTION: i32 = 0xdeadbeefu32 as i32;
 
 const CMD_GET_VERSION: usize = 2;
 const CMD_GET_ALLOW_LIST: usize = 5;
-const CMD_GET_DENY_LIST: usize = 6;
 
 pub enum Version {
     Supported,
@@ -35,9 +34,5 @@ pub fn uid_on_allowlist(uid: i32) -> bool {
 
 #[inline(never)]
 pub fn uid_on_denylist(uid: i32) -> bool {
-    let mut size = 1024u32;
-    let mut uids = vec![0; size as usize];
-    unsafe { prctl(KERNEL_SU_OPTION, CMD_GET_DENY_LIST, uids.as_mut_ptr(), &mut size as *mut u32) };
-    uids.resize(size as usize, 0);
-    uids.contains(&uid)
+    false
 }
