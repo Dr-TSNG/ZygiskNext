@@ -11,6 +11,7 @@ use passfd::FdPassingExt;
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::fs;
+use std::os::fd::{IntoRawFd, RawFd};
 use std::os::unix::{
     net::{UnixListener, UnixStream},
     prelude::AsRawFd,
@@ -24,7 +25,7 @@ use nix::unistd::{fork, ForkResult};
 
 struct Module {
     name: String,
-    memfd: Memfd,
+    memfd: RawFd,
     companion: Mutex<Option<UnixStream>>,
 }
 
@@ -94,24 +95,30 @@ fn load_modules(arch: &str) -> Result<Vec<Module>> {
             continue;
         }
         log::info!("  Loading module `{name}`...");
-        let memfd = match create_memfd(&so_path, &name) {
-            Ok(memfd) => memfd,
+        let fd = match create_library_fd(&so_path) {
+            Ok(fd) => fd,
             Err(e) => {
                 log::warn!("  Failed to create memfd for `{name}`: {e}");
                 continue;
             }
         };
         let companion = Mutex::new(None);
-        let module = Module { name, memfd, companion };
+        let module = Module { name, memfd: fd, companion };
         modules.push(module);
     }
 
     Ok(modules)
 }
 
-fn create_memfd(so_path: &PathBuf, debug_name: &str) -> Result<Memfd> {
+#[cfg(debug_assertions)]
+fn create_library_fd(so_path: &PathBuf) -> Result<RawFd> {
+    Ok(fs::File::open(so_path)?.into_raw_fd())
+}
+
+#[cfg(not(debug_assertions))]
+fn create_library_fd(so_path: &PathBuf) -> Result<RawFd> {
     let opts = memfd::MemfdOptions::default().allow_sealing(true);
-    let memfd = opts.create(debug_select!(debug_name, "jit-cache"))?;
+    let memfd = opts.create("jit-cache")?;
     let file = fs::File::open(so_path)?;
     let mut reader = std::io::BufReader::new(file);
     let mut writer = memfd.as_file();
@@ -124,7 +131,7 @@ fn create_memfd(so_path: &PathBuf, debug_name: &str) -> Result<Memfd> {
     seals.insert(memfd::FileSeal::SealSeal);
     memfd.add_seals(&seals)?;
 
-    Ok(memfd)
+    Ok(memfd.into_raw_fd())
 }
 
 fn create_daemon_socket() -> Result<UnixListener> {
@@ -136,7 +143,7 @@ fn create_daemon_socket() -> Result<UnixListener> {
     Ok(listener)
 }
 
-fn spawn_companion(name: &str, memfd: &Memfd) -> Result<Option<UnixStream>> {
+fn spawn_companion(name: &str, fd: &RawFd) -> Result<Option<UnixStream>> {
     let (mut daemon, companion) = UnixStream::pair()?;
     // Remove FD_CLOEXEC flag
     fcntl(companion.as_raw_fd(), FcntlArg::F_SETFD(FdFlag::empty()))?;
@@ -165,7 +172,7 @@ fn spawn_companion(name: &str, memfd: &Memfd) -> Result<Option<UnixStream>> {
     }
 
     daemon.write_string(name)?;
-    daemon.send_fd(memfd.as_raw_fd())?;
+    daemon.send_fd(*fd)?;
     match daemon.read_u8()? {
         0 => Ok(None),
         1 => Ok(Some(daemon)),
@@ -223,7 +230,7 @@ fn handle_daemon_action(mut stream: UnixStream, context: &Context) -> Result<()>
             let index = stream.read_usize()?;
             let module = &context.modules[index];
             let name = &module.name;
-            let memfd = &module.memfd;
+            let fd = &module.memfd;
             let mut companion = module.companion.lock().unwrap();
             if let Some(sock) = companion.as_ref() {
                 let mut pfds = [PollFd::new(sock.as_raw_fd(), PollFlags::empty())];
@@ -234,7 +241,7 @@ fn handle_daemon_action(mut stream: UnixStream, context: &Context) -> Result<()>
                 }
             }
             if companion.as_ref().is_none() {
-                match spawn_companion(&name, &memfd) {
+                match spawn_companion(&name, fd) {
                     Ok(c) => {
                         log::trace!("  spawned companion for `{name}`");
                         *companion = c;
