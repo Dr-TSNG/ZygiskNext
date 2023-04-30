@@ -44,8 +44,28 @@ void* DlopenExt(const char* path, int flags) {
     return handle;
 }
 
-void* DlopenMem(int memfd, int flags) {
-    char path[PATH_MAX];
-    sprintf(path, "/proc/self/fd/%d", memfd);
-    return DlopenExt(path, flags);
+void* DlopenMem(int fd, int flags) {
+    auto info = android_dlextinfo{};
+    auto* ns = &__loader_android_create_namespace == nullptr ? nullptr :
+               __loader_android_create_namespace("", "", nullptr,
+                                                 2, /* ANDROID_NAMESPACE_TYPE_SHARED */
+                                                 nullptr, nullptr,
+                                                 reinterpret_cast<void*>(&DlopenExt));
+    if (ns) {
+        info.flags = ANDROID_DLEXT_USE_NAMESPACE | ANDROID_DLEXT_USE_LIBRARY_FD;
+        info.library_namespace = ns;
+        info.library_fd = fd;
+
+        LOGD("Open fd %d with namespace %p", fd, ns);
+    } else {
+        LOGD("Cannot create namespace for fd %d", fd);
+    }
+
+    auto* handle = android_dlopen_ext("/jit-cache", flags, &info);
+    if (handle) {
+        LOGD("dlopen fd %d: %p", fd, handle);
+    } else {
+        LOGE("dlopen fd %d: %s", fd, dlerror());
+    }
+    return handle;
 }
