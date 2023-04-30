@@ -18,6 +18,7 @@ use std::os::unix::{
 use std::os::unix::process::CommandExt;
 use std::path::PathBuf;
 use std::process::Command;
+use nix::poll::{poll, PollFd, PollFlags};
 use nix::sys::wait::{waitpid, WaitStatus};
 use nix::unistd::{fork, ForkResult};
 
@@ -100,15 +101,7 @@ fn load_modules(arch: &str) -> Result<Vec<Module>> {
                 continue;
             }
         };
-        let companion = match spawn_companion(&name, &memfd) {
-            Ok(companion) => companion,
-            Err(e) => {
-                log::warn!("  Failed to spawn companion for `{name}`: {e}");
-                continue;
-            }
-        };
-
-        let companion = Mutex::new(companion);
+        let companion = Mutex::new(None);
         let module = Module { name, memfd, companion };
         modules.push(module);
     }
@@ -229,12 +222,33 @@ fn handle_daemon_action(mut stream: UnixStream, context: &Context) -> Result<()>
         DaemonSocketAction::RequestCompanionSocket => {
             let index = stream.read_usize()?;
             let module = &context.modules[index];
+            let name = &module.name;
+            let memfd = &module.memfd;
             let mut companion = module.companion.lock().unwrap();
+            if let Some(sock) = companion.as_ref() {
+                let mut pfds = [PollFd::new(sock.as_raw_fd(), PollFlags::empty())];
+                poll(&mut pfds, 0)?;
+                if !pfds[0].revents().unwrap().is_empty() {
+                    log::error!("poll companion for module `{}` crashed", name);
+                    companion.take();
+                }
+            }
+            if companion.as_ref().is_none() {
+                match spawn_companion(&name, &memfd) {
+                    Ok(c) => {
+                        log::trace!("  spawned companion for `{name}`");
+                        *companion = c;
+                    },
+                    Err(e) => {
+                        log::warn!("  Failed to spawn companion for `{name}`: {e}");
+                    }
+                };
+            }
             match companion.as_ref() {
                 Some(sock) => {
                     if let Err(_) = sock.send_fd(stream.as_raw_fd()) {
-                        log::error!("Companion of module `{}` crashed", module.name);
-                        companion.take();
+                        log::error!("Companion socket of module `{}` missing", module.name);
+
                         stream.write_u8(0)?;
                     }
                     // Ok: Send by companion

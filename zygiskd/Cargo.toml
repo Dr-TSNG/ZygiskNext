@@ -14,7 +14,7 @@ konst = "0.3.4"
 lazy_static = "1.4.0"
 log = "0.4.17"
 memfd = "0.6.2"
-nix = { version = "0.26.2", features = ["process"] }
+nix = { version = "0.26.2", features = ["process","poll"] }
 num_enum = "0.5.9"
 once_cell = "1.17.1"
 passfd = "0.1.5"
