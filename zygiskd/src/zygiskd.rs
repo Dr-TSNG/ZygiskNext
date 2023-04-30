@@ -1,7 +1,7 @@
 use crate::constants::DaemonSocketAction;
-use crate::utils::UnixStreamExt;
+use crate::utils::{UnixStreamExt};
 use crate::{constants, debug_select, lp_select, magic, root_impl, utils};
-use anyhow::{bail, Result};
+use anyhow::{bail, ensure, Result};
 use memfd::Memfd;
 use nix::{
     fcntl::{fcntl, FcntlArg, FdFlag},
@@ -18,6 +18,8 @@ use std::os::unix::{
 use std::os::unix::process::CommandExt;
 use std::path::PathBuf;
 use std::process::Command;
+use nix::sys::wait::{waitpid, WaitStatus};
+use nix::unistd::{fork, ForkResult};
 
 struct Module {
     name: String,
@@ -148,12 +150,26 @@ fn spawn_companion(name: &str, memfd: &Memfd) -> Result<Option<UnixStream>> {
 
     let process = std::env::args().next().unwrap();
     let nice_name = process.split('/').last().unwrap();
-    Command::new(&process)
-        .arg0(format!("{}-{}", nice_name, name))
-        .arg("companion")
-        .arg(format!("{}", companion.as_raw_fd()))
-        .spawn()?;
-    drop(companion);
+
+    match unsafe { fork()? } {
+        ForkResult::Parent { child, ..} => {
+            if let Ok(WaitStatus::Exited(.., code)) = waitpid(child, None) {
+                ensure!(code == 0, format!("process exited with {code}"));
+            } else {
+                bail!("process exited abnormally");
+            }
+        }
+        ForkResult::Child => {
+            Command::new(&process)
+                .arg0(format!("{}-{}", nice_name, name))
+                .arg("companion")
+                .arg(format!("{}", companion.as_raw_fd()))
+                .spawn()?;
+            drop(companion);
+
+            std::process::exit(0);
+        }
+    }
 
     daemon.write_string(name)?;
     daemon.send_fd(memfd.as_raw_fd())?;
