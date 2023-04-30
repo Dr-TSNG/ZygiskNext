@@ -80,6 +80,11 @@ extract "$ZIPFILE" 'customize.sh'  "$TMPDIR/.vunzip"
 extract "$ZIPFILE" 'verify.sh'     "$TMPDIR/.vunzip"
 extract "$ZIPFILE" 'sepolicy.rule' "$TMPDIR"
 
+if [ "$DEBUG" = true ]; then
+  ui_print "- Add debug SELinux policy"
+  echo "allow crash_dump adb_data_file dir search" >> "$TMPDIR/sepolicy.rule"
+fi
+
 if [ "$KSU" ]; then
   ui_print "- Checking SELinux patches"
   if ! check_sepolicy "$TMPDIR/sepolicy.rule"; then
