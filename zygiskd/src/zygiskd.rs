@@ -11,7 +11,7 @@ use passfd::FdPassingExt;
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::fs;
-use std::os::fd::{IntoRawFd, RawFd};
+use std::os::fd::{IntoRawFd, OwnedFd, RawFd};
 use std::os::unix::{
     net::{UnixListener, UnixStream},
     prelude::AsRawFd,
@@ -25,7 +25,7 @@ use nix::unistd::{fork, ForkResult};
 
 struct Module {
     name: String,
-    memfd: RawFd,
+    memfd: OwnedFd,
     companion: Mutex<Option<UnixStream>>,
 }
 
@@ -111,12 +111,12 @@ fn load_modules(arch: &str) -> Result<Vec<Module>> {
 }
 
 #[cfg(debug_assertions)]
-fn create_library_fd(so_path: &PathBuf) -> Result<RawFd> {
-    Ok(fs::File::open(so_path)?.into_raw_fd())
+fn create_library_fd(so_path: &PathBuf) -> Result<OwnedFd> {
+    Ok(OwnedFd::from(fs::File::open(so_path)?))
 }
 
 #[cfg(not(debug_assertions))]
-fn create_library_fd(so_path: &PathBuf) -> Result<RawFd> {
+fn create_library_fd(so_path: &PathBuf) -> Result<OwnedFd> {
     let opts = memfd::MemfdOptions::default().allow_sealing(true);
     let memfd = opts.create("jit-cache")?;
     let file = fs::File::open(so_path)?;
@@ -131,7 +131,7 @@ fn create_library_fd(so_path: &PathBuf) -> Result<RawFd> {
     seals.insert(memfd::FileSeal::SealSeal);
     memfd.add_seals(&seals)?;
 
-    Ok(memfd.into_raw_fd())
+    Ok(OwnedFd::from(memfd.into_file()))
 }
 
 fn create_daemon_socket() -> Result<UnixListener> {
@@ -241,7 +241,7 @@ fn handle_daemon_action(mut stream: UnixStream, context: &Context) -> Result<()>
                 }
             }
             if companion.as_ref().is_none() {
-                match spawn_companion(&name, fd) {
+                match spawn_companion(&name, &fd.as_raw_fd()) {
                     Ok(c) => {
                         log::trace!("  spawned companion for `{name}`");
                         *companion = c;
