@@ -1,8 +1,7 @@
 use crate::constants::DaemonSocketAction;
-use crate::utils::{UnixStreamExt};
-use crate::{constants, debug_select, lp_select, magic, root_impl, utils};
-use anyhow::{bail, ensure, Result};
-use memfd::Memfd;
+use crate::utils::UnixStreamExt;
+use crate::{constants, lp_select, magic, root_impl, utils};
+use anyhow::{bail, Result};
 use nix::{
     fcntl::{fcntl, FcntlArg, FdFlag},
     libc::self,
@@ -11,7 +10,7 @@ use passfd::FdPassingExt;
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::fs;
-use std::os::fd::{IntoRawFd, OwnedFd, RawFd};
+use std::os::fd::{OwnedFd, RawFd};
 use std::os::unix::{
     net::{UnixListener, UnixStream},
     prelude::AsRawFd,
@@ -20,12 +19,10 @@ use std::os::unix::process::CommandExt;
 use std::path::PathBuf;
 use std::process::Command;
 use nix::poll::{poll, PollFd, PollFlags};
-use nix::sys::wait::{waitpid, WaitStatus};
-use nix::unistd::{fork, ForkResult};
 
 struct Module {
     name: String,
-    memfd: OwnedFd,
+    lib_fd: OwnedFd,
     companion: Mutex<Option<UnixStream>>,
 }
 
@@ -103,7 +100,7 @@ fn load_modules(arch: &str) -> Result<Vec<Module>> {
             }
         };
         let companion = Mutex::new(None);
-        let module = Module { name, memfd: fd, companion };
+        let module = Module { name, lib_fd: fd, companion };
         modules.push(module);
     }
 
@@ -143,7 +140,7 @@ fn create_daemon_socket() -> Result<UnixListener> {
     Ok(listener)
 }
 
-fn spawn_companion(name: &str, fd: &RawFd) -> Result<Option<UnixStream>> {
+fn spawn_companion(name: &str, fd: RawFd) -> Result<Option<UnixStream>> {
     let (mut daemon, companion) = UnixStream::pair()?;
     // Remove FD_CLOEXEC flag
     fcntl(companion.as_raw_fd(), FcntlArg::F_SETFD(FdFlag::empty()))?;
@@ -151,28 +148,18 @@ fn spawn_companion(name: &str, fd: &RawFd) -> Result<Option<UnixStream>> {
     let process = std::env::args().next().unwrap();
     let nice_name = process.split('/').last().unwrap();
 
-    match unsafe { fork()? } {
-        ForkResult::Parent { child, ..} => {
-            if let Ok(WaitStatus::Exited(.., code)) = waitpid(child, None) {
-                ensure!(code == 0, format!("process exited with {code}"));
-            } else {
-                bail!("process exited abnormally");
-            }
-        }
-        ForkResult::Child => {
-            Command::new(&process)
-                .arg0(format!("{}-{}", nice_name, name))
-                .arg("companion")
-                .arg(format!("{}", companion.as_raw_fd()))
-                .spawn()?;
-            drop(companion);
-
-            std::process::exit(0);
-        }
+    let mut child = Command::new(&process)
+        .arg0(format!("{}-{}", nice_name, name))
+        .arg("companion")
+        .arg(format!("{}", companion.as_raw_fd()))
+        .spawn()?;
+    drop(companion);
+    if !child.wait()?.success() {
+        bail!("companion process exited abnormally");
     }
 
     daemon.write_string(name)?;
-    daemon.send_fd(*fd)?;
+    daemon.send_fd(fd)?;
     match daemon.read_u8()? {
         0 => Ok(None),
         1 => Ok(Some(daemon)),
@@ -223,39 +210,38 @@ fn handle_daemon_action(mut stream: UnixStream, context: &Context) -> Result<()>
             stream.write_usize(context.modules.len())?;
             for module in context.modules.iter() {
                 stream.write_string(&module.name)?;
-                stream.send_fd(module.memfd.as_raw_fd())?;
+                stream.send_fd(module.lib_fd.as_raw_fd())?;
             }
         }
         DaemonSocketAction::RequestCompanionSocket => {
             let index = stream.read_usize()?;
             let module = &context.modules[index];
-            let name = &module.name;
-            let fd = &module.memfd;
             let mut companion = module.companion.lock().unwrap();
             if let Some(sock) = companion.as_ref() {
                 let mut pfds = [PollFd::new(sock.as_raw_fd(), PollFlags::empty())];
                 poll(&mut pfds, 0)?;
                 if !pfds[0].revents().unwrap().is_empty() {
-                    log::error!("poll companion for module `{}` crashed", name);
+                    log::error!("Poll companion for module `{}` crashed", module.name);
                     companion.take();
                 }
             }
-            if companion.as_ref().is_none() {
-                match spawn_companion(&name, &fd.as_raw_fd()) {
+            if companion.is_none() {
+                match spawn_companion(&module.name, module.lib_fd.as_raw_fd()) {
                     Ok(c) => {
-                        log::trace!("  spawned companion for `{name}`");
+                        if c.is_some() {
+                            log::trace!("  Spawned companion for `{}`", module.name);
+                        }
                         *companion = c;
                     },
                     Err(e) => {
-                        log::warn!("  Failed to spawn companion for `{name}`: {e}");
+                        log::warn!("  Failed to spawn companion for `{}`: {}", module.name, e);
                     }
                 };
             }
             match companion.as_ref() {
                 Some(sock) => {
                     if let Err(_) = sock.send_fd(stream.as_raw_fd()) {
-                        log::error!("Companion socket of module `{}` missing", module.name);
-
+                        log::error!("Failed to send companion fd socket of module `{}`", module.name);
                         stream.write_u8(0)?;
                     }
                     // Ok: Send by companion

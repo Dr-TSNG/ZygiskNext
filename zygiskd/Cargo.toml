@@ -3,7 +3,7 @@ name = "zygiskd"
 authors = ["Nullptr"]
 version = "1.0.0"
 edition = "2021"
-rust-version = "1.67"
+rust-version = "1.69"
 
 [dependencies]
 android_logger = "0.13.0"

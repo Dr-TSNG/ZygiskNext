@@ -1,4 +1,4 @@
-use anyhow::{bail, ensure, Result};
+use anyhow::Result;
 use nix::unistd::gettid;
 use std::{fs, io::{Read, Write}, os::unix::net::UnixStream, process::Command};
 use std::ffi::c_char;
