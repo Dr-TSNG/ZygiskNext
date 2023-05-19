@@ -44,8 +44,17 @@ void* DlopenExt(const char* path, int flags) {
     return handle;
 }
 
-void* DlopenMem(int memfd, int flags) {
-    char path[PATH_MAX];
-    sprintf(path, "/proc/self/fd/%d", memfd);
-    return DlopenExt(path, flags);
+void* DlopenMem(int fd, int flags) {
+    auto info = android_dlextinfo{
+        .flags = ANDROID_DLEXT_USE_LIBRARY_FD,
+        .library_fd = fd
+    };
+
+    auto* handle = android_dlopen_ext("/jit-cache", flags, &info);
+    if (handle) {
+        LOGD("dlopen fd %d: %p", fd, handle);
+    } else {
+        LOGE("dlopen fd %d: %s", fd, dlerror());
+    }
+    return handle;
 }

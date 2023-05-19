@@ -20,7 +20,7 @@ public:
 
     UniqueFd(Fd fd) : fd_(fd) {}
 
-    ~UniqueFd() { close(fd_); }
+    ~UniqueFd() { if (fd_ >= 0) close(fd_); }
 
     // Disallow copy
     UniqueFd(const UniqueFd&) = delete;
