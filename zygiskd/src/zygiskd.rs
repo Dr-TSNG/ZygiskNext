@@ -1,29 +1,28 @@
+use std::ffi::c_void;
 use crate::constants::DaemonSocketAction;
 use crate::utils::UnixStreamExt;
-use crate::{constants, lp_select, magic, root_impl, utils};
+use crate::{constants, dl, lp_select, magic, root_impl, utils};
 use anyhow::{bail, Result};
-use nix::{
-    fcntl::{fcntl, FcntlArg, FdFlag},
-    libc::self,
-};
 use passfd::FdPassingExt;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 use std::thread;
 use std::fs;
-use std::os::fd::{OwnedFd, RawFd};
+use std::os::fd::{IntoRawFd, OwnedFd};
 use std::os::unix::{
     net::{UnixListener, UnixStream},
     prelude::AsRawFd,
 };
-use std::os::unix::process::CommandExt;
 use std::path::PathBuf;
-use std::process::Command;
-use nix::poll::{poll, PollFd, PollFlags};
+use nix::libc;
+use nix::sys::stat::fstat;
+use nix::unistd::close;
+
+type ZygiskCompanionEntryFn = unsafe extern "C" fn(i32);
 
 struct Module {
     name: String,
     lib_fd: OwnedFd,
-    companion: Mutex<Option<UnixStream>>,
+    entry: Option<ZygiskCompanionEntryFn>,
 }
 
 struct Context {
@@ -83,8 +82,8 @@ fn load_modules(arch: &str) -> Result<Vec<Module>> {
             return Ok(modules);
         }
     };
-    for entry_result in dir.into_iter() {
-        let entry = entry_result?;
+    for entry in dir.into_iter() {
+        let entry = entry?;
         let name = entry.file_name().into_string().unwrap();
         let so_path = entry.path().join(format!("zygisk/{arch}.so"));
         let disabled = entry.path().join("disable");
@@ -92,15 +91,15 @@ fn load_modules(arch: &str) -> Result<Vec<Module>> {
             continue;
         }
         log::info!("  Loading module `{name}`...");
-        let fd = match create_library_fd(&so_path) {
+        let lib_fd = match create_library_fd(&so_path) {
             Ok(fd) => fd,
             Err(e) => {
                 log::warn!("  Failed to create memfd for `{name}`: {e}");
                 continue;
             }
         };
-        let companion = Mutex::new(None);
-        let module = Module { name, lib_fd: fd, companion };
+        let entry = resolve_module(&so_path.to_string_lossy())?;
+        let module = Module { name, lib_fd, entry };
         modules.push(module);
     }
 
@@ -140,30 +139,16 @@ fn create_daemon_socket() -> Result<UnixListener> {
     Ok(listener)
 }
 
-fn spawn_companion(name: &str, fd: RawFd) -> Result<Option<UnixStream>> {
-    let (mut daemon, companion) = UnixStream::pair()?;
-    // Remove FD_CLOEXEC flag
-    fcntl(companion.as_raw_fd(), FcntlArg::F_SETFD(FdFlag::empty()))?;
-
-    let process = std::env::args().next().unwrap();
-    let nice_name = process.split('/').last().unwrap();
-
-    let mut child = Command::new(&process)
-        .arg0(format!("{}-{}", nice_name, name))
-        .arg("companion")
-        .arg(format!("{}", companion.as_raw_fd()))
-        .spawn()?;
-    drop(companion);
-    if !child.wait()?.success() {
-        bail!("companion process exited abnormally");
-    }
-
-    daemon.write_string(name)?;
-    daemon.send_fd(fd)?;
-    match daemon.read_u8()? {
-        0 => Ok(None),
-        1 => Ok(Some(daemon)),
-        _ => bail!("Invalid companion response"),
+fn resolve_module(path: &str) -> Result<Option<ZygiskCompanionEntryFn>> {
+    unsafe {
+        let handle = dl::dlopen(path, libc::RTLD_NOW)?;
+        let symbol = std::ffi::CString::new("zygisk_companion_entry")?;
+        let entry = libc::dlsym(handle, symbol.as_ptr());
+        if entry.is_null() {
+            return Ok(None);
+        }
+        let fnptr = std::mem::transmute::<*mut c_void, ZygiskCompanionEntryFn>(entry);
+        Ok(Some(fnptr))
     }
 }
 
@@ -216,38 +201,25 @@ fn handle_daemon_action(mut stream: UnixStream, context: &Context) -> Result<()>
         DaemonSocketAction::RequestCompanionSocket => {
             let index = stream.read_usize()?;
             let module = &context.modules[index];
-            let mut companion = module.companion.lock().unwrap();
-            if let Some(sock) = companion.as_ref() {
-                let mut pfds = [PollFd::new(sock.as_raw_fd(), PollFlags::empty())];
-                poll(&mut pfds, 0)?;
-                if !pfds[0].revents().unwrap().is_empty() {
-                    log::error!("Poll companion for module `{}` crashed", module.name);
-                    companion.take();
-                }
-            }
-            if companion.is_none() {
-                match spawn_companion(&module.name, module.lib_fd.as_raw_fd()) {
-                    Ok(c) => {
-                        if c.is_some() {
-                            log::trace!("  Spawned companion for `{}`", module.name);
-                        }
-                        *companion = c;
-                    },
-                    Err(e) => {
-                        log::warn!("  Failed to spawn companion for `{}`: {}", module.name, e);
-                    }
-                };
-            }
-            match companion.as_ref() {
-                Some(sock) => {
-                    if let Err(_) = sock.send_fd(stream.as_raw_fd()) {
-                        log::error!("Failed to send companion fd socket of module `{}`", module.name);
-                        stream.write_u8(0)?;
-                    }
-                    // Ok: Send by companion
-                }
+            match module.entry {
                 None => {
                     stream.write_u8(0)?;
+                    return Ok(());
+                }
+                Some(companion) => {
+                    stream.write_u8(1)?;
+                    let fd = stream.into_raw_fd();
+                    let st0 = fstat(fd)?;
+                    unsafe { companion(fd); }
+                    // Only close client if it is the same file so we don't
+                    // accidentally close a re-used file descriptor.
+                    // This check is required because the module companion
+                    // handler could've closed the file descriptor already.
+                    if let Ok(st1) = fstat(fd) {
+                        if st0.st_dev == st1.st_dev && st0.st_ino == st1.st_ino {
+                            close(fd)?;
+                        }
+                    }
                 }
             }
         }

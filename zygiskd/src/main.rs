@@ -1,6 +1,5 @@
 #![allow(dead_code)]
 
-mod companion;
 mod constants;
 mod dl;
 mod magic;

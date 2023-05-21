@@ -115,6 +115,7 @@ namespace zygiskd {
         if (socket_utils::read_u8(fd) == 1) {
             return fd;
         } else {
+            close(fd);
             return -1;
         }
     }
