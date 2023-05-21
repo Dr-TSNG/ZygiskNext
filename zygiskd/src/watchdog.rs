@@ -1,33 +1,36 @@
 use crate::{constants, magic, root_impl, utils};
 use anyhow::{bail, Result};
 use nix::unistd::{getgid, getuid, Pid};
-use std::process::{Child, Command};
-use std::sync::mpsc;
-use std::{fs, io, thread};
+use std::{fs, io};
 use std::ffi::CString;
+use std::future::Future;
 use std::io::{BufRead, Write};
 use std::os::unix::net::UnixListener;
+use std::pin::Pin;
 use std::time::Duration;
 use binder::IBinder;
+use futures::stream::FuturesUnordered;
+use futures::StreamExt;
 use nix::errno::Errno;
 use nix::libc;
 use nix::sys::signal::{kill, Signal};
+use tokio::process::{Child, Command};
 use crate::utils::LateInit;
 
 static LOCK: LateInit<UnixListener> = LateInit::new();
 static PROP_SECTIONS: LateInit<[String; 2]> = LateInit::new();
 
-pub fn entry() -> Result<()> {
+pub async fn entry() -> Result<()> {
     log::info!("Start zygisksu watchdog");
     check_permission()?;
     ensure_single_instance()?;
-    mount_prop()?;
+    mount_prop().await?;
     if check_and_set_hint()? == false {
         log::warn!("Requirements not met, exiting");
         utils::set_property(constants::PROP_NATIVE_BRIDGE, &utils::get_native_bridge())?;
         return Ok(());
     }
-    let end = spawn_daemon();
+    let end = spawn_daemon().await;
     set_prop_hint(constants::STATUS_CRASHED)?;
     end
 }
@@ -63,9 +66,9 @@ fn ensure_single_instance() -> Result<()> {
     Ok(())
 }
 
-fn mount_prop() -> Result<()> {
+async fn mount_prop() -> Result<()> {
     let module_prop = if let root_impl::RootImpl::Magisk = root_impl::get_impl() {
-        let magisk_path = Command::new("magisk").arg("--path").output()?;
+        let magisk_path = Command::new("magisk").arg("--path").output().await?;
         let mut magisk_path = String::from_utf8(magisk_path.stdout)?;
         magisk_path.pop(); // Removing '\n'
         let cwd = std::env::current_dir()?;
@@ -136,46 +139,57 @@ fn check_and_set_hint() -> Result<bool> {
     Ok(false)
 }
 
-fn spawn_daemon() -> Result<()> {
+async fn spawn_daemon() -> Result<()> {
     let mut lives = 5;
     loop {
+        let mut futures = FuturesUnordered::<Pin<Box<dyn Future<Output=Result<()>>>>>::new();
+        let mut child_ids = vec![];
+
         let daemon32 = Command::new(constants::PATH_ZYGISKD32).arg("daemon").spawn();
         let daemon64 = Command::new(constants::PATH_ZYGISKD64).arg("daemon").spawn();
-        let mut child_ids = vec![];
-        let (sender, receiver) = mpsc::channel();
-        let mut spawn = |mut daemon: Child| {
-            child_ids.push(daemon.id());
-            let sender = sender.clone();
-            thread::spawn(move || {
-                let result = daemon.wait().unwrap();
-                log::error!("Daemon process {} died: {}", daemon.id(), result);
-                drop(daemon);
-                let _ = sender.send(());
-            });
-        };
-        if let Ok(it) = daemon32 { spawn(it) }
-        if let Ok(it) = daemon64 { spawn(it) }
-
-        let mut binder = loop {
-            if receiver.try_recv().is_ok() {
-                bail!("Daemon died before system server ready");
-            }
-            match binder::get_service("activity") {
-                Some(binder) => break binder,
-                None => {
-                    log::trace!("System server not ready, wait for 1s...");
-                    thread::sleep(Duration::from_secs(1));
-                }
-            };
-        };
-        log::info!("System server ready, restore native bridge");
-        utils::set_property(constants::PROP_NATIVE_BRIDGE, &utils::get_native_bridge())?;
-
-        loop {
-            if receiver.try_recv().is_ok() || binder.ping_binder().is_err() { break; }
-            thread::sleep(Duration::from_secs(1))
+        async fn spawn_daemon(mut daemon: Child) -> Result<()> {
+            let result = daemon.wait().await?;
+            log::error!("Daemon process {} died: {}", daemon.id().unwrap(), result);
+            Ok(())
         }
+        if let Ok(it) = daemon32 {
+            child_ids.push(it.id().unwrap());
+            futures.push(Box::pin(spawn_daemon(it)));
+        }
+        if let Ok(it) = daemon64 {
+            child_ids.push(it.id().unwrap());
+            futures.push(Box::pin(spawn_daemon(it)));
+        }
+
+        async fn binder_listener() -> Result<()> {
+            let mut binder = loop {
+                match binder::get_service("activity") {
+                    Some(binder) => break binder,
+                    None => {
+                        log::trace!("System server not ready, wait for 1s...");
+                        tokio::time::sleep(Duration::from_secs(1)).await;
+                    }
+                };
+            };
+
+            log::info!("System server ready, restore native bridge");
+            utils::set_property(constants::PROP_NATIVE_BRIDGE, &utils::get_native_bridge())?;
+
+            loop {
+                if binder.ping_binder().is_err() { break; }
+                tokio::time::sleep(Duration::from_secs(1)).await;
+            }
+            log::error!("System server died");
+            Ok(())
+        }
+        futures.push(Box::pin(binder_listener()));
+
+        if let Err(e) = futures.next().await.unwrap() {
+            log::error!("{}", e);
+        }
+
         for child in child_ids {
+            log::debug!("Killing child process {}", child);
             let _ = kill(Pid::from_raw(child as i32), Signal::SIGKILL);
         }
 

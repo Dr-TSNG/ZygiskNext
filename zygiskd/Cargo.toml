@@ -10,6 +10,7 @@ android_logger = "0.13.0"
 anyhow = { version = "1.0.68", features = ["backtrace"] }
 clap = { version = "4.1.4", features = ["derive"] }
 const_format = "0.2.5"
+futures = "0.3"
 konst = "0.3.4"
 lazy_static = "1.4.0"
 log = "0.4.17"
@@ -19,6 +20,7 @@ num_enum = "0.5.9"
 once_cell = "1.17.1"
 passfd = "0.1.5"
 rand = "0.8.5"
+tokio = { version = "1.28", features = ["full"] }
 
 binder = { git = "https://github.com/Kernel-SU/binder_rs" }
 

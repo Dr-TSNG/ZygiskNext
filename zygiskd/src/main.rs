@@ -25,8 +25,6 @@ enum Commands {
     Watchdog,
     /// Start zygisk daemon
     Daemon,
-    /// Start zygisk companion
-    Companion { fd: i32 },
 }
 
 
@@ -38,24 +36,24 @@ fn init_android_logger(tag: &str) {
     );
 }
 
-fn start() -> Result<()> {
+async fn start() -> Result<()> {
     root_impl::setup();
     magic::setup()?;
     let cli = Args::parse();
     match cli.command {
-        Commands::Watchdog => watchdog::entry()?,
+        Commands::Watchdog => watchdog::entry().await?,
         Commands::Daemon => zygiskd::entry()?,
-        Commands::Companion { fd } => companion::entry(fd)?,
     };
     Ok(())
 }
 
-fn main() {
+#[tokio::main]
+async fn main() {
     let process = std::env::args().next().unwrap();
     let nice_name = process.split('/').last().unwrap();
     init_android_logger(nice_name);
 
-    if let Err(e) = start() {
+    if let Err(e) = start().await {
         log::error!("Crashed: {}\n{}", e, e.backtrace());
     }
 }
