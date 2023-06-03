@@ -4,7 +4,8 @@ use crate::constants::{MIN_KSU_VERSION, MAX_KSU_VERSION};
 const KERNEL_SU_OPTION: i32 = 0xdeadbeefu32 as i32;
 
 const CMD_GET_VERSION: usize = 2;
-const CMD_GET_ALLOW_LIST: usize = 5;
+const CMD_UID_GRANTED_ROOT: usize = 12;
+const CMD_UID_SHOULD_UMOUNT: usize = 13;
 
 pub enum Version {
     Supported,
@@ -23,16 +24,14 @@ pub fn get_kernel_su() -> Option<Version> {
     }
 }
 
-#[inline(never)]
-pub fn uid_on_allowlist(uid: i32) -> bool {
-    let mut size = 1024u32;
-    let mut uids = vec![0; size as usize];
-    unsafe { prctl(KERNEL_SU_OPTION, CMD_GET_ALLOW_LIST, uids.as_mut_ptr(), &mut size as *mut u32) };
-    uids.resize(size as usize, 0);
-    uids.contains(&uid)
+pub fn uid_granted_root(uid: i32) -> bool {
+    let mut granted = false;
+    unsafe { prctl(KERNEL_SU_OPTION, CMD_UID_GRANTED_ROOT, uid, &mut granted as *mut bool) };
+    granted
 }
 
-#[inline(never)]
-pub fn uid_on_denylist(uid: i32) -> bool {
-    false
+pub fn uid_should_umount(uid: i32) -> bool {
+    let mut umount = false;
+    unsafe { prctl(KERNEL_SU_OPTION, CMD_UID_SHOULD_UMOUNT, uid, &mut umount as *mut bool) };
+    umount
 }

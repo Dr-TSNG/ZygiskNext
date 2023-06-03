@@ -1,3 +1,4 @@
+use bitflags::bitflags;
 use const_format::concatcp;
 use konst::primitive::parse_i32;
 use konst::unwrap_ctx;
@@ -46,8 +47,13 @@ pub enum DaemonSocketAction {
 }
 
 // Zygisk process flags
-pub const PROCESS_GRANTED_ROOT: u32 = 1 << 0;
-pub const PROCESS_ON_DENYLIST: u32 = 1 << 1;
-pub const PROCESS_ROOT_IS_KSU: u32 = 1 << 29;
-pub const PROCESS_ROOT_IS_MAGISK: u32 = 1 << 30;
-pub const PROCESS_IS_SYSUI: u32 = 1 << 31;
+bitflags! {
+    #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+    pub struct ProcessFlags: u32 {
+        const PROCESS_GRANTED_ROOT = 1 << 0;
+        const PROCESS_ON_DENYLIST = 1 << 1;
+        const PROCESS_ROOT_IS_KSU = 1 << 29;
+        const PROCESS_ROOT_IS_MAGISK = 1 << 30;
+        const PROCESS_IS_SYSUI = 1 << 31;
+    }
+}

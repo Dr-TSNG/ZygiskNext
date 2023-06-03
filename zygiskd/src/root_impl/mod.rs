@@ -41,21 +41,18 @@ pub fn get_impl() -> &'static RootImpl {
     unsafe { &ROOT_IMPL }
 }
 
-// FIXME: Without #[inline(never)], this function will lag forever
-#[inline(never)]
-pub fn uid_on_allowlist(uid: i32) -> bool {
+pub fn uid_granted_root(uid: i32) -> bool {
     match get_impl() {
-        RootImpl::KernelSU => kernelsu::uid_on_allowlist(uid),
-        RootImpl::Magisk => magisk::uid_on_allowlist(uid),
+        RootImpl::KernelSU => kernelsu::uid_granted_root(uid),
+        RootImpl::Magisk => magisk::uid_granted_root(uid),
         _ => unreachable!(),
     }
 }
 
-#[inline(never)]
-pub fn uid_on_denylist(uid: i32) -> bool {
+pub fn uid_should_umount(uid: i32) -> bool {
     match get_impl() {
-        RootImpl::KernelSU => kernelsu::uid_on_denylist(uid),
-        RootImpl::Magisk => magisk::uid_on_denylist(uid),
+        RootImpl::KernelSU => kernelsu::uid_should_umount(uid),
+        RootImpl::Magisk => magisk::uid_should_umount(uid),
         _ => unreachable!(),
     }
 }

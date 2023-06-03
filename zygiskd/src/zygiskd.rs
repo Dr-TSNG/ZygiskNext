@@ -1,5 +1,5 @@
 use std::ffi::c_void;
-use crate::constants::DaemonSocketAction;
+use crate::constants::{DaemonSocketAction, ProcessFlags};
 use crate::utils::UnixStreamExt;
 use crate::{constants, dl, lp_select, magic, root_impl, utils};
 use anyhow::{bail, Result};
@@ -176,20 +176,21 @@ fn handle_daemon_action(mut stream: UnixStream, context: &Context) -> Result<()>
         }
         DaemonSocketAction::GetProcessFlags => {
             let uid = stream.read_u32()? as i32;
-            let mut flags = 0u32;
-            if root_impl::uid_on_allowlist(uid) {
-                flags |= constants::PROCESS_GRANTED_ROOT;
+            let mut flags = ProcessFlags::empty();
+            if root_impl::uid_granted_root(uid) {
+                flags |= ProcessFlags::PROCESS_GRANTED_ROOT;
             }
-            if root_impl::uid_on_denylist(uid) {
-                flags |= constants::PROCESS_ON_DENYLIST;
+            if root_impl::uid_should_umount(uid) {
+                flags |= ProcessFlags::PROCESS_ON_DENYLIST;
             }
             match root_impl::get_impl() {
-                root_impl::RootImpl::KernelSU => flags |= constants::PROCESS_ROOT_IS_KSU,
-                root_impl::RootImpl::Magisk => flags |= constants::PROCESS_ROOT_IS_MAGISK,
+                root_impl::RootImpl::KernelSU => flags |= ProcessFlags::PROCESS_ROOT_IS_KSU,
+                root_impl::RootImpl::Magisk => flags |= ProcessFlags::PROCESS_ROOT_IS_MAGISK,
                 _ => unreachable!(),
             }
-            // TODO: PROCESS_IS_SYSUI?
-            stream.write_u32(flags)?;
+            log::trace!("Uid {} granted root: {}", uid, flags.contains(ProcessFlags::PROCESS_GRANTED_ROOT));
+            log::trace!("Uid {} on denylist: {}", uid, flags.contains(ProcessFlags::PROCESS_ON_DENYLIST));
+            stream.write_u32(flags.bits())?;
         }
         DaemonSocketAction::ReadModules => {
             stream.write_usize(context.modules.len())?;

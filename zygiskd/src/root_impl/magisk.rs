@@ -23,8 +23,7 @@ pub fn get_magisk() -> Option<Version> {
     })
 }
 
-#[inline(never)]
-pub fn uid_on_allowlist(uid: i32) -> bool {
+pub fn uid_granted_root(uid: i32) -> bool {
     let output: Option<String> = Command::new("magisk")
         .arg("--sqlite")
         .arg("select uid from policies where policy=2")
@@ -41,8 +40,7 @@ pub fn uid_on_allowlist(uid: i32) -> bool {
     })
 }
 
-#[inline(never)]
-pub fn uid_on_denylist(uid: i32) -> bool {
-    // TODO: uid_on_denylist
+pub fn uid_should_umount(uid: i32) -> bool {
+    // TODO: uid_should_umount
     return false;
 }
