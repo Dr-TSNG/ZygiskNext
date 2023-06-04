@@ -2,7 +2,7 @@
 
 Zygisk loader for KernelSU, allowing Zygisk modules to run without Magisk environment.
 
-Also works as standalone loader for Magisk on purpose of getting rid of LD_PRELOAD.
+Also works as standalone loader for Magisk.
 
 ## Requirements
 
@@ -12,8 +12,8 @@ Also works as standalone loader for Magisk on purpose of getting rid of LD_PRELO
 
 ### KernelSU
 
-+ Minimal KernelSU version: 10654
-+ Minimal ksud version: 10670
++ Minimal KernelSU version: 10940
++ Minimal ksud version: 10942
 + Kernel has full SELinux patch support
 
 ### Magisk

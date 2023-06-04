@@ -45,8 +45,8 @@ androidComponents.onVariants { variant ->
             include("module.prop")
             expand(
                 "moduleId" to moduleId,
-                "moduleName" to "$moduleName-$variantCapped",
-                "versionName" to "$verName ($verCode)-($variantCapped)",
+                "moduleName" to moduleName,
+                "versionName" to "$verName ($verCode-$variantLowered)",
                 "versionCode" to verCode,
             )
         }
