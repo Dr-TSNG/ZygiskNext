@@ -26,12 +26,12 @@ pub fn get_kernel_su() -> Option<Version> {
 
 pub fn uid_granted_root(uid: i32) -> i32 {
     let mut granted = 0;
-    unsafe { prctl(KERNEL_SU_OPTION, CMD_UID_GRANTED_ROOT, uid, &mut granted as *mut bool) };
+    unsafe { prctl(KERNEL_SU_OPTION, CMD_UID_GRANTED_ROOT, uid, &mut granted as *mut i32) };
     granted
 }
 
 pub fn uid_should_umount(uid: i32) -> i32 {
     let mut umount = 0;
-    unsafe { prctl(KERNEL_SU_OPTION, CMD_UID_SHOULD_UMOUNT, uid, &mut umount as *mut bool) };
+    unsafe { prctl(KERNEL_SU_OPTION, CMD_UID_SHOULD_UMOUNT, uid, &mut umount as *mut i32) };
     umount
 }
