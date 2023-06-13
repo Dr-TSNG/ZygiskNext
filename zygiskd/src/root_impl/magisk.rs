@@ -35,9 +35,9 @@ pub fn uid_granted_root(uid: i32) -> i32 {
         Some(output) => output.lines(),
         None => return 0,
     };
-    lines.into_iter().any(|line| {
+    return if lines.into_iter().any(|line| {
         line.trim().strip_prefix("uid=").and_then(|uid| uid.parse().ok()) == Some(uid)
-    })
+    }) { 1 } else { 0 }
 }
 
 pub fn uid_should_umount(uid: i32) -> i32 {

@@ -177,10 +177,10 @@ fn handle_daemon_action(mut stream: UnixStream, context: &Context) -> Result<()>
         DaemonSocketAction::GetProcessFlags => {
             let uid = stream.read_u32()? as i32;
             let mut flags = ProcessFlags::empty();
-            if root_impl::uid_granted_root(uid) {
+            if root_impl::uid_granted_root(uid) == 1 {
                 flags |= ProcessFlags::PROCESS_GRANTED_ROOT;
             }
-            if root_impl::uid_should_umount(uid) {
+            if root_impl::uid_should_umount(uid) == 1 {
                 flags |= ProcessFlags::PROCESS_ON_DENYLIST;
             }
             match root_impl::get_impl() {
