@@ -41,6 +41,8 @@ pub fn get_impl() -> &'static RootImpl {
     unsafe { &ROOT_IMPL }
 }
 
+// FIXME: Without #[inline(never)], this function will lag forever
+#[inline(never)]
 pub fn uid_granted_root(uid: i32) -> bool {
     match get_impl() {
         RootImpl::KernelSU => kernelsu::uid_granted_root(uid),
@@ -49,6 +51,7 @@ pub fn uid_granted_root(uid: i32) -> bool {
     }
 }
 
+#[inline(never)]
 pub fn uid_should_umount(uid: i32) -> bool {
     match get_impl() {
         RootImpl::KernelSU => kernelsu::uid_should_umount(uid),

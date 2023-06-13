@@ -23,6 +23,7 @@ pub fn get_magisk() -> Option<Version> {
     })
 }
 
+#[inline(never)]
 pub fn uid_granted_root(uid: i32) -> bool {
     let output: Option<String> = Command::new("magisk")
         .arg("--sqlite")
@@ -40,6 +41,7 @@ pub fn uid_granted_root(uid: i32) -> bool {
     })
 }
 
+#[inline(never)]
 pub fn uid_should_umount(uid: i32) -> bool {
     // TODO: uid_should_umount
     return false;
