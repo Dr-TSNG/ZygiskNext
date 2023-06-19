@@ -1,33 +1,46 @@
 use anyhow::Result;
+use nix::sys::socket::{AddressFamily, SockFlag, SockType, UnixAddr};
 use nix::unistd::gettid;
-use std::{fs, io::{Read, Write}, os::unix::net::UnixStream, process::Command};
+use once_cell::sync::OnceCell;
+use rand::distributions::{Alphanumeric, DistString};
 use std::ffi::c_char;
 use std::os::fd::FromRawFd;
 use std::os::unix::net::UnixListener;
-use nix::sys::socket::{AddressFamily, SockFlag, SockType, UnixAddr};
-use once_cell::sync::OnceCell;
-use rand::distributions::{Alphanumeric, DistString};
+use std::{
+    fs,
+    io::{Read, Write},
+    os::unix::net::UnixStream,
+    process::Command,
+};
 
 #[cfg(target_pointer_width = "64")]
 #[macro_export]
 macro_rules! lp_select {
-    ($lp32:expr, $lp64:expr) => { $lp64 };
+    ($lp32:expr, $lp64:expr) => {
+        $lp64
+    };
 }
 #[cfg(target_pointer_width = "32")]
 #[macro_export]
 macro_rules! lp_select {
-    ($lp32:expr, $lp64:expr) => { $lp32 };
+    ($lp32:expr, $lp64:expr) => {
+        $lp32
+    };
 }
 
 #[cfg(debug_assertions)]
 #[macro_export]
 macro_rules! debug_select {
-    ($debug:expr, $release:expr) => { $debug };
+    ($debug:expr, $release:expr) => {
+        $debug
+    };
 }
 #[cfg(not(debug_assertions))]
 #[macro_export]
 macro_rules! debug_select {
-    ($debug:expr, $release:expr) => { $release };
+    ($debug:expr, $release:expr) => {
+        $release
+    };
 }
 
 pub struct LateInit<T> {
@@ -36,7 +49,9 @@ pub struct LateInit<T> {
 
 impl<T> LateInit<T> {
     pub const fn new() -> Self {
-        LateInit { cell: OnceCell::new() }
+        LateInit {
+            cell: OnceCell::new(),
+        }
     }
 
     pub fn init(&self, value: T) {
@@ -93,7 +108,8 @@ pub fn set_property(name: &str, value: &str) -> Result<()> {
     Command::new("resetprop")
         .arg(name)
         .arg(value)
-        .spawn()?.wait()?;
+        .spawn()?
+        .wait()?;
     Ok(())
 }
 
@@ -159,7 +175,12 @@ impl UnixStreamExt for UnixStream {
 // TODO: Replace with SockAddrExt::from_abstract_name when it's stable
 pub fn abstract_namespace_socket(name: &str) -> Result<UnixListener> {
     let addr = UnixAddr::new_abstract(name.as_bytes())?;
-    let socket = nix::sys::socket::socket(AddressFamily::Unix, SockType::Stream, SockFlag::empty(), None)?;
+    let socket = nix::sys::socket::socket(
+        AddressFamily::Unix,
+        SockType::Stream,
+        SockFlag::empty(),
+        None,
+    )?;
     nix::sys::socket::bind(socket, &addr)?;
     nix::sys::socket::listen(socket, 2)?;
     let listener = unsafe { UnixListener::from_raw_fd(socket) };

@@ -1,5 +1,5 @@
-use std::process::{Command, Stdio};
 use crate::constants::MIN_MAGISK_VERSION;
+use std::process::{Command, Stdio};
 
 pub enum Version {
     Supported,
@@ -10,7 +10,8 @@ pub fn get_magisk() -> Option<Version> {
     let version: Option<i32> = Command::new("magisk")
         .arg("-V")
         .stdout(Stdio::piped())
-        .spawn().ok()
+        .spawn()
+        .ok()
         .and_then(|child| child.wait_with_output().ok())
         .and_then(|output| String::from_utf8(output.stdout).ok())
         .and_then(|output| output.trim().parse().ok());
@@ -28,7 +29,8 @@ pub fn uid_granted_root(uid: i32) -> bool {
         .arg("--sqlite")
         .arg("select uid from policies where policy=2")
         .stdout(Stdio::piped())
-        .spawn().ok()
+        .spawn()
+        .ok()
         .and_then(|child| child.wait_with_output().ok())
         .and_then(|output| String::from_utf8(output.stdout).ok());
     let lines = match &output {
@@ -36,7 +38,10 @@ pub fn uid_granted_root(uid: i32) -> bool {
         None => return false,
     };
     lines.into_iter().any(|line| {
-        line.trim().strip_prefix("uid=").and_then(|uid| uid.parse().ok()) == Some(uid)
+        line.trim()
+            .strip_prefix("uid=")
+            .and_then(|uid| uid.parse().ok())
+            == Some(uid)
     })
 }
 
