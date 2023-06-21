@@ -42,7 +42,7 @@ pub fn uid_granted_root(uid: i32) -> bool {
             CMD_UID_GRANTED_ROOT,
             uid,
             &mut granted as *mut bool,
-            std::ptr::addr_of_mut!(result).cast::<libc::c_void>(),
+            &mut result as *mut u32,
         )
     };
     if result != KERNEL_SU_OPTION {
@@ -60,7 +60,7 @@ pub fn uid_should_umount(uid: i32) -> bool {
             CMD_UID_SHOULD_UMOUNT,
             uid,
             &mut umount as *mut bool,
-            std::ptr::addr_of_mut!(result).cast::<libc::c_void>(),
+            &mut result as *mut u32,
         )
     };
     if result != KERNEL_SU_OPTION {
