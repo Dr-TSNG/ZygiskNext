@@ -20,19 +20,21 @@ pub fn setup() {
     let impl_ = match (ksu_version, magisk_version) {
         (None, None) => RootImpl::None,
         (Some(_), Some(_)) => RootImpl::Multiple,
-        (Some(ksu_version), None) => match ksu_version {
-            kernelsu::Version::Supported => RootImpl::KernelSU,
-            kernelsu::Version::TooOld => RootImpl::TooOld,
-            kernelsu::Version::Abnormal => RootImpl::Abnormal,
-        },
-        (None, Some(magisk_version)) => match magisk_version {
-            magisk::Version::Supported => RootImpl::Magisk,
-            magisk::Version::TooOld => RootImpl::TooOld,
-        },
+        (Some(ksu_version), None) => {
+            match ksu_version {
+                kernelsu::Version::Supported => RootImpl::KernelSU,
+                kernelsu::Version::TooOld => RootImpl::TooOld,
+                kernelsu::Version::Abnormal => RootImpl::Abnormal,
+            }
+        }
+        (None, Some(magisk_version)) => {
+            match magisk_version {
+                magisk::Version::Supported => RootImpl::Magisk,
+                magisk::Version::TooOld => RootImpl::TooOld,
+            }
+        }
     };
-    unsafe {
-        ROOT_IMPL = impl_;
-    }
+    unsafe { ROOT_IMPL = impl_; }
 }
 
 pub fn get_impl() -> &'static RootImpl {

@@ -1,7 +1,7 @@
+use std::fs;
+use anyhow::Result;
 use crate::constants;
 use crate::utils::LateInit;
-use anyhow::Result;
-use std::fs;
 
 pub static MAGIC: LateInit<String> = LateInit::new();
 pub static PATH_TMP_DIR: LateInit<String> = LateInit::new();

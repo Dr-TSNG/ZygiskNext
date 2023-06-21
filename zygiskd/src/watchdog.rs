@@ -1,21 +1,21 @@
-use crate::utils::LateInit;
 use crate::{constants, magic, root_impl, utils};
 use anyhow::{bail, Result};
-use binder::IBinder;
-use futures::stream::FuturesUnordered;
-use futures::StreamExt;
-use nix::errno::Errno;
-use nix::libc;
-use nix::sys::signal::{kill, Signal};
 use nix::unistd::{getgid, getuid, Pid};
+use std::{fs, io};
 use std::ffi::CString;
 use std::future::Future;
 use std::io::{BufRead, Write};
 use std::os::unix::net::UnixListener;
 use std::pin::Pin;
 use std::time::Duration;
-use std::{fs, io};
+use binder::IBinder;
+use futures::stream::FuturesUnordered;
+use futures::StreamExt;
+use nix::errno::Errno;
+use nix::libc;
+use nix::sys::signal::{kill, Signal};
 use tokio::process::{Child, Command};
+use crate::utils::LateInit;
 
 static LOCK: LateInit<UnixListener> = LateInit::new();
 static PROP_SECTIONS: LateInit<[String; 2]> = LateInit::new();
@@ -61,7 +61,7 @@ fn ensure_single_instance() -> Result<()> {
     let name = format!("zygiskwd{}", magic::MAGIC.as_str());
     match utils::abstract_namespace_socket(&name) {
         Ok(socket) => LOCK.init(socket),
-        Err(e) => bail!("Failed to acquire lock: {e}. Maybe another instance is running?"),
+        Err(e) => bail!("Failed to acquire lock: {e}. Maybe another instance is running?")
     }
     Ok(())
 }
@@ -73,10 +73,7 @@ async fn mount_prop() -> Result<()> {
         magisk_path.pop(); // Removing '\n'
         let cwd = std::env::current_dir()?;
         let dir = cwd.file_name().unwrap().to_string_lossy();
-        format!(
-            "{magisk_path}/.magisk/modules/{dir}/{}",
-            constants::PATH_MODULE_PROP
-        )
+        format!("{magisk_path}/.magisk/modules/{dir}/{}", constants::PATH_MODULE_PROP)
     } else {
         constants::PATH_MODULE_PROP.to_string()
     };
@@ -145,15 +142,11 @@ fn check_and_set_hint() -> Result<bool> {
 async fn spawn_daemon() -> Result<()> {
     let mut lives = 5;
     loop {
-        let mut futures = FuturesUnordered::<Pin<Box<dyn Future<Output = Result<()>>>>>::new();
+        let mut futures = FuturesUnordered::<Pin<Box<dyn Future<Output=Result<()>>>>>::new();
         let mut child_ids = vec![];
 
-        let daemon32 = Command::new(constants::PATH_ZYGISKD32)
-            .arg("daemon")
-            .spawn();
-        let daemon64 = Command::new(constants::PATH_ZYGISKD64)
-            .arg("daemon")
-            .spawn();
+        let daemon32 = Command::new(constants::PATH_ZYGISKD32).arg("daemon").spawn();
+        let daemon64 = Command::new(constants::PATH_ZYGISKD64).arg("daemon").spawn();
         async fn spawn_daemon(mut daemon: Child) -> Result<()> {
             let result = daemon.wait().await?;
             log::error!("Daemon process {} died: {}", daemon.id().unwrap(), result);
@@ -183,9 +176,7 @@ async fn spawn_daemon() -> Result<()> {
             utils::set_property(constants::PROP_NATIVE_BRIDGE, &utils::get_native_bridge())?;
 
             loop {
-                if binder.ping_binder().is_err() {
-                    break;
-                }
+                if binder.ping_binder().is_err() { break; }
                 tokio::time::sleep(Duration::from_secs(1)).await;
             }
             log::error!("System server died");

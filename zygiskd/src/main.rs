@@ -9,7 +9,7 @@ mod watchdog;
 mod zygiskd;
 
 use anyhow::Result;
-use clap::{Parser, Subcommand};
+use clap::{Subcommand, Parser};
 
 #[derive(Parser, Debug)]
 #[command(author, version = constants::VERSION_FULL, about, long_about = None)]
@@ -25,6 +25,7 @@ enum Commands {
     /// Start zygisk daemon
     Daemon,
 }
+
 
 fn init_android_logger(tag: &str) {
     android_logger::init_once(

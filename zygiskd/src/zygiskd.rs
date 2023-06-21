@@ -1,12 +1,11 @@
+use std::ffi::c_void;
 use crate::constants::{DaemonSocketAction, ProcessFlags};
 use crate::utils::UnixStreamExt;
 use crate::{constants, dl, lp_select, magic, root_impl, utils};
 use anyhow::{bail, Result};
-use nix::libc;
-use nix::sys::stat::fstat;
-use nix::unistd::close;
 use passfd::FdPassingExt;
-use std::ffi::c_void;
+use std::sync::Arc;
+use std::thread;
 use std::fs;
 use std::os::fd::{IntoRawFd, OwnedFd};
 use std::os::unix::{
@@ -14,8 +13,9 @@ use std::os::unix::{
     prelude::AsRawFd,
 };
 use std::path::PathBuf;
-use std::sync::Arc;
-use std::thread;
+use nix::libc;
+use nix::sys::stat::fstat;
+use nix::unistd::close;
 
 type ZygiskCompanionEntryFn = unsafe extern "C" fn(i32);
 
@@ -99,11 +99,7 @@ fn load_modules(arch: &str) -> Result<Vec<Module>> {
             }
         };
         let entry = resolve_module(&so_path.to_string_lossy())?;
-        let module = Module {
-            name,
-            lib_fd,
-            entry,
-        };
+        let module = Module { name, lib_fd, entry };
         modules.push(module);
     }
 
@@ -164,15 +160,17 @@ fn handle_daemon_action(mut stream: UnixStream, context: &Context) -> Result<()>
         DaemonSocketAction::PingHeartbeat => {
             // Do nothing
         }
-        DaemonSocketAction::RequestLogcatFd => loop {
-            let level = match stream.read_u8() {
-                Ok(level) => level,
-                Err(_) => break,
-            };
-            let tag = stream.read_string()?;
-            let message = stream.read_string()?;
-            utils::log_raw(level as i32, &tag, &message)?;
-        },
+        DaemonSocketAction::RequestLogcatFd => {
+            loop {
+                let level = match stream.read_u8() {
+                    Ok(level) => level,
+                    Err(_) => break,
+                };
+                let tag = stream.read_string()?;
+                let message = stream.read_string()?;
+                utils::log_raw(level as i32, &tag, &message)?;
+            }
+        }
         DaemonSocketAction::ReadNativeBridge => {
             stream.write_string(&context.native_bridge)?;
         }
@@ -190,16 +188,8 @@ fn handle_daemon_action(mut stream: UnixStream, context: &Context) -> Result<()>
                 root_impl::RootImpl::Magisk => flags |= ProcessFlags::PROCESS_ROOT_IS_MAGISK,
                 _ => unreachable!(),
             }
-            log::trace!(
-                "Uid {} granted root: {}",
-                uid,
-                flags.contains(ProcessFlags::PROCESS_GRANTED_ROOT)
-            );
-            log::trace!(
-                "Uid {} on denylist: {}",
-                uid,
-                flags.contains(ProcessFlags::PROCESS_ON_DENYLIST)
-            );
+            log::trace!("Uid {} granted root: {}", uid, flags.contains(ProcessFlags::PROCESS_GRANTED_ROOT));
+            log::trace!("Uid {} on denylist: {}", uid, flags.contains(ProcessFlags::PROCESS_ON_DENYLIST));
             stream.write_u32(flags.bits())?;
         }
         DaemonSocketAction::ReadModules => {
@@ -221,9 +211,7 @@ fn handle_daemon_action(mut stream: UnixStream, context: &Context) -> Result<()>
                     stream.write_u8(1)?;
                     let fd = stream.into_raw_fd();
                     let st0 = fstat(fd)?;
-                    unsafe {
-                        companion(fd);
-                    }
+                    unsafe { companion(fd); }
                     // Only close client if it is the same file so we don't
                     // accidentally close a re-used file descriptor.
                     // This check is required because the module companion
