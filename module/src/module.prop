@@ -4,3 +4,4 @@ version=${versionName}
 versionCode=${versionCode}
 author=Nullptr, 5ec1cff
 description=Run Zygisk on KernelSU.
+updateJson=https://api.nullptr.icu/android/zygisk-on-kernelsu/static/update.json
