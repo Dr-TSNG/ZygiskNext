@@ -7,12 +7,13 @@ body:
     attributes:
       value: |
         Thanks for reporting issues of Zygisk on KernelSU!
-
         To make it easier for us to help you please enter detailed information below.
+        Note: We will **NEVER** handle any issue related to root detection or writable system.
 
         感谢给 Zygisk on KernelSU 汇报问题！
         为了使我们更好地帮助你，请提供以下信息。
         为了防止重复汇报，标题请务必使用英文。
+        请注意：我们**不会**处理任何有关 root 检测和 system 分区可写相关的问题。
   - type: textarea
     attributes:
       label: Steps to reproduce/复现步骤
