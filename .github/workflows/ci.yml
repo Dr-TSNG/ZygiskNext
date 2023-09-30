@@ -40,7 +40,7 @@ jobs:
         with:
           workspaces: zygiskd/src -> ../build/intermediates/rust
           cache-targets: false
-          
+
       - name: Setup Rust
         run: |
           rustup target add armv7-linux-androideabi

@@ -40,7 +40,6 @@ val maxKsuVersion by extra(20000)
 val minMagiskVersion by extra(25208)
 
 val androidMinSdkVersion by extra(29)
-val androidTargetSdkVersion by extra(34)
 val androidCompileSdkVersion by extra(34)
 val androidBuildToolsVersion by extra("34.0.0")
 val androidCompileNdkVersion by extra("25.2.9519653")
@@ -48,7 +47,7 @@ val androidSourceCompatibility by extra(JavaVersion.VERSION_11)
 val androidTargetCompatibility by extra(JavaVersion.VERSION_11)
 
 tasks.register("Delete", Delete::class) {
-    delete(rootProject.buildDir)
+    delete(rootProject.layout.buildDirectory)
 }
 
 fun Project.configureBaseExtension() {
@@ -60,7 +59,6 @@ fun Project.configureBaseExtension() {
 
         defaultConfig {
             minSdk = androidMinSdkVersion
-            targetSdk = androidTargetSdkVersion
         }
 
         lint {

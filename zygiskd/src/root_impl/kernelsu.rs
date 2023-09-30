@@ -1,5 +1,4 @@
-use crate::constants::{MAX_KSU_VERSION, MIN_KSU_VERSION};
-use nix::libc;
+use crate::constants::{MAX_KSU_VERSION, MIN_KSU_VERSION, MIN_KSU_VERSION_1};
 use nix::libc::prctl;
 
 const KERNEL_SU_OPTION: u32 = 0xdeadbeefu32;
@@ -27,8 +26,8 @@ pub fn get_kernel_su() -> Option<Version> {
     };
     match version {
         0 => None,
+        0..=MIN_KSU_VERSION_1 => Some(Version::TooOld),
         MIN_KSU_VERSION..=MAX_KSU_VERSION => Some(Version::Supported),
-        1..=MIN_KSU_VERSION => Some(Version::TooOld),
         _ => Some(Version::Abnormal),
     }
 }

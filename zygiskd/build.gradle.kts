@@ -20,7 +20,7 @@ cargo {
     targetIncludes = arrayOf("zygiskd")
     targets = listOf("arm64", "arm", "x86", "x86_64")
     targetDirectory = "build/intermediates/rust"
-    val isDebug = gradle.startParameter.taskNames.any { it.toLowerCase().contains("debug") }
+    val isDebug = gradle.startParameter.taskNames.any { it.lowercase().contains("debug") }
     profile = if (isDebug) "debug" else "release"
     exec = { spec, _ ->
         spec.environment("ANDROID_NDK_HOME", android.ndkDirectory.path)

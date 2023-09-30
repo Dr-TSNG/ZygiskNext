@@ -9,6 +9,7 @@ pub const VERSION_NAME: &str = env!("VERSION_NAME");
 pub const VERSION_CODE: &str = env!("VERSION_CODE");
 pub const VERSION_FULL: &str = concatcp!(VERSION_NAME, " (", VERSION_CODE, ")");
 pub const MIN_KSU_VERSION: i32 = unwrap_ctx!(parse_i32(env!("MIN_KSU_VERSION")));
+pub const MIN_KSU_VERSION_1: i32 = MIN_KSU_VERSION - 1;
 pub const MAX_KSU_VERSION: i32 = unwrap_ctx!(parse_i32(env!("MAX_KSU_VERSION")));
 pub const MIN_MAGISK_VERSION: i32 = unwrap_ctx!(parse_i32(env!("MIN_MAGISK_VERSION")));
 

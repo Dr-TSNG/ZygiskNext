@@ -19,7 +19,7 @@ namespace socket_utils {
             read_sz += ret;
         } while (read_sz != count && ret != 0);
         if (read_sz != count) {
-            PLOGE("read (%d != %d)", count, read_sz);
+            PLOGE("read (%zu != %zu)", count, read_sz);
         }
         return read_sz;
     }
@@ -37,7 +37,7 @@ namespace socket_utils {
             write_sz += ret;
         } while (write_sz != count && ret != 0);
         if (write_sz != count) {
-            PLOGE("write (%d != %d)", count, write_sz);
+            PLOGE("write (%zu != %zu)", count, write_sz);
         }
         return write_sz;
     }

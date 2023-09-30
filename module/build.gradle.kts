@@ -23,11 +23,11 @@ android.buildFeatures {
 }
 
 androidComponents.onVariants { variant ->
-    val variantLowered = variant.name.toLowerCase()
-    val variantCapped = variant.name.capitalize()
-    val buildTypeLowered = variant.buildType?.toLowerCase()
+    val variantLowered = variant.name.lowercase()
+    val variantCapped = variant.name.replaceFirstChar { it.titlecase() }
+    val buildTypeLowered = variant.buildType?.lowercase()
 
-    val moduleDir = "$buildDir/outputs/module/$variantLowered"
+    val moduleDir = layout.buildDirectory.dir("outputs/module/$variantLowered")
     val zipFileName = "$moduleName-$verName-$verCode-$commitHash-$buildTypeLowered.zip".replace(' ', '-')
 
     val prepareModuleFilesTask = task<Sync>("prepareModuleFiles$variantCapped") {
@@ -64,10 +64,10 @@ androidComponents.onVariants { variant ->
             filter<FixCrLfFilter>("eol" to FixCrLfFilter.CrLf.newInstance("lf"))
         }
         into("bin") {
-            from(project(":zygiskd").buildDir.path + "/rustJniLibs/android")
+            from(project(":zygiskd").layout.buildDirectory.dir("rustJniLibs/android"))
         }
         into("lib") {
-            from("${project(":loader").buildDir}/intermediates/stripped_native_libs/$variantLowered/out/lib")
+            from(project(":loader").layout.buildDirectory.dir("intermediates/stripped_native_libs/$variantLowered/out/lib"))
         }
 
         doLast {
@@ -86,7 +86,7 @@ androidComponents.onVariants { variant ->
         group = "module"
         dependsOn(prepareModuleFilesTask)
         archiveFileName.set(zipFileName)
-        destinationDirectory.set(file("$buildDir/outputs/release"))
+        destinationDirectory.set(layout.buildDirectory.dir("outputs/release"))
         from(moduleDir)
     }
 

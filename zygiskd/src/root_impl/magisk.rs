@@ -40,7 +40,7 @@ pub fn uid_granted_root(uid: i32) -> bool {
     })
 }
 
-pub fn uid_should_umount(uid: i32) -> bool {
+pub fn uid_should_umount(_uid: i32) -> bool {
     // TODO: uid_should_umount
     return false;
 }
