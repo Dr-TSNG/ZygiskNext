@@ -24,7 +24,8 @@ using jni_hook::hash_map;
 using jni_hook::tree_map;
 using xstring = jni_hook::string;
 
-static bool unhook_functions();
+static void hook_unloader();
+static void unhook_functions();
 
 namespace {
 
@@ -45,6 +46,11 @@ void name##_pre();         \
 void name##_post();
 
 #define MAX_FD_SIZE 1024
+
+struct HookContext;
+
+// Current context
+HookContext *g_ctx;
 
 struct HookContext {
     JNIEnv *env;
@@ -80,7 +86,8 @@ struct HookContext {
     vector<IgnoreInfo> ignore_info;
 
     HookContext() : env(nullptr), args{nullptr}, process(nullptr), pid(-1), info_flags(0),
-    hook_info_lock(PTHREAD_MUTEX_INITIALIZER) {}
+    hook_info_lock(PTHREAD_MUTEX_INITIALIZER) { g_ctx = this; }
+    ~HookContext();
 
     /* Zygisksu changed: Load module fds */
     void run_modules_pre();
@@ -94,6 +101,7 @@ struct HookContext {
     void unload_zygisk();
     void sanitize_fds();
     bool exempt_fd(int fd);
+    bool is_child() const { return pid <= 0; }
 
     // Compatibility shim
     void plt_hook_register(const char *regex, const char *symbol, void *fn, void **backup);
@@ -109,9 +117,8 @@ struct HookContext {
 vector<tuple<dev_t, ino_t, const char *, void **>> *plt_hook_list;
 map<string, vector<JNINativeMethod>, StringCmp> *jni_hook_list;
 hash_map<xstring, tree_map<xstring, tree_map<xstring, void *>>> *jni_method_map;
+bool should_unmap_zygisk = false;
 
-// Current context
-HookContext *g_ctx;
 const JNINativeInterface *old_functions = nullptr;
 JNINativeInterface *new_functions = nullptr;
 
@@ -246,13 +253,28 @@ DCL_HOOK_FUNC(void, android_log_close) {
     old_android_log_close();
 }
 
-// Last point before process secontext changes
-DCL_HOOK_FUNC(int, selinux_android_setcontext,
-        uid_t uid, int isSystemServer, const char *seinfo, const char *pkgname) {
-    if (g_ctx) {
-        g_ctx->flags[CAN_UNLOAD_ZYGISK] = unhook_functions();
+// We cannot directly call `dlclose` to unload ourselves, otherwise when `dlclose` returns,
+// it will return to our code which has been unmapped, causing segmentation fault.
+// Instead, we hook `pthread_attr_destroy` which will be called when VM daemon threads start.
+DCL_HOOK_FUNC(int, pthread_attr_destroy, void *target) {
+    int res = old_pthread_attr_destroy((pthread_attr_t *)target);
+
+    // Only perform unloading on the main thread
+    if (gettid() != getpid())
+        return res;
+
+    LOGD("pthread_attr_destroy\n");
+    if (should_unmap_zygisk) {
+        unhook_functions();
+        if (should_unmap_zygisk) {
+            // Because both `pthread_attr_destroy` and `dlclose` have the same function signature,
+            // we can use `musttail` to let the compiler reuse our stack frame and thus
+            // `dlclose` will directly return to the caller of `pthread_attr_destroy`.
+            [[clang::musttail]] return dlclose(self_handle);
+        }
     }
-    return old_selinux_android_setcontext(uid, isSystemServer, seinfo, pkgname);
+
+    return res;
 }
 
 #undef DCL_HOOK_FUNC
@@ -449,7 +471,6 @@ int sigmask(int how, int signum) {
 }
 
 void HookContext::fork_pre() {
-    g_ctx = this;
     // Do our own fork before loading any 3rd party code
     // First block SIGCHLD, unblock after original fork is done
     sigmask(SIG_BLOCK, SIGCHLD);
@@ -615,7 +636,6 @@ bool HookContext::exempt_fd(int fd) {
 void HookContext::nativeSpecializeAppProcess_pre() {
     process = env->GetStringUTFChars(args.app->nice_name, nullptr);
     LOGV("pre  specialize [%s]\n", process);
-    g_ctx = this;
     // App specialize does not check FD
     flags[SKIP_FD_SANITIZATION] = true;
     app_specialize_pre();
@@ -674,6 +694,43 @@ void HookContext::nativeForkAndSpecialize_post() {
     fork_post();
 }
 
+HookContext::~HookContext() {
+    // This global pointer points to a variable on the stack.
+    // Set this to nullptr to prevent leaking local variable.
+    // This also disables most plt hooked functions.
+    g_ctx = nullptr;
+
+    if (!is_child())
+        return;
+
+    should_unmap_zygisk = true;
+
+    // Restore JNIEnv
+    if (env->functions == new_functions) {
+        env->functions = old_functions;
+        delete new_functions;
+    }
+
+    // Unhook JNI methods
+    for (const auto &[clz, methods] : *jni_hook_list) {
+        if (!methods.empty() && env->RegisterNatives(
+                env->FindClass(clz.data()), methods.data(),
+                static_cast<int>(methods.size())) != 0) {
+            LOGE("Failed to restore JNI hook of class [%s]\n", clz.data());
+            should_unmap_zygisk = false;
+        }
+    }
+    delete jni_hook_list;
+    jni_hook_list = nullptr;
+
+    // Strip out all API function pointers
+    for (auto &m : modules) {
+        m.clearApi();
+    }
+
+    hook_unloader();
+}
+
 } // namespace
 
 static bool hook_commit() {
@@ -716,7 +773,6 @@ void hook_functions() {
 
     PLT_HOOK_REGISTER(android_runtime_dev, android_runtime_inode, fork);
     PLT_HOOK_REGISTER(android_runtime_dev, android_runtime_inode, unshare);
-    PLT_HOOK_REGISTER(android_runtime_dev, android_runtime_inode, selinux_android_setcontext);
     PLT_HOOK_REGISTER(android_runtime_dev, android_runtime_inode, androidSetCreateThreadFunc);
     PLT_HOOK_REGISTER_SYM(android_runtime_dev, android_runtime_inode, "__android_log_close", android_log_close);
     hook_commit();
@@ -728,38 +784,32 @@ void hook_functions() {
             plt_hook_list->end());
 }
 
-static bool unhook_functions() {
-    bool success = true;
+static void hook_unloader() {
+    ino_t art_inode = 0;
+    dev_t art_dev = 0;
 
-    // Restore JNIEnv
-    if (g_ctx->env->functions == new_functions) {
-        g_ctx->env->functions = old_functions;
-        delete new_functions;
-    }
-
-    // Unhook JNI methods
-    for (const auto &[clz, methods] : *jni_hook_list) {
-        if (!methods.empty() && g_ctx->env->RegisterNatives(
-                g_ctx->env->FindClass(clz.data()), methods.data(),
-                static_cast<int>(methods.size())) != 0) {
-            LOGE("Failed to restore JNI hook of class [%s]\n", clz.data());
-            success = false;
+    for (auto &map : lsplt::MapInfo::Scan()) {
+        if (map.path.ends_with("/libart.so")) {
+            art_inode = map.inode;
+            art_dev = map.dev;
+            break;
         }
     }
-    delete jni_hook_list;
 
+    PLT_HOOK_REGISTER(art_dev, art_inode, pthread_attr_destroy);
+    hook_commit();
+}
+
+static void unhook_functions() {
     // Unhook plt_hook
     for (const auto &[dev, inode, sym, old_func] : *plt_hook_list) {
         if (!lsplt::RegisterHook(dev, inode, sym, *old_func, nullptr)) {
             LOGE("Failed to register plt_hook [%s]\n", sym);
-            success = false;
         }
     }
     delete plt_hook_list;
     if (!hook_commit()) {
         LOGE("Failed to restore plt_hook\n");
-        success = false;
+        should_unmap_zygisk = false;
     }
-
-    return success;
 }
