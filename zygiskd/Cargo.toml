@@ -23,7 +23,7 @@ passfd = "0.1"
 rand = "0.8"
 tokio = { version = "1.28", features = ["full"] }
 
-binder = { git = "https://github.com/Kernel-SU/binder_rs" }
+binder = { git = "https://github.com/5ec1cff/binder_rs" }
 
 [profile.release]
 strip = true
