@@ -35,7 +35,6 @@ enum {
     APP_SPECIALIZE,
     SERVER_FORK_AND_SPECIALIZE,
     DO_REVERT_UNMOUNT,
-    CAN_UNLOAD_ZYGISK,
     SKIP_FD_SANITIZATION,
 
     FLAG_MAX
@@ -98,7 +97,6 @@ struct HookContext {
     DCL_PRE_POST(nativeSpecializeAppProcess)
     DCL_PRE_POST(nativeForkSystemServer)
 
-    void unload_zygisk();
     void sanitize_fds();
     bool exempt_fd(int fd);
     bool is_child() const { return pid <= 0; }
@@ -552,7 +550,6 @@ void HookContext::fork_post() {
     // Unblock SIGCHLD in case the original method didn't
     sigmask(SIG_UNBLOCK, SIGCHLD);
     g_ctx = nullptr;
-    unload_zygisk();
 }
 
 /* Zygisksu changed: Load module fds */
@@ -606,22 +603,6 @@ void HookContext::app_specialize_post() {
     logging::setfd(-1);
 }
 
-void HookContext::unload_zygisk() {
-    if (flags[CAN_UNLOAD_ZYGISK]) {
-        // Do NOT call the destructor
-        operator delete(jni_method_map);
-        // Directly unmap the whole memory block
-        jni_hook::memory_block::release();
-
-        // Strip out all API function pointers
-        for (auto &m : modules) {
-            m.clearApi();
-        }
-
-        new_daemon_thread(reinterpret_cast<thread_entry>(&dlclose), self_handle);
-    }
-}
-
 bool HookContext::exempt_fd(int fd) {
     if (flags[POST_SPECIALIZE] || flags[SKIP_FD_SANITIZATION])
         return true;
@@ -644,7 +625,6 @@ void HookContext::nativeSpecializeAppProcess_pre() {
 void HookContext::nativeSpecializeAppProcess_post() {
     LOGV("post specialize [%s]\n", process);
     app_specialize_post();
-    unload_zygisk();
 }
 
 /* Zygisksu changed: No system_server status write back */
