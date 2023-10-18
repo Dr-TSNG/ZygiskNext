@@ -2,7 +2,7 @@ import java.nio.file.Paths
 import org.gradle.internal.os.OperatingSystem
 
 plugins {
-    id("com.android.library")
+    alias(libs.plugins.agp.lib)
 }
 
 fun Project.findInPath(executable: String, property: String): String? {

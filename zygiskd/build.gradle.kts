@@ -1,6 +1,6 @@
 plugins {
-    id("com.android.library")
-    id("org.mozilla.rust-android-gradle.rust-android")
+    alias(libs.plugins.agp.lib)
+    alias(libs.plugins.rust.android)
 }
 
 val verName: String by rootProject.extra

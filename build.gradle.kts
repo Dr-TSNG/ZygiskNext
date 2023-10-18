@@ -2,18 +2,7 @@ import com.android.build.gradle.LibraryExtension
 import java.io.ByteArrayOutputStream
 
 plugins {
-    id("com.android.application") apply false
-    id("com.android.library") apply false
-}
-
-buildscript {
-    repositories {
-        maven("https://plugins.gradle.org/m2/")
-    }
-    dependencies {
-        classpath("org.eclipse.jgit:org.eclipse.jgit:6.4.0.202211300538-r")
-        classpath("org.mozilla.rust-android-gradle:plugin:0.9.3")
-    }
+    alias(libs.plugins.agp.lib) apply false
 }
 
 fun String.execute(currentWorkingDir: File = file("./")): String {

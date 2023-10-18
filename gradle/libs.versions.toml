@@ -1,0 +1,9 @@
+[versions]
+agp = "8.1.2"
+kotlin = "1.9.10"
+
+[plugins]
+agp-lib = { id = "com.android.library", version.ref = "agp" }
+kotlin = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
+lsplugin-jgit = { id = "org.lsposed.lsplugin.jgit", version = "1.1" }
+rust-android = { id = "org.mozilla.rust-android-gradle.rust-android", version = "0.9.3" }
