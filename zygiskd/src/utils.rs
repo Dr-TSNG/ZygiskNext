@@ -1,12 +1,11 @@
 use anyhow::Result;
-use nix::unistd::gettid;
 use std::{fs, io::{Read, Write}, os::unix::net::UnixStream, process::Command};
 use std::ffi::c_char;
-use std::os::fd::FromRawFd;
 use std::os::unix::net::UnixListener;
-use nix::sys::socket::{AddressFamily, SockFlag, SockType, UnixAddr};
-use once_cell::sync::OnceCell;
+use std::sync::OnceLock;
 use rand::distributions::{Alphanumeric, DistString};
+use rustix::net::{AddressFamily, bind_unix, listen, socket, SocketAddrUnix, SocketType};
+use rustix::thread::gettid;
 
 #[cfg(target_pointer_width = "64")]
 #[macro_export]
@@ -31,12 +30,12 @@ macro_rules! debug_select {
 }
 
 pub struct LateInit<T> {
-    cell: OnceCell<T>,
+    cell: OnceLock<T>,
 }
 
 impl<T> LateInit<T> {
     pub const fn new() -> Self {
-        LateInit { cell: OnceCell::new() }
+        LateInit { cell: OnceLock::new() }
     }
 
     pub fn init(&self, value: T) {
@@ -60,7 +59,7 @@ pub fn set_socket_create_context(context: &str) -> Result<()> {
     match fs::write(path, context) {
         Ok(_) => Ok(()),
         Err(_) => {
-            let path = format!("/proc/self/task/{}/attr/sockcreate", gettid().as_raw());
+            let path = format!("/proc/self/task/{}/attr/sockcreate", gettid().as_raw_nonzero());
             fs::write(path, context)?;
             Ok(())
         }
@@ -156,14 +155,12 @@ impl UnixStreamExt for UnixStream {
     }
 }
 
-// TODO: Replace with SockAddrExt::from_abstract_name when it's stable
 pub fn abstract_namespace_socket(name: &str) -> Result<UnixListener> {
-    let addr = UnixAddr::new_abstract(name.as_bytes())?;
-    let socket = nix::sys::socket::socket(AddressFamily::Unix, SockType::Stream, SockFlag::empty(), None)?;
-    nix::sys::socket::bind(socket, &addr)?;
-    nix::sys::socket::listen(socket, 2)?;
-    let listener = unsafe { UnixListener::from_raw_fd(socket) };
-    Ok(listener)
+    let addr = SocketAddrUnix::new_abstract_name(name.as_bytes())?;
+    let socket = socket(AddressFamily::UNIX, SocketType::STREAM, None)?;
+    bind_unix(&socket, &addr)?;
+    listen(&socket, 2)?;
+    Ok(UnixListener::from(socket))
 }
 
 extern "C" {

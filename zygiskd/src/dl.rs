@@ -1,6 +1,5 @@
 use anyhow::{bail, Result};
 use std::ffi::{c_char, c_void};
-use nix::libc;
 
 const ANDROID_NAMESPACE_TYPE_SHARED: u64 = 0x2;
 const ANDROID_DLEXT_USE_NAMESPACE: u64 = 0x200;

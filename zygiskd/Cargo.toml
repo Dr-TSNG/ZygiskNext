@@ -14,13 +14,13 @@ const_format = "0.2"
 futures = "0.3"
 konst = "0.3"
 lazy_static = "1.4"
+libc = "0.2"
 log = "0.4"
 memfd = "0.6"
-nix = { version = "0.26", features = ["process","poll"] }
 num_enum = "0.5"
-once_cell = "1.17"
 passfd = "0.1"
 rand = "0.8"
+rustix = { version = "0.38", features = [ "fs", "process", "mount", "net", "thread"] }
 tokio = { version = "1.28", features = ["full"] }
 
 binder = { git = "https://github.com/Kernel-SU/binder_rs", rev = "c9f2b62d6a744fd2264056c638c1b061a6a2932d" }

@@ -1,19 +1,16 @@
 use crate::{constants, magic, root_impl, utils};
 use anyhow::{bail, Result};
-use nix::unistd::{getgid, getuid, Pid};
-use std::{fs, io};
-use std::ffi::CString;
+use std::fs;
 use std::future::Future;
-use std::io::{BufRead, Write};
+use std::io::{BufRead, BufReader, Write};
 use std::os::unix::net::UnixListener;
 use std::pin::Pin;
 use std::time::Duration;
 use binder::IBinder;
 use futures::stream::FuturesUnordered;
 use futures::StreamExt;
-use nix::errno::Errno;
-use nix::libc;
-use nix::sys::signal::{kill, Signal};
+use rustix::mount::mount_bind;
+use rustix::process::{getgid, getuid, kill_process, Pid, Signal};
 use tokio::process::{Child, Command};
 use crate::utils::LateInit;
 
@@ -38,12 +35,12 @@ pub async fn entry() -> Result<()> {
 fn check_permission() -> Result<()> {
     log::info!("Check permission");
     let uid = getuid();
-    if uid.as_raw() != 0 {
+    if !uid.is_root() {
         bail!("UID is not 0");
     }
 
     let gid = getgid();
-    if gid.as_raw() != 0 {
+    if !gid.is_root() {
         bail!("GID is not 0");
     }
 
@@ -81,7 +78,7 @@ async fn mount_prop() -> Result<()> {
     let module_prop_file = fs::File::open(&module_prop)?;
     let mut section = 0;
     let mut sections: [String; 2] = [String::new(), String::new()];
-    let lines = io::BufReader::new(module_prop_file).lines();
+    let lines = BufReader::new(module_prop_file).lines();
     for line in lines {
         let line = line?;
         if line.starts_with("description=") {
@@ -99,18 +96,7 @@ async fn mount_prop() -> Result<()> {
     fs::create_dir(magic::PATH_TMP_DIR.as_str())?;
     fs::File::create(magic::PATH_TMP_PROP.as_str())?;
 
-    // FIXME: sys_mount cannot be compiled on 32 bit
-    unsafe {
-        let r = libc::mount(
-            CString::new(magic::PATH_TMP_PROP.as_str())?.as_ptr(),
-            CString::new(module_prop)?.as_ptr(),
-            std::ptr::null(),
-            libc::MS_BIND,
-            std::ptr::null(),
-        );
-        Errno::result(r)?;
-    }
-
+    mount_bind(magic::PATH_TMP_PROP.as_str(), &module_prop)?;
     Ok(())
 }
 
@@ -190,7 +176,7 @@ async fn spawn_daemon() -> Result<()> {
 
         for child in child_ids {
             log::debug!("Killing child process {}", child);
-            let _ = kill(Pid::from_raw(child as i32), Signal::SIGKILL);
+            let _ = kill_process(Pid::from_raw(child as i32).unwrap(), Signal::Kill);
         }
 
         lives -= 1;

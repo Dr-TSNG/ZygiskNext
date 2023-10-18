@@ -7,15 +7,14 @@ use passfd::FdPassingExt;
 use std::sync::Arc;
 use std::thread;
 use std::fs;
-use std::os::fd::{IntoRawFd, OwnedFd};
+use std::os::fd::OwnedFd;
 use std::os::unix::{
     net::{UnixListener, UnixStream},
     prelude::AsRawFd,
 };
 use std::path::PathBuf;
-use nix::libc;
-use nix::sys::stat::fstat;
-use nix::unistd::close;
+use rustix::fs::fstat;
+use rustix::process::Signal;
 
 type ZygiskCompanionEntryFn = unsafe extern "C" fn(i32);
 
@@ -31,7 +30,7 @@ struct Context {
 }
 
 pub fn entry() -> Result<()> {
-    unsafe { libc::prctl(libc::PR_SET_PDEATHSIG, libc::SIGKILL) };
+    rustix::process::set_parent_process_death_signal(Some(Signal::Kill))?;
 
     let arch = get_arch()?;
     log::debug!("Daemon architecture: {arch}");
@@ -209,16 +208,15 @@ fn handle_daemon_action(mut stream: UnixStream, context: &Context) -> Result<()>
                 }
                 Some(companion) => {
                     stream.write_u8(1)?;
-                    let fd = stream.into_raw_fd();
-                    let st0 = fstat(fd)?;
-                    unsafe { companion(fd); }
+                    let st0 = fstat(&stream)?;
+                    unsafe { companion(stream.as_raw_fd()); }
                     // Only close client if it is the same file so we don't
                     // accidentally close a re-used file descriptor.
                     // This check is required because the module companion
                     // handler could've closed the file descriptor already.
-                    if let Ok(st1) = fstat(fd) {
-                        if st0.st_dev == st1.st_dev && st0.st_ino == st1.st_ino {
-                            close(fd)?;
+                    if let Ok(st1) = fstat(&stream) {
+                        if st0.st_dev != st1.st_dev || st0.st_ino != st1.st_ino {
+                            std::mem::forget(stream);
                         }
                     }
                 }
