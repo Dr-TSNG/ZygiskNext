@@ -6,8 +6,6 @@ if [ "$ZYGISK_ENABLED" ]; then
 fi
 
 cd "$MODDIR"
-getprop ro.dalvik.vm.native.bridge > /dev/.native_bridge
-resetprop ro.dalvik.vm.native.bridge libzygisk_loader.so
 
 if [ "$(which magisk)" ]; then
   for file in ../*; do
@@ -21,3 +19,5 @@ if [ "$(which magisk)" ]; then
     fi
   done
 fi
+
+sh -c "bin/zygisk-fuse &"

@@ -9,7 +9,6 @@ rust-version = "1.69"
 android_logger = "0.13"
 anyhow = { version = "1.0", features = ["backtrace"] }
 bitflags = { version = "2.3" }
-clap = { version = "4", features = ["derive"] }
 const_format = "0.2"
 futures = "0.3"
 konst = "0.3"
@@ -19,11 +18,13 @@ log = "0.4"
 memfd = "0.6"
 num_enum = "0.5"
 passfd = "0.1"
-rand = "0.8"
+proc-maps = "0.3"
+ptrace-do = "0.1"
 rustix = { version = "0.38", features = [ "fs", "process", "mount", "net", "thread"] }
 tokio = { version = "1.28", features = ["full"] }
 
 binder = { git = "https://github.com/Kernel-SU/binder_rs", rev = "c9f2b62d6a744fd2264056c638c1b061a6a2932d" }
+fuser = { git = "https://github.com/Dr-TSNG/fuser", default-features = false }
 
 [profile.release]
 strip = true

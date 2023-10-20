@@ -11,7 +11,7 @@
 # define LP_SELECT(lp32, lp64) lp32
 #endif
 
-constexpr auto kZygiskMagic = "/system/zygisk_magic";
+constexpr auto kCPSocketPath = "/dev/zygisk/" LP_SELECT("cp32", "cp64") ".sock";
 
 class UniqueFd {
     using Fd = int;
@@ -54,7 +54,6 @@ namespace zygiskd {
     enum class SocketAction {
         PingHeartBeat,
         RequestLogcatFd,
-        ReadNativeBridge,
         GetProcessFlags,
         ReadModules,
         RequestCompanionSocket,
@@ -64,8 +63,6 @@ namespace zygiskd {
     bool PingHeartbeat();
 
     int RequestLogcatFd();
-
-    std::string ReadNativeBridge();
 
     std::vector<Module> ReadModules();
 

@@ -13,16 +13,7 @@ LOCAL_LDLIBS           := -llog
 include $(BUILD_STATIC_LIBRARY)
 
 include $(CLEAR_VARS)
-LOCAL_MODULE           := zygisk_loader
-LOCAL_C_INCLUDES       := $(LOCAL_PATH)/include
-FILE_LIST              := $(filter %.cpp, $(call walk, $(LOCAL_PATH)/loader))
-LOCAL_SRC_FILES        := $(FILE_LIST:COMMON_FILE_LIST:$(LOCAL_PATH)/%=%)
-LOCAL_STATIC_LIBRARIES := cxx common
-LOCAL_LDLIBS           := -llog
-include $(BUILD_SHARED_LIBRARY)
-
-include $(CLEAR_VARS)
-LOCAL_MODULE           := zygisk_injector
+LOCAL_MODULE           := zygisk
 LOCAL_C_INCLUDES       := $(LOCAL_PATH)/include
 FILE_LIST              := $(filter %.cpp, $(call walk, $(LOCAL_PATH)/injector))
 LOCAL_SRC_FILES        := $(FILE_LIST:COMMON_FILE_LIST:$(LOCAL_PATH)/%=%)

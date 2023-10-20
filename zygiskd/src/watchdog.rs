@@ -1,39 +1,46 @@
-use crate::{constants, magic, root_impl, utils};
+use crate::{constants, root_impl, utils};
 use anyhow::{bail, Result};
 use std::fs;
 use std::future::Future;
 use std::io::{BufRead, BufReader, Write};
-use std::os::unix::net::UnixListener;
 use std::pin::Pin;
 use std::time::Duration;
 use binder::IBinder;
 use futures::stream::FuturesUnordered;
 use futures::StreamExt;
+use log::info;
 use rustix::mount::mount_bind;
 use rustix::process::{getgid, getuid, kill_process, Pid, Signal};
 use tokio::process::{Child, Command};
 use crate::utils::LateInit;
 
-static LOCK: LateInit<UnixListener> = LateInit::new();
 static PROP_SECTIONS: LateInit<[String; 2]> = LateInit::new();
 
-pub async fn entry() -> Result<()> {
-    log::info!("Start zygisksu watchdog");
+pub async fn main() -> Result<()> {
+    let result = run().await;
+    set_prop_hint(constants::STATUS_CRASHED)?;
+    result
+}
+
+async fn run() -> Result<()> {
+    info!("Start zygisksu watchdog");
     check_permission()?;
-    ensure_single_instance()?;
     mount_prop().await?;
     if check_and_set_hint()? == false {
         log::warn!("Requirements not met, exiting");
-        utils::set_property(constants::PROP_NATIVE_BRIDGE, &utils::get_native_bridge())?;
         return Ok(());
     }
-    let end = spawn_daemon().await;
-    set_prop_hint(constants::STATUS_CRASHED)?;
-    end
+    spawn_daemon().await?;
+    Ok(())
+}
+
+fn spawn_fuse() -> Result<()> {
+    Command::new("bin/zygisk-fuse").spawn()?;
+    Ok(())
 }
 
 fn check_permission() -> Result<()> {
-    log::info!("Check permission");
+    info!("Check permission");
     let uid = getuid();
     if !uid.is_root() {
         bail!("UID is not 0");
@@ -53,16 +60,6 @@ fn check_permission() -> Result<()> {
     Ok(())
 }
 
-fn ensure_single_instance() -> Result<()> {
-    log::info!("Ensure single instance");
-    let name = format!("zygiskwd{}", magic::MAGIC.as_str());
-    match utils::abstract_namespace_socket(&name) {
-        Ok(socket) => LOCK.init(socket),
-        Err(e) => bail!("Failed to acquire lock: {e}. Maybe another instance is running?")
-    }
-    Ok(())
-}
-
 async fn mount_prop() -> Result<()> {
     let module_prop = if let root_impl::RootImpl::Magisk = root_impl::get_impl() {
         let magisk_path = Command::new("magisk").arg("--path").output().await?;
@@ -74,7 +71,7 @@ async fn mount_prop() -> Result<()> {
     } else {
         constants::PATH_MODULE_PROP.to_string()
     };
-    log::info!("Mount {module_prop}");
+    info!("Mount {module_prop}");
     let module_prop_file = fs::File::open(&module_prop)?;
     let mut section = 0;
     let mut sections: [String; 2] = [String::new(), String::new()];
@@ -93,15 +90,13 @@ async fn mount_prop() -> Result<()> {
     }
     PROP_SECTIONS.init(sections);
 
-    fs::create_dir(magic::PATH_TMP_DIR.as_str())?;
-    fs::File::create(magic::PATH_TMP_PROP.as_str())?;
-
-    mount_bind(magic::PATH_TMP_PROP.as_str(), &module_prop)?;
+    fs::File::create(constants::PATH_PROP_OVERLAY)?;
+    mount_bind(constants::PATH_PROP_OVERLAY, &module_prop)?;
     Ok(())
 }
 
 fn set_prop_hint(hint: &str) -> Result<()> {
-    let mut file = fs::File::create(magic::PATH_TMP_PROP.as_str())?;
+    let mut file = fs::File::create(constants::PATH_PROP_OVERLAY)?;
     file.write_all(PROP_SECTIONS[0].as_bytes())?;
     file.write_all(b"[")?;
     file.write_all(hint.as_bytes())?;
@@ -131,8 +126,8 @@ async fn spawn_daemon() -> Result<()> {
         let mut futures = FuturesUnordered::<Pin<Box<dyn Future<Output=Result<()>>>>>::new();
         let mut child_ids = vec![];
 
-        let daemon32 = Command::new(constants::PATH_ZYGISKD32).arg("daemon").spawn();
-        let daemon64 = Command::new(constants::PATH_ZYGISKD64).arg("daemon").spawn();
+        let daemon32 = Command::new(constants::PATH_CP32_BIN).spawn();
+        let daemon64 = Command::new(constants::PATH_CP64_BIN).spawn();
         async fn spawn_daemon(mut daemon: Child) -> Result<()> {
             let result = daemon.wait().await?;
             log::error!("Daemon process {} died: {}", daemon.id().unwrap(), result);
@@ -158,8 +153,7 @@ async fn spawn_daemon() -> Result<()> {
                 };
             };
 
-            log::info!("System server ready, restore native bridge");
-            utils::set_property(constants::PROP_NATIVE_BRIDGE, &utils::get_native_bridge())?;
+            info!("System server ready");
 
             loop {
                 if binder.ping_binder().is_err() { break; }
@@ -185,7 +179,6 @@ async fn spawn_daemon() -> Result<()> {
         }
 
         log::error!("Restarting zygote...");
-        utils::set_property(constants::PROP_NATIVE_BRIDGE, constants::ZYGISK_LOADER)?;
         utils::set_property(constants::PROP_CTL_RESTART, "zygote")?;
     }
 }

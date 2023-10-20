@@ -1,3 +1,5 @@
+deny vold fusectlfs file write
+
 allow * tmpfs * *
 allow zygote appdomain_tmpfs dir *
 allow zygote appdomain_tmpfs file *

@@ -8,32 +8,14 @@
 
 namespace zygiskd {
 
-    bool sMagicRead = false;
-    static std::string sSocketName;
-
-    void ReadMagic() {
-        sMagicRead = true;
-        char magic[PATH_MAX]{0};
-        auto fp = fopen(kZygiskMagic, "r");
-        if (fp == nullptr) {
-            PLOGE("Open magic file");
-            return;
-        }
-        fgets(magic, PATH_MAX, fp);
-        fclose(fp);
-        sSocketName.append(LP_SELECT("zygiskd32", "zygiskd64")).append(magic);
-        LOGD("Socket name: %s", sSocketName.data());
-    }
-
     int Connect(uint8_t retry) {
-        if (!sMagicRead) ReadMagic();
         int fd = socket(PF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, 0);
         struct sockaddr_un addr{
                 .sun_family = AF_UNIX,
                 .sun_path={0},
         };
-        strcpy(addr.sun_path + 1, sSocketName.data());
-        socklen_t socklen = sizeof(sa_family_t) + strlen(addr.sun_path + 1) + 1;
+        strcpy(addr.sun_path, kCPSocketPath);
+        socklen_t socklen = sizeof(addr);
 
         while (retry--) {
             int r = connect(fd, reinterpret_cast<struct sockaddr*>(&addr), socklen);
@@ -64,16 +46,6 @@ namespace zygiskd {
         }
         socket_utils::write_u8(fd, (uint8_t) SocketAction::RequestLogcatFd);
         return fd;
-    }
-
-    std::string ReadNativeBridge() {
-        UniqueFd fd = Connect(1);
-        if (fd == -1) {
-            PLOGE("ReadNativeBridge");
-            return "";
-        }
-        socket_utils::write_u8(fd, (uint8_t) SocketAction::ReadNativeBridge);
-        return socket_utils::read_string(fd);
     }
 
     uint32_t GetProcessFlags(uid_t uid) {

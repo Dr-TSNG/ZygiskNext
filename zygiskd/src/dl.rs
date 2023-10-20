@@ -1,17 +1,17 @@
 use anyhow::{bail, Result};
 use std::ffi::{c_char, c_void};
 
-const ANDROID_NAMESPACE_TYPE_SHARED: u64 = 0x2;
-const ANDROID_DLEXT_USE_NAMESPACE: u64 = 0x200;
+pub const ANDROID_NAMESPACE_TYPE_SHARED: u64 = 0x2;
+pub const ANDROID_DLEXT_USE_NAMESPACE: u64 = 0x200;
 
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
-struct AndroidNamespace {
+pub struct AndroidNamespace {
     _unused: [u8; 0],
 }
 
 #[repr(C)]
-struct AndroidDlextinfo {
+pub struct AndroidDlextinfo {
     pub flags: u64,
     pub reserved_addr: *mut c_void,
     pub reserved_size: libc::size_t,
@@ -22,7 +22,7 @@ struct AndroidDlextinfo {
 }
 
 extern "C" {
-    fn android_dlopen_ext(
+    pub fn android_dlopen_ext(
         filename: *const c_char,
         flags: libc::c_int,
         extinfo: *const AndroidDlextinfo,

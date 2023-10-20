@@ -1,7 +1,7 @@
 use std::ffi::c_void;
 use crate::constants::{DaemonSocketAction, ProcessFlags};
 use crate::utils::UnixStreamExt;
-use crate::{constants, dl, lp_select, magic, root_impl, utils};
+use crate::{constants, dl, lp_select, root_impl, utils};
 use anyhow::{bail, Result};
 use passfd::FdPassingExt;
 use std::sync::Arc;
@@ -14,7 +14,7 @@ use std::os::unix::{
 };
 use std::path::PathBuf;
 use rustix::fs::fstat;
-use rustix::process::Signal;
+use rustix::process::{set_parent_process_death_signal, Signal};
 
 type ZygiskCompanionEntryFn = unsafe extern "C" fn(i32);
 
@@ -25,12 +25,11 @@ struct Module {
 }
 
 struct Context {
-    native_bridge: String,
     modules: Vec<Module>,
 }
 
-pub fn entry() -> Result<()> {
-    rustix::process::set_parent_process_death_signal(Some(Signal::Kill))?;
+pub fn main() -> Result<()> {
+    set_parent_process_death_signal(Some(Signal::Kill))?;
 
     let arch = get_arch()?;
     log::debug!("Daemon architecture: {arch}");
@@ -39,7 +38,6 @@ pub fn entry() -> Result<()> {
     let modules = load_modules(arch)?;
 
     let context = Context {
-        native_bridge: utils::get_native_bridge(),
         modules,
     };
     let context = Arc::new(context);
@@ -131,10 +129,8 @@ fn create_library_fd(so_path: &PathBuf) -> Result<OwnedFd> {
 
 fn create_daemon_socket() -> Result<UnixListener> {
     utils::set_socket_create_context("u:r:zygote:s0")?;
-    let prefix = lp_select!("zygiskd32", "zygiskd64");
-    let name = format!("{}{}", prefix, magic::MAGIC.as_str());
-    let listener = utils::abstract_namespace_socket(&name)?;
-    log::debug!("Daemon socket: {name}");
+    log::debug!("Daemon socket: {}", constants::PATH_CP_SOCKET);
+    let listener = utils::unix_listener_from_path(constants::PATH_CP_SOCKET)?;
     Ok(listener)
 }
 
@@ -169,9 +165,6 @@ fn handle_daemon_action(mut stream: UnixStream, context: &Context) -> Result<()>
                 let message = stream.read_string()?;
                 utils::log_raw(level as i32, &tag, &message)?;
             }
-        }
-        DaemonSocketAction::ReadNativeBridge => {
-            stream.write_string(&context.native_bridge)?;
         }
         DaemonSocketAction::GetProcessFlags => {
             let uid = stream.read_u32()? as i32;

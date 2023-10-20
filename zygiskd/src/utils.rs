@@ -1,9 +1,9 @@
 use anyhow::Result;
-use std::{fs, io::{Read, Write}, os::unix::net::UnixStream, process::Command};
+use std::{fs, io::{Read, Write}, os::unix::net::UnixStream};
 use std::ffi::c_char;
 use std::os::unix::net::UnixListener;
+use std::process::Command;
 use std::sync::OnceLock;
-use rand::distributions::{Alphanumeric, DistString};
 use rustix::net::{AddressFamily, bind_unix, listen, socket, SocketAddrUnix, SocketType};
 use rustix::thread::gettid;
 
@@ -50,10 +50,6 @@ impl<T> std::ops::Deref for LateInit<T> {
     }
 }
 
-pub fn random_string() -> String {
-    Alphanumeric.sample_string(&mut rand::thread_rng(), 8)
-}
-
 pub fn set_socket_create_context(context: &str) -> Result<()> {
     let path = "/proc/thread-self/attr/sockcreate";
     match fs::write(path, context) {
@@ -66,15 +62,16 @@ pub fn set_socket_create_context(context: &str) -> Result<()> {
     }
 }
 
-pub fn get_native_bridge() -> String {
-    std::env::var("NATIVE_BRIDGE").unwrap_or_default()
+pub fn chcon(path: &str, context: &str) -> Result<()> {
+    Command::new("chcon").arg(context).arg(path).status()?;
+    Ok(())
 }
 
 pub fn log_raw(level: i32, tag: &str, message: &str) -> Result<()> {
     let tag = std::ffi::CString::new(tag)?;
     let message = std::ffi::CString::new(message)?;
     unsafe {
-        __android_log_print(level as i32, tag.as_ptr(), message.as_ptr());
+        __android_log_print(level, tag.as_ptr(), message.as_ptr());
     }
     Ok(())
 }
@@ -89,10 +86,11 @@ pub fn get_property(name: &str) -> Result<String> {
 }
 
 pub fn set_property(name: &str, value: &str) -> Result<()> {
-    Command::new("resetprop")
-        .arg(name)
-        .arg(value)
-        .spawn()?.wait()?;
+    let name = std::ffi::CString::new(name)?;
+    let value = std::ffi::CString::new(value)?;
+    unsafe {
+        __system_property_set(name.as_ptr(), value.as_ptr());
+    }
     Ok(())
 }
 
@@ -155,15 +153,18 @@ impl UnixStreamExt for UnixStream {
     }
 }
 
-pub fn abstract_namespace_socket(name: &str) -> Result<UnixListener> {
-    let addr = SocketAddrUnix::new_abstract_name(name.as_bytes())?;
+pub fn unix_listener_from_path(path: &str) -> Result<UnixListener> {
+    let _ = fs::remove_file(path);
+    let addr = SocketAddrUnix::new(path)?;
     let socket = socket(AddressFamily::UNIX, SocketType::STREAM, None)?;
     bind_unix(&socket, &addr)?;
     listen(&socket, 2)?;
+    chcon(path, "u:object_r:magisk_file:s0")?;
     Ok(UnixListener::from(socket))
 }
 
 extern "C" {
     fn __android_log_print(prio: i32, tag: *const c_char, fmt: *const c_char, ...) -> i32;
     fn __system_property_get(name: *const c_char, value: *mut c_char) -> u32;
+    fn __system_property_set(name: *const c_char, value: *const c_char) -> u32;
 }

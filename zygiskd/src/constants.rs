@@ -17,15 +17,25 @@ pub const MAX_LOG_LEVEL: LevelFilter = LevelFilter::Trace;
 #[cfg(not(debug_assertions))]
 pub const MAX_LOG_LEVEL: LevelFilter = LevelFilter::Info;
 
-pub const PROP_NATIVE_BRIDGE: &str = "ro.dalvik.vm.native.bridge";
 pub const PROP_CTL_RESTART: &str = "ctl.restart";
-pub const ZYGISK_LOADER: &str = "libzygisk_loader.so";
-pub const ZYGISK_MAGIC: &str = "/system/zygisk_magic";
+pub const ZYGISK_LIBRARY: &str = "libzygisk.so";
+
+pub const PATH_PCL: &str = "/system/etc/preloaded-classes";
+pub const PATH_SYSTEM_LIB32: &str = "/system/lib";
+pub const PATH_SYSTEM_LIB64: &str = "/system/lib64";
+pub const PATH_WORK_DIR: &str = "/dev/zygisk"; // TODO: Replace with /debug_ramdisk/zygisk
+pub const PATH_PROP_OVERLAY: &str = concatcp!(PATH_WORK_DIR, "/module.prop");
+#[cfg(target_pointer_width = "64")]
+pub const PATH_CP_SOCKET: &str = concatcp!(PATH_WORK_DIR, "/cp64.sock");
+#[cfg(target_pointer_width = "32")]
+pub const PATH_CP_SOCKET: &str = concatcp!(PATH_WORK_DIR, "/cp32.sock");
+pub const PATH_FUSE_DIR: &str = concatcp!(PATH_WORK_DIR, "/fuse");
+pub const PATH_FUSE_PCL: &str = concatcp!(PATH_FUSE_DIR, "/preloaded-classes");
 
 pub const PATH_MODULES_DIR: &str = "..";
 pub const PATH_MODULE_PROP: &str = "module.prop";
-pub const PATH_ZYGISKD32: &str = "bin/zygiskd32";
-pub const PATH_ZYGISKD64: &str = "bin/zygiskd64";
+pub const PATH_CP32_BIN: &str = "bin/zygisk-cp32";
+pub const PATH_CP64_BIN: &str = "bin/zygisk-cp64";
 
 pub const STATUS_LOADED: &str = "😋 Zygisksu is loaded";
 pub const STATUS_CRASHED: &str = "❌ Zygiskd has crashed";
@@ -39,7 +49,6 @@ pub const STATUS_ROOT_IMPL_MULTIPLE: &str = "❌ Multiple root implementations i
 pub enum DaemonSocketAction {
     PingHeartbeat,
     RequestLogcatFd,
-    ReadNativeBridge,
     GetProcessFlags,
     ReadModules,
     RequestCompanionSocket,

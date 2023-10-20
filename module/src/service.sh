@@ -8,8 +8,6 @@ if [ "$ZYGISK_ENABLED" ]; then
 fi
 
 cd "$MODDIR"
-export NATIVE_BRIDGE=$(cat /dev/.native_bridge)
-rm /dev/.native_bridge
 
 if [ "$(which magisk)" ]; then
   for file in ../*; do
@@ -26,4 +24,4 @@ fi
 
 log -p i -t "zygisksu" "Start watchdog"
 [ "$DEBUG" = true ] && export RUST_BACKTRACE=1
-exec "bin/zygiskwd" "watchdog" >/dev/null 2>&1
+exec "bin/zygisk-wd" >/dev/null 2>&1

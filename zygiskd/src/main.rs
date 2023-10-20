@@ -3,29 +3,13 @@
 
 mod constants;
 mod dl;
-mod magic;
+mod fuse;
 mod root_impl;
 mod utils;
 mod watchdog;
 mod zygiskd;
 
 use anyhow::Result;
-use clap::{Subcommand, Parser};
-
-#[derive(Parser, Debug)]
-#[command(author, version = constants::VERSION_FULL, about, long_about = None)]
-struct Args {
-    #[command(subcommand)]
-    command: Commands,
-}
-
-#[derive(Subcommand, Debug)]
-enum Commands {
-    /// Start zygisk watchdog
-    Watchdog,
-    /// Start zygisk daemon
-    Daemon,
-}
 
 
 fn init_android_logger(tag: &str) {
@@ -36,14 +20,15 @@ fn init_android_logger(tag: &str) {
     );
 }
 
-async fn start() -> Result<()> {
+async fn start(name: &str) -> Result<()> {
     root_impl::setup();
-    magic::setup()?;
-    let cli = Args::parse();
-    match cli.command {
-        Commands::Watchdog => watchdog::entry().await?,
-        Commands::Daemon => zygiskd::entry()?,
-    };
+    match name.trim_start_matches("zygisk-") {
+        "wd" => watchdog::main().await?,
+        "fuse" => fuse::main()?,
+        "cp32" => zygiskd::main()?,
+        "cp64" => zygiskd::main()?,
+        _ => println!("Available commands: wd, fuse, cp"),
+    }
     Ok(())
 }
 
@@ -53,7 +38,7 @@ async fn main() {
     let nice_name = process.split('/').last().unwrap();
     init_android_logger(nice_name);
 
-    if let Err(e) = start().await {
+    if let Err(e) = start(nice_name).await {
         log::error!("Crashed: {}\n{}", e, e.backtrace());
     }
 }

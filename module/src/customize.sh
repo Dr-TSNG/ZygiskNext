@@ -102,58 +102,44 @@ extract "$ZIPFILE" 'service.sh'      "$MODPATH"
 mv "$TMPDIR/sepolicy.rule" "$MODPATH"
 
 HAS32BIT=false && [ -d "/system/lib" ] && HAS32BIT=true
-HAS64BIT=false && [ -d "/system/lib64" ] && HAS64BIT=true
 
 mkdir "$MODPATH/bin"
 mkdir "$MODPATH/system"
+mkdir "$MODPATH/system/lib64"
 [ "$HAS32BIT" = true ] && mkdir "$MODPATH/system/lib"
-[ "$HAS64BIT" = true ] && mkdir "$MODPATH/system/lib64"
 
 if [ "$ARCH" = "x86" ] || [ "$ARCH" = "x64" ]; then
   if [ "$HAS32BIT" = true ]; then
     ui_print "- Extracting x86 libraries"
     extract "$ZIPFILE" 'bin/x86/zygiskd' "$MODPATH/bin" true
-    mv "$MODPATH/bin/zygiskd" "$MODPATH/bin/zygiskd32"
-    extract "$ZIPFILE" 'lib/x86/libzygisk_injector.so' "$MODPATH/system/lib" true
-    extract "$ZIPFILE" 'lib/x86/libzygisk_loader.so' "$MODPATH/system/lib" true
-    ln -sf "zygiskd32" "$MODPATH/bin/zygiskwd"
+    mv "$MODPATH/bin/zygiskd" "$MODPATH/bin/zygisk-cp32"
+    extract "$ZIPFILE" 'lib/x86/libzygisk.so' "$MODPATH/system/lib" true
   fi
 
-  if [ "$HAS64BIT" = true ]; then
-    ui_print "- Extracting x64 libraries"
-    extract "$ZIPFILE" 'bin/x86_64/zygiskd' "$MODPATH/bin" true
-    mv "$MODPATH/bin/zygiskd" "$MODPATH/bin/zygiskd64"
-    extract "$ZIPFILE" 'lib/x86_64/libzygisk_injector.so' "$MODPATH/system/lib64" true
-    extract "$ZIPFILE" 'lib/x86_64/libzygisk_loader.so' "$MODPATH/system/lib64" true
-    ln -sf "zygiskd64" "$MODPATH/bin/zygiskwd"
-  fi
+  ui_print "- Extracting x64 libraries"
+  extract "$ZIPFILE" 'bin/x86_64/zygiskd' "$MODPATH/bin" true
+  extract "$ZIPFILE" 'lib/x86_64/libzygisk.so' "$MODPATH/system/lib64" true
+  ln -sf "zygiskd" "$MODPATH/bin/zygisk-wd"
+  ln -sf "zygiskd" "$MODPATH/bin/zygisk-fuse"
+  ln -sf "zygiskd" "$MODPATH/bin/zygisk-cp64"
 else
   if [ "$HAS32BIT" = true ]; then
     ui_print "- Extracting arm libraries"
     extract "$ZIPFILE" 'bin/armeabi-v7a/zygiskd' "$MODPATH/bin" true
-    mv "$MODPATH/bin/zygiskd" "$MODPATH/bin/zygiskd32"
-    extract "$ZIPFILE" 'lib/armeabi-v7a/libzygisk_injector.so' "$MODPATH/system/lib" true
-    extract "$ZIPFILE" 'lib/armeabi-v7a/libzygisk_loader.so' "$MODPATH/system/lib" true
-    ln -sf "zygiskd32" "$MODPATH/bin/zygiskwd"
+    mv "$MODPATH/bin/zygiskd" "$MODPATH/bin/zygisk-cp32"
+    extract "$ZIPFILE" 'lib/armeabi-v7a/libzygisk.so' "$MODPATH/system/lib" true
   fi
 
-  if [ "$HAS64BIT" = true ]; then
-    ui_print "- Extracting arm64 libraries"
-    extract "$ZIPFILE" 'bin/arm64-v8a/zygiskd' "$MODPATH/bin" true
-    mv "$MODPATH/bin/zygiskd" "$MODPATH/bin/zygiskd64"
-    extract "$ZIPFILE" 'lib/arm64-v8a/libzygisk_injector.so' "$MODPATH/system/lib64" true
-    extract "$ZIPFILE" 'lib/arm64-v8a/libzygisk_loader.so' "$MODPATH/system/lib64" true
-    ln -sf "zygiskd64" "$MODPATH/bin/zygiskwd"
-  fi
+  ui_print "- Extracting arm64 libraries"
+  extract "$ZIPFILE" 'bin/arm64-v8a/zygiskd' "$MODPATH/bin" true
+  extract "$ZIPFILE" 'lib/arm64-v8a/libzygisk.so' "$MODPATH/system/lib64" true
+  ln -sf "zygiskd" "$MODPATH/bin/zygisk-wd"
+  ln -sf "zygiskd" "$MODPATH/bin/zygisk-fuse"
+  ln -sf "zygiskd" "$MODPATH/bin/zygisk-cp64"
 fi
 
-ui_print "- Generating magic"
-MAGIC=$(tr -dc 'a-f0-9' </dev/urandom | head -c 18)
-echo -n "$MAGIC" > "$MODPATH/system/zygisk_magic"
-
 ui_print "- Setting permissions"
-chmod 0744 "$MODPATH/daemon.sh"
-set_perm_recursive "$MODPATH/bin" 0 2000 0755 0755
+set_perm_recursive "$MODPATH/bin" 0 0 0755 0755
 set_perm_recursive "$MODPATH/system/lib" 0 0 0755 0644 u:object_r:system_lib_file:s0
 set_perm_recursive "$MODPATH/system/lib64" 0 0 0755 0644 u:object_r:system_lib_file:s0
 
