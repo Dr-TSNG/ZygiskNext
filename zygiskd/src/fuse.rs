@@ -83,10 +83,8 @@ impl Filesystem for DelegateFilesystem {
             let process = fs::read_to_string(process).unwrap();
             let process = &process[..process.find('\0').unwrap()];
             info!("Process {} is reading preloaded-classes", process);
-            match process {
-                // "zygote" => ptrace_zygote(pid, false).unwrap(),
-                "zygote64" => ptrace_zygote(pid, true).unwrap(),
-                _ => (),
+            if process == "zygote64" {
+                ptrace_zygote(pid).unwrap()
             }
         }
         reply.opened(0, 0);
@@ -156,14 +154,10 @@ fn find_remote_procedure(
     Ok(local_addr - local_module.start() + remote_module.start())
 }
 
-fn ptrace_zygote(pid: u32, is64: bool) -> Result<()> {
-    static LAST_32: Mutex<u32> = Mutex::new(0);
-    static LAST_64: Mutex<u32> = Mutex::new(0);
+fn ptrace_zygote(pid: u32) -> Result<()> {
+    static LAST: Mutex<u32> = Mutex::new(0);
 
-    let mut last = match is64 {
-        true => LAST_64.lock().unwrap(),
-        false => LAST_32.lock().unwrap(),
-    };
+    let mut last = LAST.lock().unwrap();
     if *last == pid {
         return Ok(());
     }
@@ -171,13 +165,9 @@ fn ptrace_zygote(pid: u32, is64: bool) -> Result<()> {
     let (sender, receiver) = mpsc::channel::<()>();
 
     let worker = move || -> Result<()> {
-        info!("Injecting into pid {}, is64 = {}", pid, is64);
-        let lib_dir = match is64 {
-            true => constants::PATH_SYSTEM_LIB64,
-            false => constants::PATH_SYSTEM_LIB32,
-        };
-        let zygisk_lib = format!("{}/{}", lib_dir, constants::ZYGISK_LIBRARY);
-        let lib_dir = CString::new(lib_dir)?;
+        info!("Injecting into pid {}", pid);
+        let zygisk_lib = format!("{}/{}", constants::PATH_SYSTEM_LIB, constants::ZYGISK_LIBRARY);
+        let lib_dir = CString::new(constants::PATH_SYSTEM_LIB)?;
         let zygisk_lib = CString::new(zygisk_lib)?;
         let libc_base = find_module_for_pid(pid as i32, ANDROID_LIBC)?.start();
         let mmap_remote = find_remote_procedure(

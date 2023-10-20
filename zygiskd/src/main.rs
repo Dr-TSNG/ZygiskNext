@@ -25,8 +25,7 @@ async fn start(name: &str) -> Result<()> {
     match name.trim_start_matches("zygisk-") {
         "wd" => watchdog::main().await?,
         "fuse" => fuse::main()?,
-        "cp32" => zygiskd::main()?,
-        "cp64" => zygiskd::main()?,
+        "cp" => zygiskd::main()?,
         _ => println!("Available commands: wd, fuse, cp"),
     }
     Ok(())

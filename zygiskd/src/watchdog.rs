@@ -8,7 +8,7 @@ use std::time::Duration;
 use binder::IBinder;
 use futures::stream::FuturesUnordered;
 use futures::StreamExt;
-use log::info;
+use log::{debug, error, info};
 use rustix::mount::mount_bind;
 use rustix::process::{getgid, getuid, kill_process, Pid, Signal};
 use tokio::process::{Child, Command};
@@ -124,23 +124,14 @@ async fn spawn_daemon() -> Result<()> {
     let mut lives = 5;
     loop {
         let mut futures = FuturesUnordered::<Pin<Box<dyn Future<Output=Result<()>>>>>::new();
-        let mut child_ids = vec![];
+        let daemon = Command::new(constants::PATH_CP_BIN).spawn()?;
+        let daemon_pid = daemon.id().unwrap();
 
-        let daemon32 = Command::new(constants::PATH_CP32_BIN).spawn();
-        let daemon64 = Command::new(constants::PATH_CP64_BIN).spawn();
-        async fn spawn_daemon(mut daemon: Child) -> Result<()> {
+        async fn daemon_holder(mut daemon: Child) -> Result<()> {
             let result = daemon.wait().await?;
-            log::error!("Daemon process {} died: {}", daemon.id().unwrap(), result);
-            Ok(())
+            bail!("Daemon process {} died: {}", daemon.id().unwrap(), result);
         }
-        if let Ok(it) = daemon32 {
-            child_ids.push(it.id().unwrap());
-            futures.push(Box::pin(spawn_daemon(it)));
-        }
-        if let Ok(it) = daemon64 {
-            child_ids.push(it.id().unwrap());
-            futures.push(Box::pin(spawn_daemon(it)));
-        }
+        futures.push(Box::pin(daemon_holder(daemon)));
 
         async fn binder_listener() -> Result<()> {
             let mut binder = loop {
@@ -159,26 +150,23 @@ async fn spawn_daemon() -> Result<()> {
                 if binder.ping_binder().is_err() { break; }
                 tokio::time::sleep(Duration::from_secs(1)).await;
             }
-            log::error!("System server died");
-            Ok(())
+            bail!("System server died");
         }
         futures.push(Box::pin(binder_listener()));
 
         if let Err(e) = futures.next().await.unwrap() {
-            log::error!("{}", e);
+            error!("{}", e);
         }
 
-        for child in child_ids {
-            log::debug!("Killing child process {}", child);
-            let _ = kill_process(Pid::from_raw(child as i32).unwrap(), Signal::Kill);
-        }
+        debug!("Killing child process {}", daemon_pid);
+        let _ = kill_process(Pid::from_raw(daemon_pid as i32).unwrap(), Signal::Kill);
 
         lives -= 1;
         if lives == 0 {
             bail!("Too many crashes, abort");
         }
 
-        log::error!("Restarting zygote...");
+        error!("Restarting zygote...");
         utils::set_property(constants::PROP_CTL_RESTART, "zygote")?;
     }
 }
