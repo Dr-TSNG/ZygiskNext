@@ -1,6 +1,6 @@
 use anyhow::Result;
 use std::{fs, io::{Read, Write}, os::unix::net::UnixStream};
-use std::ffi::c_char;
+use std::ffi::{c_char, CStr, CString};
 use std::os::unix::net::UnixListener;
 use std::process::Command;
 use std::sync::OnceLock;
@@ -57,8 +57,8 @@ pub fn chcon(path: &str, context: &str) -> Result<()> {
 }
 
 pub fn log_raw(level: i32, tag: &str, message: &str) -> Result<()> {
-    let tag = std::ffi::CString::new(tag)?;
-    let message = std::ffi::CString::new(message)?;
+    let tag = CString::new(tag)?;
+    let message = CString::new(message)?;
     unsafe {
         __android_log_print(level, tag.as_ptr(), message.as_ptr());
     }
@@ -66,17 +66,18 @@ pub fn log_raw(level: i32, tag: &str, message: &str) -> Result<()> {
 }
 
 pub fn get_property(name: &str) -> Result<String> {
-    let name = std::ffi::CString::new(name)?;
+    let name = CString::new(name)?;
     let mut buf = vec![0u8; 92];
-    unsafe {
+    let prop = unsafe {
         __system_property_get(name.as_ptr(), buf.as_mut_ptr() as *mut c_char);
-    }
-    Ok(String::from_utf8(buf)?)
+        CStr::from_bytes_until_nul(&buf)?
+    };
+    Ok(prop.to_string_lossy().to_string())
 }
 
 pub fn set_property(name: &str, value: &str) -> Result<()> {
-    let name = std::ffi::CString::new(name)?;
-    let value = std::ffi::CString::new(value)?;
+    let name = CString::new(name)?;
+    let value = CString::new(value)?;
     unsafe {
         __system_property_set(name.as_ptr(), value.as_ptr());
     }

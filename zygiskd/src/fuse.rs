@@ -84,7 +84,7 @@ impl Filesystem for DelegateFilesystem {
             let process = &process[..process.find('\0').unwrap()];
             info!("Process {} is reading preloaded-classes", process);
             if process == "zygote64" {
-                ptrace_zygote(pid).unwrap()
+                ptrace_zygote(pid).unwrap();
             }
         }
         reply.opened(0, 0);
