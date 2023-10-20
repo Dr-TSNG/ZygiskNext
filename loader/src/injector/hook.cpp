@@ -158,10 +158,6 @@ string get_class_name(JNIEnv *env, jclass clazz) {
     return className;
 }
 
-#define DCL_HOOK_FUNC(ret, func, ...) \
-ret (*old_##func)(__VA_ARGS__);       \
-ret new_##func(__VA_ARGS__)
-
 jint env_RegisterNatives(
         JNIEnv *env, jclass clazz, const JNINativeMethod *methods, jint numMethods) {
     auto className = get_class_name(env, clazz);
@@ -170,45 +166,49 @@ jint env_RegisterNatives(
     return old_functions->RegisterNatives(env, clazz, newMethods.get() ?: methods, numMethods);
 }
 
-DCL_HOOK_FUNC(void, androidSetCreateThreadFunc, void* func) {
-    LOGD("androidSetCreateThreadFunc\n");
-    do {
-        auto get_created_java_vms = reinterpret_cast<jint (*)(JavaVM **, jsize, jsize *)>(
-                dlsym(RTLD_DEFAULT, "JNI_GetCreatedJavaVMs"));
-        if (!get_created_java_vms) {
-            for (auto &map: lsplt::MapInfo::Scan()) {
-                if (!map.path.ends_with("/libnativehelper.so")) continue;
-                void *h = dlopen(map.path.data(), RTLD_LAZY);
-                if (!h) {
-                    LOGW("cannot dlopen libnativehelper.so: %s\n", dlerror());
-                    break;
-                }
-                get_created_java_vms = reinterpret_cast<decltype(get_created_java_vms)>(dlsym(h, "JNI_GetCreatedJavaVMs"));
-                dlclose(h);
+void replace_jni_methods() {
+    auto get_created_java_vms = reinterpret_cast<jint (*)(JavaVM **, jsize, jsize *)>(
+            dlsym(RTLD_DEFAULT, "JNI_GetCreatedJavaVMs"));
+    if (!get_created_java_vms) {
+        for (auto &map: lsplt::MapInfo::Scan()) {
+            if (!map.path.ends_with("/libnativehelper.so")) continue;
+            void *h = dlopen(map.path.data(), RTLD_LAZY);
+            if (!h) {
+                LOGW("cannot dlopen libnativehelper.so: %s\n", dlerror());
                 break;
             }
-            if (!get_created_java_vms) {
-                LOGW("JNI_GetCreatedJavaVMs not found\n");
-                break;
-            }
+            get_created_java_vms = reinterpret_cast<decltype(get_created_java_vms)>(dlsym(h, "JNI_GetCreatedJavaVMs"));
+            dlclose(h);
+            break;
         }
-        JavaVM *vm = nullptr;
-        jsize num = 0;
-        jint res = get_created_java_vms(&vm, 1, &num);
-        if (res != JNI_OK || vm == nullptr) break;
-        JNIEnv *env = nullptr;
-        res = vm->GetEnv(reinterpret_cast<void **>(&env), JNI_VERSION_1_6);
-        if (res != JNI_OK || env == nullptr) break;
-        default_new(new_functions);
-        memcpy(new_functions, env->functions, sizeof(*new_functions));
-        new_functions->RegisterNatives = &env_RegisterNatives;
+        if (!get_created_java_vms) {
+            LOGW("JNI_GetCreatedJavaVMs not found\n");
+            return;
+        }
+    }
+    JavaVM *vm = nullptr;
+    jsize num = 0;
+    jint res = get_created_java_vms(&vm, 1, &num);
+    if (res != JNI_OK || vm == nullptr) return;
+    JNIEnv *env = nullptr;
+    res = vm->GetEnv(reinterpret_cast<void **>(&env), JNI_VERSION_1_6);
+    if (res != JNI_OK || env == nullptr) return;
+    default_new(new_functions);
+    memcpy(new_functions, env->functions, sizeof(*new_functions));
+    new_functions->RegisterNatives = &env_RegisterNatives;
 
-        // Replace the function table in JNIEnv to hook RegisterNatives
-        old_functions = env->functions;
-        env->functions = new_functions;
-    } while (false);
-    old_androidSetCreateThreadFunc(func);
+    // Replace the function table in JNIEnv to hook RegisterNatives
+    old_functions = env->functions;
+    env->functions = new_functions;
+
+    // Re-run register_com_android_internal_os_Zygote to hook JNI methods
+    auto register_zygote = dlsym(RTLD_DEFAULT, "_ZN7android39register_com_android_internal_os_ZygoteEP7_JNIEnv");
+    reinterpret_cast<void (*)(JNIEnv *)>(register_zygote)(env);
 }
+
+#define DCL_HOOK_FUNC(ret, func, ...) \
+ret (*old_##func)(__VA_ARGS__);       \
+ret new_##func(__VA_ARGS__)
 
 // Skip actual fork and return cached result if applicable
 DCL_HOOK_FUNC(int, fork) {
@@ -753,7 +753,6 @@ void hook_functions() {
 
     PLT_HOOK_REGISTER(android_runtime_dev, android_runtime_inode, fork);
     PLT_HOOK_REGISTER(android_runtime_dev, android_runtime_inode, unshare);
-    PLT_HOOK_REGISTER(android_runtime_dev, android_runtime_inode, androidSetCreateThreadFunc);
     PLT_HOOK_REGISTER_SYM(android_runtime_dev, android_runtime_inode, "__android_log_close", android_log_close);
     hook_commit();
 
@@ -762,6 +761,8 @@ void hook_functions() {
             std::remove_if(plt_hook_list->begin(), plt_hook_list->end(),
                            [](auto &t) { return *std::get<3>(t) == nullptr;}),
             plt_hook_list->end());
+
+    replace_jni_methods();
 }
 
 static void hook_unloader() {
