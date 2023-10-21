@@ -19,7 +19,7 @@ Also works as standalone loader for Magisk.
 
 ### Magisk
 
-+ Minimal version: 25208
++ Minimal version: 26300
 + Original Zygisk turned off
 
 ## Compatibility
