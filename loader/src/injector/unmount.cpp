@@ -18,7 +18,9 @@ namespace {
         if (umount2(mountpoint, MNT_DETACH) != -1) {
             LOGD("Unmounted (%s)", mountpoint);
         } else {
+#ifndef NDEBUG
             PLOGE("Unmount (%s)", mountpoint);
+#endif
         }
     }
 }
@@ -35,7 +37,7 @@ void revert_unmount_ksu() {
             ksu_loop = info.source;
             continue;
         }
-        // Unmount everything on /data/adb except ksu module dir
+        // Unmount everything mounted to /data/adb
         if (info.target.starts_with("/data/adb")) {
             targets.emplace_back(info.target);
         }
@@ -72,6 +74,14 @@ void revert_unmount_magisk() {
         if (info.source == "magisk" || info.source == "worker" || // magisktmp tmpfs
             info.root.starts_with("/adb/modules")) { // bind mount from data partition
             targets.push_back(info.target);
+        }
+        // Unmount everything mounted to /data/adb
+        if (info.target.starts_with("/data/adb")) {
+            targets.emplace_back(info.target);
+        }
+        // Unmount fuse
+        if (info.type == "fuse" && info.source == ZYGISK_FUSE_SOURCE) {
+            targets.emplace_back(info.target);
         }
     }
 
