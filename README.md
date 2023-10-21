@@ -9,6 +9,7 @@ Also works as standalone loader for Magisk.
 ### General
 
 + No multiple root implementation installed
++ SELinux enforcing: We now rely on SELinux to prevent `vold` from aborting our fuse connection
 
 ### KernelSU
 
