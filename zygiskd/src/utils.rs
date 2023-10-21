@@ -1,6 +1,7 @@
 use anyhow::Result;
 use std::{fs, io::{Read, Write}, os::unix::net::UnixStream};
 use std::ffi::{c_char, CStr, CString};
+use std::os::fd::AsFd;
 use std::os::unix::net::UnixListener;
 use std::process::Command;
 use std::sync::OnceLock;
@@ -81,6 +82,14 @@ pub fn set_property(name: &str, value: &str) -> Result<()> {
     unsafe {
         __system_property_set(name.as_ptr(), value.as_ptr());
     }
+    Ok(())
+}
+
+pub fn switch_mount_namespace(pid: i32) -> Result<()> {
+    let cwd = std::env::current_dir()?;
+    let mnt = fs::File::open(format!("/proc/{}/ns/mnt", pid))?;
+    rustix::thread::move_into_link_name_space(mnt.as_fd(), None)?;
+    std::env::set_current_dir(cwd)?;
     Ok(())
 }
 

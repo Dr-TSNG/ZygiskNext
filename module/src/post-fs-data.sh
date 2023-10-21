@@ -20,4 +20,5 @@ if [ "$(which magisk)" ]; then
   done
 fi
 
-sh -c "bin/zygisk-fuse &"
+[ "$DEBUG" = true ] && export RUST_BACKTRACE=1
+unshare -m sh -c "bin/zygisk-fuse &"

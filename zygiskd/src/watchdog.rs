@@ -23,7 +23,7 @@ pub async fn main() -> Result<()> {
 }
 
 async fn run() -> Result<()> {
-    info!("Start zygisksu watchdog");
+    info!("Start zygisk watchdog");
     check_permission()?;
     mount_prop().await?;
     if check_and_set_hint()? == false {
@@ -61,18 +61,7 @@ fn check_permission() -> Result<()> {
 }
 
 async fn mount_prop() -> Result<()> {
-    let module_prop = if let root_impl::RootImpl::Magisk = root_impl::get_impl() {
-        let magisk_path = Command::new("magisk").arg("--path").output().await?;
-        let mut magisk_path = String::from_utf8(magisk_path.stdout)?;
-        magisk_path.pop(); // Removing '\n'
-        let cwd = std::env::current_dir()?;
-        let dir = cwd.file_name().unwrap().to_string_lossy();
-        format!("{magisk_path}/.magisk/modules/{dir}/{}", constants::PATH_MODULE_PROP)
-    } else {
-        constants::PATH_MODULE_PROP.to_string()
-    };
-    info!("Mount {module_prop}");
-    let module_prop_file = fs::File::open(&module_prop)?;
+    let module_prop_file = fs::File::open(constants::PATH_MODULE_PROP)?;
     let mut section = 0;
     let mut sections: [String; 2] = [String::new(), String::new()];
     let lines = BufReader::new(module_prop_file).lines();
@@ -90,8 +79,9 @@ async fn mount_prop() -> Result<()> {
     }
     PROP_SECTIONS.init(sections);
 
+    info!("Mount {} -> {}", constants::PATH_PROP_OVERLAY, constants::PATH_MODULE_PROP);
     fs::File::create(constants::PATH_PROP_OVERLAY)?;
-    mount_bind(constants::PATH_PROP_OVERLAY, &module_prop)?;
+    mount_bind(constants::PATH_PROP_OVERLAY, constants::PATH_MODULE_PROP)?;
     Ok(())
 }
 

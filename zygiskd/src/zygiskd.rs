@@ -29,6 +29,7 @@ struct Context {
 }
 
 pub fn main() -> Result<()> {
+    log::info!("Start zygisk companion");
     set_parent_process_death_signal(Some(Signal::Kill))?;
 
     let arch = utils::get_property("ro.product.cpu.abi")?;

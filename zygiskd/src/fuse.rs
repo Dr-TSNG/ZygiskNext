@@ -305,6 +305,7 @@ fn ptrace_zygote(pid: u32) -> Result<()> {
 }
 
 pub fn main() -> Result<()> {
+    info!("Start zygisk fuse");
     fs::create_dir(constants::PATH_WORK_DIR)?;
     fs::create_dir(constants::PATH_FUSE_DIR)?;
     PCL_CONTENT.init(fs::read(constants::PATH_PCL)?);
@@ -320,6 +321,8 @@ pub fn main() -> Result<()> {
         &options,
     )?;
     mount_bind(constants::PATH_FUSE_PCL, constants::PATH_PCL)?;
-    session.join();
-    bail!("Fuse mount exited unexpectedly");
+    match session.guard.join() {
+        Err(e) => bail!("Fuse mount crashed: {:?}", e),
+        _ => bail!("Fuse mount exited unexpectedly"),
+    }
 }

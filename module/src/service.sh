@@ -22,6 +22,5 @@ if [ "$(which magisk)" ]; then
   done
 fi
 
-log -p i -t "zygisksu" "Start watchdog"
 [ "$DEBUG" = true ] && export RUST_BACKTRACE=1
-exec "bin/zygisk-wd" >/dev/null 2>&1
+unshare -m sh -c "bin/zygisk-wd &"
