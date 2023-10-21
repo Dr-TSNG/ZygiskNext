@@ -24,23 +24,40 @@ pub fn get_magisk() -> Option<Version> {
 }
 
 pub fn uid_granted_root(uid: i32) -> bool {
-    let output: Option<String> = Command::new("magisk")
+    Command::new("magisk")
         .arg("--sqlite")
-        .arg("select uid from policies where policy=2")
+        .arg(format!("select 1 from policies where uid={uid} and policy=2 limit 1"))
+        .stdout(Stdio::piped())
+        .spawn().ok()
+        .and_then(|child| child.wait_with_output().ok())
+        .and_then(|output| String::from_utf8(output.stdout).ok())
+        .map(|output| output.is_empty()) == Some(false)
+}
+
+pub fn uid_should_umount(uid: i32) -> bool {
+    let output = Command::new("pm")
+        .args(["list", "packages", "--uid", &uid.to_string()])
         .stdout(Stdio::piped())
         .spawn().ok()
         .and_then(|child| child.wait_with_output().ok())
         .and_then(|output| String::from_utf8(output.stdout).ok());
-    let lines = match &output {
-        Some(output) => output.lines(),
+    let line = match output {
+        Some(line) => line,
         None => return false,
     };
-    lines.into_iter().any(|line| {
-        line.trim().strip_prefix("uid=").and_then(|uid| uid.parse().ok()) == Some(uid)
-    })
-}
-
-pub fn uid_should_umount(uid: i32) -> bool {
-    // TODO: uid_should_umount
-    return false;
+    let pkg = line
+        .strip_prefix("package:")
+        .and_then(|line| line.split(' ').next());
+    let pkg = match pkg {
+        Some(pkg) => pkg,
+        None => return false,
+    };
+    Command::new("magisk")
+        .arg("--sqlite")
+        .arg(format!("select 1 from denylist where package_name=\"{pkg}\" limit 1"))
+        .stdout(Stdio::piped())
+        .spawn().ok()
+        .and_then(|child| child.wait_with_output().ok())
+        .and_then(|output| String::from_utf8(output.stdout).ok())
+        .map(|output| output.is_empty()) == Some(false)
 }
