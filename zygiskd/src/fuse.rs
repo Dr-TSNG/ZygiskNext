@@ -2,17 +2,16 @@ use std::cmp::min;
 use anyhow::{bail, Result};
 use std::ffi::{CString, OsStr};
 use std::{fs, thread};
+use std::io::Read;
+use std::process::{Command, Stdio};
 use std::sync::{mpsc, Mutex};
 use std::time::{Duration, SystemTime};
 use fuser::{FileAttr, Filesystem, FileType, ReplyAttr, ReplyData, ReplyDirectory, ReplyEntry, ReplyOpen, Request};
 use libc::ENOENT;
-use log::{debug, error, info};
-use proc_maps::{get_process_maps, MapRange, Pid};
-use ptrace_do::{RawProcess, TracedProcess};
+use log::{error, info};
 use rustix::mount::mount_bind;
 use rustix::path::Arg;
-use rustix::process::getpid;
-use crate::{constants, dl};
+use crate::constants;
 use crate::utils::LateInit;
 
 pub struct DelegateFilesystem;
@@ -37,8 +36,6 @@ const fn attr(inode: u64, size: u64, kind: FileType) -> FileAttr {
     }
 }
 
-const ANDROID_LIBC: &str = "bionic/libc.so";
-const ANDROID_LIBDL: &str = "bionic/libdl.so";
 
 const INO_DIR: u64 = 1;
 const INO_PCL: u64 = 2;
@@ -55,6 +52,66 @@ const ENTRIES: &[(u64, FileType, &str)] = &[
 ];
 
 const TTL: Duration = Duration::from_secs(1);
+
+fn ptrace_zygote64(pid: u32) -> Result<()> {
+    static LAST: Mutex<u32> = Mutex::new(0);
+
+    let mut last = LAST.lock().unwrap();
+    if *last == pid {
+        return Ok(());
+    }
+    *last = pid;
+    let (sender, receiver) = mpsc::channel::<()>();
+
+    let worker = move || -> Result<()> {
+        let mut child = Command::new(constants::PATH_PTRACE_BIN64).stdout(Stdio::piped()).arg(format!("{}", pid)).spawn()?;
+        child.stdout.as_mut().unwrap().read_exact(&mut [0u8; 1])?;
+        info!("child attached");
+        sender.send(())?;
+        let result = child.wait()?;
+        info!("ptrace64 process status {}", result);
+        Ok(())
+    };
+
+    thread::spawn(move || {
+        if let Err(e) = worker() {
+            error!("Crashed: {:?}", e);
+        }
+    });
+
+    receiver.recv()?;
+    Ok(())
+}
+
+fn ptrace_zygote32(pid: u32) -> Result<()> {
+    static LAST: Mutex<u32> = Mutex::new(0);
+
+    let mut last = LAST.lock().unwrap();
+    if *last == pid {
+        return Ok(());
+    }
+    *last = pid;
+    let (sender, receiver) = mpsc::channel::<()>();
+
+    let worker = move || -> Result<()> {
+        let mut child = Command::new(constants::PATH_PTRACE_BIN32).stdout(Stdio::piped()).arg(format!("{}", pid)).spawn()?;
+        child.stdout.as_mut().unwrap().read_exact(&mut [0u8; 1])?;
+        info!("child attached");
+        sender.send(())?;
+        let result = child.wait()?;
+        info!("ptrace32 process status {}", result);
+        Ok(())
+    };
+
+    thread::spawn(move || {
+        if let Err(e) = worker() {
+            error!("Crashed: {:?}", e);
+        }
+    });
+
+    receiver.recv()?;
+    Ok(())
+}
 
 impl Filesystem for DelegateFilesystem {
     fn lookup(&mut self, _req: &Request<'_>, parent: u64, name: &OsStr, reply: ReplyEntry) {
@@ -84,7 +141,9 @@ impl Filesystem for DelegateFilesystem {
             let process = &process[..process.find('\0').unwrap()];
             info!("Process {} is reading preloaded-classes", process);
             if process == "zygote64" {
-                ptrace_zygote(pid).unwrap();
+                ptrace_zygote64(pid).unwrap();
+            } else if process == "zygote" {
+                ptrace_zygote32(pid).unwrap();
             }
         }
         reply.opened(0, 0);
@@ -118,190 +177,6 @@ impl Filesystem for DelegateFilesystem {
         }
         reply.ok();
     }
-}
-
-fn find_module_for_pid(pid: Pid, library: &str) -> Result<MapRange> {
-    let maps = get_process_maps(pid)?;
-    for map in maps.into_iter() {
-        if let Some(p) = map.filename() {
-            if p.as_str()?.contains(library) {
-                return Ok(map);
-            }
-        }
-    }
-    bail!("Cannot find module {library} for pid {pid}");
-}
-
-fn find_remote_procedure(
-    pid: Pid,
-    library: &str,
-    local_addr: usize,
-) -> Result<usize> {
-    let local_module = find_module_for_pid(getpid().as_raw_nonzero().get(), library)?;
-    debug!(
-        "Identifed local range {library} ({:?}) at {:x}",
-        local_module.filename(),
-        local_module.start()
-    );
-
-    let remote_module = find_module_for_pid(pid, library)?;
-    debug!(
-        "Identifed remote range {library} ({:?}) at {:x}",
-        remote_module.filename(),
-        remote_module.start()
-    );
-
-    Ok(local_addr - local_module.start() + remote_module.start())
-}
-
-fn ptrace_zygote(pid: u32) -> Result<()> {
-    static LAST: Mutex<u32> = Mutex::new(0);
-
-    let mut last = LAST.lock().unwrap();
-    if *last == pid {
-        return Ok(());
-    }
-    *last = pid;
-    let (sender, receiver) = mpsc::channel::<()>();
-
-    let worker = move || -> Result<()> {
-        info!("Injecting into pid {}", pid);
-        let zygisk_lib = format!("{}/{}", constants::PATH_SYSTEM_LIB, constants::ZYGISK_LIBRARY);
-        let lib_dir = CString::new(constants::PATH_SYSTEM_LIB)?;
-        let zygisk_lib = CString::new(zygisk_lib)?;
-        let libc_base = find_module_for_pid(pid as i32, ANDROID_LIBC)?.start();
-        let mmap_remote = find_remote_procedure(
-            pid as i32,
-            ANDROID_LIBC,
-            libc::mmap as usize,
-        )?;
-        let munmap_remote = find_remote_procedure(
-            pid as i32,
-            ANDROID_LIBC,
-            libc::munmap as usize,
-        )?;
-        let dlopen_remote = find_remote_procedure(
-            pid as i32,
-            ANDROID_LIBDL,
-            dl::android_dlopen_ext as usize,
-        )?;
-        let dlsym_remote = find_remote_procedure(
-            pid as i32,
-            ANDROID_LIBDL,
-            libc::dlsym as usize,
-        )?;
-
-        let tracer = TracedProcess::attach(RawProcess::new(pid as i32))?;
-        sender.send(())?;
-        let frame = tracer.next_frame()?;
-        debug!("Waited for a frame");
-
-        // Map a buffer in the remote process
-        let mmap_params: [usize; 6] = [
-            0,
-            0x1000,
-            (libc::PROT_READ | libc::PROT_WRITE) as usize,
-            (libc::MAP_ANONYMOUS | libc::MAP_PRIVATE) as usize,
-            0,
-            0,
-        ];
-        let (regs, mut frame) = frame.invoke_remote(
-            mmap_remote,
-            libc_base,
-            &mmap_params,
-        )?;
-        let buf_addr = regs.return_value();
-        debug!("Buffer addr: {:x}", buf_addr);
-
-        // Find the address of __loader_android_create_namespace
-        let sym = CString::new("__loader_android_create_namespace")?;
-        frame.write_memory(buf_addr, sym.as_bytes_with_nul())?;
-        let (regs, mut frame) = frame.invoke_remote(
-            dlsym_remote,
-            libc_base,
-            &[libc::RTLD_DEFAULT as usize, buf_addr],
-        )?;
-        let android_create_namespace_remote = regs.return_value();
-        debug!("__loader_android_create_namespace addr: {:x}", android_create_namespace_remote);
-
-        // Create a linker namespace for remote process
-        frame.write_memory(buf_addr, zygisk_lib.as_bytes_with_nul())?;
-        frame.write_memory(buf_addr + 0x100, lib_dir.as_bytes_with_nul())?;
-        let ns_params: [usize; 7] = [
-            buf_addr,                                   // name
-            buf_addr + 0x100,                           // ld_library_path
-            0,                                          // default_library_path
-            dl::ANDROID_NAMESPACE_TYPE_SHARED as usize, // type
-            0,                                          // permitted_when_isolated_path
-            0,                                          // parent
-            dlopen_remote,                              // caller_addr
-        ];
-        let (regs, mut frame) = frame.invoke_remote(
-            android_create_namespace_remote,
-            libc_base,
-            &ns_params,
-        )?;
-        let ns_addr = regs.return_value();
-        debug!("Linker namespace addr: {:x}", ns_addr);
-
-        // Load zygisk into remote process
-        let info = dl::AndroidDlextinfo {
-            flags: dl::ANDROID_DLEXT_USE_NAMESPACE,
-            reserved_addr: std::ptr::null_mut(),
-            reserved_size: 0,
-            relro_fd: 0,
-            library_fd: 0,
-            library_fd_offset: 0,
-            library_namespace: ns_addr as *mut _,
-        };
-        let info = unsafe {
-            std::slice::from_raw_parts(
-                &info as *const _ as *const u8,
-                std::mem::size_of::<dl::AndroidDlextinfo>(),
-            )
-        };
-        frame.write_memory(buf_addr + 0x200, info)?;
-        let (regs, mut frame) = frame.invoke_remote(
-            dlopen_remote,
-            libc_base,
-            &[buf_addr, libc::RTLD_NOW as usize, buf_addr + 0x200],
-        )?;
-        let handle = regs.return_value();
-        debug!("Load zygisk into remote process: {:x}", handle);
-
-        let entry = CString::new("entry")?;
-        frame.write_memory(buf_addr, entry.as_bytes_with_nul())?;
-        let (regs, frame) = frame.invoke_remote(
-            dlsym_remote,
-            libc_base,
-            &[handle, buf_addr],
-        )?;
-        let entry = regs.return_value();
-        debug!("Call zygisk entry: {:x}", entry);
-        let (_, frame) = frame.invoke_remote(
-            entry,
-            libc_base,
-            &[handle],
-        )?;
-
-        // Cleanup
-        let _ = frame.invoke_remote(
-            munmap_remote,
-            libc_base,
-            &[buf_addr],
-        )?;
-        debug!("Cleaned up");
-        Ok(())
-    };
-
-    thread::spawn(move || {
-        if let Err(e) = worker() {
-            error!("Crashed: {:?}", e);
-        }
-    });
-
-    receiver.recv()?;
-    Ok(())
 }
 
 pub fn main() -> Result<()> {

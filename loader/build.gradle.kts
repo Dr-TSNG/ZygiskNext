@@ -35,7 +35,6 @@ android {
     defaultConfig {
         externalNativeBuild {
             ndkBuild {
-                abiFilters("arm64-v8a", "x86_64")
                 ccachePatch?.let {
                     arguments += "NDK_CCACHE=$it"
                 }

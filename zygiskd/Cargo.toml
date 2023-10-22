@@ -19,7 +19,8 @@ memfd = "0.6"
 num_enum = "0.5"
 passfd = "0.1"
 proc-maps = "0.3"
-ptrace-do = "0.1"
+# ptrace-do = "0.1"
+ptrace-do = { git = "https://github.com/5ec1cff/ptrace-do" }
 rustix = { version = "0.38", features = [ "fs", "process", "mount", "net", "thread"] }
 tokio = { version = "1.28", features = ["full"] }
 
