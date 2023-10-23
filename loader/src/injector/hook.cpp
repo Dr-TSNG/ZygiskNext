@@ -26,6 +26,7 @@ using xstring = jni_hook::string;
 
 static void hook_unloader();
 static void unhook_functions();
+static void restore_jni_env(JNIEnv *env);
 
 namespace {
 
@@ -84,8 +85,16 @@ struct HookContext {
     vector<RegisterInfo> register_info;
     vector<IgnoreInfo> ignore_info;
 
-    HookContext() : env(nullptr), args{nullptr}, process(nullptr), pid(-1), info_flags(0),
-    hook_info_lock(PTHREAD_MUTEX_INITIALIZER) { g_ctx = this; }
+    HookContext(JNIEnv *env, void *args) :
+    env(env), args{args}, process(nullptr), pid(-1), info_flags(0),
+    hook_info_lock(PTHREAD_MUTEX_INITIALIZER) {
+        static bool restored_env = false;
+        if (!restored_env) {
+            restore_jni_env(env);
+            restored_env = true;
+        }
+        g_ctx = this;
+    }
     ~HookContext();
 
     /* Zygisksu changed: Load module fds */
@@ -685,12 +694,6 @@ HookContext::~HookContext() {
 
     should_unmap_zygisk = true;
 
-    // Restore JNIEnv
-    if (env->functions == new_functions) {
-        env->functions = old_functions;
-        delete new_functions;
-    }
-
     // Unhook JNI methods
     for (const auto &[clz, methods] : *jni_hook_list) {
         if (!methods.empty() && env->RegisterNatives(
@@ -712,6 +715,12 @@ HookContext::~HookContext() {
 }
 
 } // namespace
+
+static void restore_jni_env(JNIEnv *env) {
+    env->functions = old_functions;
+    delete new_functions;
+    new_functions = nullptr;
+}
 
 static bool hook_commit() {
     if (lsplt::CommitHook()) {
