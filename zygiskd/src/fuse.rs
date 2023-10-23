@@ -9,7 +9,8 @@ use libc::ENOENT;
 use log::{debug, error, info};
 use proc_maps::{get_process_maps, MapRange, Pid};
 use ptrace_do::{RawProcess, TracedProcess};
-use rustix::mount::mount_bind;
+use rustix::fs::UnmountFlags;
+use rustix::mount::{mount_bind, unmount};
 use rustix::path::Arg;
 use rustix::process::getpid;
 use crate::{constants, dl};
@@ -321,7 +322,9 @@ pub fn main() -> Result<()> {
         &options,
     )?;
     mount_bind(constants::PATH_FUSE_PCL, constants::PATH_PCL)?;
-    match session.guard.join() {
+    let crash = session.guard.join();
+    unmount(constants::PATH_PCL, UnmountFlags::DETACH)?;
+    match crash {
         Err(e) => bail!("Fuse mount crashed: {:?}", e),
         _ => bail!("Fuse mount exited unexpectedly"),
     }
