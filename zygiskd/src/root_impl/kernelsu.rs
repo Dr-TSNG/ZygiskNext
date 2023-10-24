@@ -26,7 +26,7 @@ pub fn get_kernel_su() -> Option<Version> {
     match version {
         0 => None,
         MIN_KSU_VERSION..=MAX_KSU_VERSION => Some(Version::Supported),
-        1..MIN_KSU_VERSION => Some(Version::TooOld),
+        1..=MIN_KSU_VERSION => Some(Version::TooOld),
         _ => Some(Version::Abnormal),
     }
 }

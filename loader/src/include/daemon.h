@@ -5,7 +5,13 @@
 #include <unistd.h>
 #include <vector>
 
-constexpr auto kCPSocketPath = "/dev/zygisk/cp.sock";
+#if defined(__LP64__)
+# define LP_SELECT(lp32, lp64) lp64
+#else
+# define LP_SELECT(lp32, lp64) lp32
+#endif
+
+constexpr auto kCPSocketPath = "/dev/zygisk/" LP_SELECT("cp32", "cp64") ".sock";
 
 class UniqueFd {
     using Fd = int;

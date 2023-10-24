@@ -1,9 +1,7 @@
-#![feature(exclusive_range_pattern)]
-#![allow(dead_code)]
-
 mod constants;
 mod dl;
 mod fuse;
+mod ptrace;
 mod root_impl;
 mod utils;
 mod watchdog;
@@ -11,7 +9,6 @@ mod zygiskd;
 
 use std::future::Future;
 use anyhow::Result;
-
 
 fn init_android_logger(tag: &str) {
     android_logger::init_once(
@@ -32,8 +29,9 @@ fn start(name: &str) -> Result<()> {
     match name.trim_start_matches("zygisk-") {
         "wd" => async_start(watchdog::main())?,
         "fuse" => fuse::main()?,
-        "cp" => zygiskd::main()?,
-        _ => println!("Available commands: wd, fuse, cp"),
+        lp_select!("cp32", "cp64") => zygiskd::main()?,
+        lp_select!("ptrace32", "ptrace64") => ptrace::main()?,
+        _ => println!("Available commands: wd, fuse, cp, ptrace"),
     }
     Ok(())
 }

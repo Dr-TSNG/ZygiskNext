@@ -1,8 +1,8 @@
 use std::ffi::c_void;
 use crate::constants::{DaemonSocketAction, ProcessFlags};
 use crate::utils::UnixStreamExt;
-use crate::{constants, dl, root_impl, utils};
-use anyhow::Result;
+use crate::{constants, dl, lp_select, root_impl, utils};
+use anyhow::{bail, Result};
 use passfd::FdPassingExt;
 use std::sync::Arc;
 use std::thread;
@@ -32,11 +32,11 @@ pub fn main() -> Result<()> {
     log::info!("Start zygisk companion");
     set_parent_process_death_signal(Some(Signal::Kill))?;
 
-    let arch = utils::get_property("ro.product.cpu.abi")?;
+    let arch = get_arch()?;
     log::debug!("Daemon architecture: {arch}");
 
     log::info!("Load modules");
-    let modules = load_modules(&arch)?;
+    let modules = load_modules(arch)?;
 
     let context = Context {
         modules,
@@ -58,6 +58,17 @@ pub fn main() -> Result<()> {
     }
 
     Ok(())
+}
+
+fn get_arch() -> Result<&'static str> {
+    let system_arch = utils::get_property("ro.product.cpu.abi")?;
+    if system_arch.contains("arm") {
+        return Ok(lp_select!("armeabi-v7a", "arm64-v8a"));
+    }
+    if system_arch.contains("x86") {
+        return Ok(lp_select!("x86", "x86_64"));
+    }
+    bail!("Unsupported system architecture: {}", system_arch);
 }
 
 fn load_modules(arch: &str) -> Result<Vec<Module>> {

@@ -8,6 +8,17 @@ use std::sync::OnceLock;
 use rustix::net::{AddressFamily, bind_unix, listen, socket, SocketAddrUnix, SocketType};
 use rustix::thread::gettid;
 
+#[cfg(target_pointer_width = "64")]
+#[macro_export]
+macro_rules! lp_select {
+    ($lp32:expr, $lp64:expr) => { $lp64 };
+}
+#[cfg(target_pointer_width = "32")]
+#[macro_export]
+macro_rules! lp_select {
+    ($lp32:expr, $lp64:expr) => { $lp32 };
+}
+
 #[cfg(debug_assertions)]
 #[macro_export]
 macro_rules! debug_select {

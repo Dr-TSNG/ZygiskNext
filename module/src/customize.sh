@@ -61,7 +61,7 @@ else
 fi
 
 # check architecture
-if [ "$ARCH" != "arm64" ] && [ "$ARCH" != "x64" ]; then
+if [ "$ARCH" != "arm" ] && [ "$ARCH" != "arm64" ] && [ "$ARCH" != "x86" ] && [ "$ARCH" != "x64" ]; then
   abort "! Unsupported platform: $ARCH"
 else
   ui_print "- Device platform: $ARCH"
@@ -101,28 +101,54 @@ extract "$ZIPFILE" 'post-fs-data.sh' "$MODPATH"
 extract "$ZIPFILE" 'service.sh'      "$MODPATH"
 mv "$TMPDIR/sepolicy.rule" "$MODPATH"
 
+HAS32BIT=false && [ -d "/system/lib" ] && HAS32BIT=true
+
 mkdir "$MODPATH/bin"
 mkdir "$MODPATH/system"
 mkdir "$MODPATH/system/lib64"
+[ "$HAS32BIT" = true ] && mkdir "$MODPATH/system/lib"
 
-if [ "$ARCH" = "x64" ]; then
+if [ "$ARCH" = "x86" ] || [ "$ARCH" = "x64" ]; then
+  if [ "$HAS32BIT" = true ]; then
+    ui_print "- Extracting x86 libraries"
+    extract "$ZIPFILE" 'bin/x86/zygiskd' "$MODPATH/bin" true
+    mv "$MODPATH/bin/zygiskd" "$MODPATH/bin/zygiskd32"
+    extract "$ZIPFILE" 'lib/x86/libzygisk.so' "$MODPATH/system/lib" true
+    ln -sf "zygiskd32" "$MODPATH/bin/zygisk-cp32"
+    ln -sf "zygiskd32" "$MODPATH/bin/zygisk-ptrace32"
+  fi
+
   ui_print "- Extracting x64 libraries"
   extract "$ZIPFILE" 'bin/x86_64/zygiskd' "$MODPATH/bin" true
+  mv "$MODPATH/bin/zygiskd" "$MODPATH/bin/zygiskd64"
   extract "$ZIPFILE" 'lib/x86_64/libzygisk.so' "$MODPATH/system/lib64" true
-  ln -sf "zygiskd" "$MODPATH/bin/zygisk-wd"
-  ln -sf "zygiskd" "$MODPATH/bin/zygisk-fuse"
-  ln -sf "zygiskd" "$MODPATH/bin/zygisk-cp"
+  ln -sf "zygiskd64" "$MODPATH/bin/zygisk-wd"
+  ln -sf "zygiskd64" "$MODPATH/bin/zygisk-fuse"
+  ln -sf "zygiskd64" "$MODPATH/bin/zygisk-cp64"
+  ln -sf "zygiskd64" "$MODPATH/bin/zygisk-ptrace64"
 else
+  if [ "$HAS32BIT" = true ]; then
+    ui_print "- Extracting arm libraries"
+    extract "$ZIPFILE" 'bin/armeabi-v7a/zygiskd' "$MODPATH/bin" true
+    mv "$MODPATH/bin/zygiskd" "$MODPATH/bin/zygiskd32"
+    extract "$ZIPFILE" 'lib/armeabi-v7a/libzygisk.so' "$MODPATH/system/lib" true
+    ln -sf "zygiskd32" "$MODPATH/bin/zygisk-cp32"
+    ln -sf "zygiskd32" "$MODPATH/bin/zygisk-ptrace32"
+  fi
+
   ui_print "- Extracting arm64 libraries"
   extract "$ZIPFILE" 'bin/arm64-v8a/zygiskd' "$MODPATH/bin" true
+  mv "$MODPATH/bin/zygiskd" "$MODPATH/bin/zygiskd64"
   extract "$ZIPFILE" 'lib/arm64-v8a/libzygisk.so' "$MODPATH/system/lib64" true
-  ln -sf "zygiskd" "$MODPATH/bin/zygisk-wd"
-  ln -sf "zygiskd" "$MODPATH/bin/zygisk-fuse"
-  ln -sf "zygiskd" "$MODPATH/bin/zygisk-cp"
+  ln -sf "zygiskd64" "$MODPATH/bin/zygisk-wd"
+  ln -sf "zygiskd64" "$MODPATH/bin/zygisk-fuse"
+  ln -sf "zygiskd64" "$MODPATH/bin/zygisk-cp64"
+  ln -sf "zygiskd64" "$MODPATH/bin/zygisk-ptrace64"
 fi
 
 ui_print "- Setting permissions"
 set_perm_recursive "$MODPATH/bin" 0 0 0755 0755
+set_perm_recursive "$MODPATH/system/lib" 0 0 0755 0644 u:object_r:system_lib_file:s0
 set_perm_recursive "$MODPATH/system/lib64" 0 0 0755 0644 u:object_r:system_lib_file:s0
 
 # If Huawei's Maple is enabled, system_server is created with a special way which is out of Zygisk's control
