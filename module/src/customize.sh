@@ -31,7 +31,7 @@ if [ "$BOOTMODE" ] && [ "$KSU" ]; then
   if [ "$(which magisk)" ]; then
     ui_print "*********************************************************"
     ui_print "! Multiple root implementation is NOT supported!"
-    ui_print "! Please uninstall Magisk before installing Zygisksu"
+    ui_print "! Please uninstall Magisk before installing Zygisk Next"
     abort    "*********************************************************"
   fi
 elif [ "$BOOTMODE" ] && [ "$MAGISK_VER_CODE" ]; then
@@ -50,7 +50,7 @@ else
 fi
 
 VERSION=$(grep_prop version "${TMPDIR}/module.prop")
-ui_print "- Installing Zygisksu $VERSION"
+ui_print "- Installing Zygisk Next $VERSION"
 
 # check android
 if [ "$API" -lt 29 ]; then

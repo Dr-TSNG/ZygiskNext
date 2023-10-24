@@ -6,11 +6,11 @@ body:
   - type: markdown
     attributes:
       value: |
-        Thanks for reporting issues of Zygisk on KernelSU!
+        Thanks for reporting issues for Zygisk Next!
         To make it easier for us to help you please enter detailed information below.
         Note: We will **NEVER** handle any issue related to root detection or writable system.
 
-        感谢给 Zygisk on KernelSU 汇报问题！
+        感谢给 Zygisk Next 汇报问题！
         为了使我们更好地帮助你，请提供以下信息。
         为了防止重复汇报，标题请务必使用英文。
         请注意：我们**不会**处理任何有关 root 检测和 system 分区可写相关的问题。
@@ -43,7 +43,7 @@ body:
       required: true
   - type: input
     attributes:
-      label: Zygisk on KernelSU version/Zygisk on KernelSU 版本
+      label: Zygisk Next version/Zygisk Next 版本
       description: Don't use 'latest'. Specify actual version, otherwise your issue will be closed./不要填用“最新版”。给出具体版本号，不然 issue 会被关闭。
     validations:
       required: true
@@ -62,7 +62,7 @@ body:
     attributes:
       label: Version requirement/版本要求
       options:
-        - label: I am using latest debug CI version of Zygisk on KernelSU and enable verbose log/我正在使用最新 CI 调试版本 Zygisk on KernelSU 且启用详细日志
+        - label: I am using latest debug CI version of Zygisk Next and enable verbose log/我正在使用最新 CI 调试版本 Zygisk Next 且启用详细日志
           required: true
   - type: textarea
     attributes:

@@ -33,8 +33,8 @@ pub const PATH_PTRACE_BIN32: &str = "bin/zygisk-ptrace32";
 pub const PATH_PTRACE_BIN64: &str = "bin/zygisk-ptrace64";
 
 
-pub const STATUS_LOADED: &str = "😋 Zygisksu is loaded";
-pub const STATUS_CRASHED: &str = "❌ Zygiskd has crashed";
+pub const STATUS_LOADED: &str = "😋 Zygisk Next is loaded";
+pub const STATUS_CRASHED: &str = "❌ Zygisk Next has crashed";
 pub const STATUS_ROOT_IMPL_NONE: &str = "❌ Unknown root implementation";
 pub const STATUS_ROOT_IMPL_TOO_OLD: &str = "❌ Root implementation version too old";
 pub const STATUS_ROOT_IMPL_ABNORMAL: &str = "❌ Abnormal root implementation version";

@@ -1,15 +1,13 @@
-# Zygisk on KernelSU
+# Zygisk Next
 
-Zygisk loader for KernelSU, allowing Zygisk modules to run without Magisk environment.
-
-Also works as standalone loader for Magisk.
+Standalone implementation of Zygisk, providing Zygisk API support for KernelSU and a replacement of Magisk's built-in Zygisk.
 
 ## Requirements
 
 ### General
 
 + No multiple root implementation installed
-+ SELinux enforcing: We now rely on SELinux to prevent `vold` from aborting our fuse connection
++ SELinux enforcing: Zygisk Next rely on SELinux to prevent `vold` from aborting our fuse connection
 
 ### KernelSU
 
@@ -20,8 +18,10 @@ Also works as standalone loader for Magisk.
 ### Magisk
 
 + Minimal version: 26300
-+ Original Zygisk turned off
++ Built-in Zygisk turned off
 
 ## Compatibility
 
-Should work with everything except those rely on Magisk internal behaviors.
+`PROCESS_ON_DENYLIST` cannot be flagged correctly for isolated processes on Magisk DenyList currently.
+
+Zygisk Next only guarantees the same behavior of Zygisk API, but will NOT ensure Magisk's internal features.

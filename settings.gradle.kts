@@ -16,7 +16,7 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "ZygiskOnKernelSU"
+rootProject.name = "ZygiskNext"
 include(
     ":loader",
     ":module",
