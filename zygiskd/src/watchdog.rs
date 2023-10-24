@@ -18,7 +18,9 @@ static PROP_SECTIONS: LateInit<[String; 2]> = LateInit::new();
 
 pub async fn main() -> Result<()> {
     let result = run().await;
-    set_prop_hint(constants::STATUS_CRASHED)?;
+    if result.is_err() {
+        set_prop_hint(constants::STATUS_CRASHED)?;
+    }
     result
 }
 

@@ -9,7 +9,8 @@ use std::time::{Duration, SystemTime};
 use fuser::{FileAttr, Filesystem, FileType, ReplyAttr, ReplyData, ReplyDirectory, ReplyEntry, ReplyOpen, Request};
 use libc::ENOENT;
 use log::{error, info};
-use rustix::mount::mount_bind;
+use rustix::fs::UnmountFlags;
+use rustix::mount::{mount_bind, unmount};
 use rustix::path::Arg;
 use crate::constants;
 use crate::utils::LateInit;
@@ -195,7 +196,9 @@ pub fn main() -> Result<()> {
         &options,
     )?;
     mount_bind(constants::PATH_FUSE_PCL, constants::PATH_PCL)?;
-    match session.guard.join() {
+    let crash = session.guard.join();
+    unmount(constants::PATH_PCL, UnmountFlags::DETACH)?;
+    match crash {
         Err(e) => bail!("Fuse mount crashed: {:?}", e),
         _ => bail!("Fuse mount exited unexpectedly"),
     }

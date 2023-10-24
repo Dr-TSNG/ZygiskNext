@@ -10,7 +10,6 @@ pub enum RootImpl {
     Magisk,
 }
 
-// FIXME: OnceCell bugs on 32 bit
 static mut ROOT_IMPL: RootImpl = RootImpl::None;
 
 pub fn setup() {
