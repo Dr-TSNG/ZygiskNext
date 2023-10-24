@@ -1,6 +1,3 @@
-// #![feature(exclusive_range_pattern)]
-#![allow(dead_code)]
-
 mod constants;
 mod dl;
 mod fuse;
@@ -12,7 +9,6 @@ mod zygiskd;
 
 use std::future::Future;
 use anyhow::Result;
-
 
 fn init_android_logger(tag: &str) {
     android_logger::init_once(

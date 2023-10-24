@@ -34,11 +34,6 @@ async fn run() -> Result<()> {
     Ok(())
 }
 
-fn spawn_fuse() -> Result<()> {
-    Command::new("bin/zygisk-fuse").spawn()?;
-    Ok(())
-}
-
 fn check_permission() -> Result<()> {
     info!("Check permission");
     let uid = getuid();

@@ -6,19 +6,12 @@
 
 #ifndef LOG_TAG
 #if defined(__LP64__)
-# define LOG_TAG "zygisksu64"
+# define LOG_TAG "zygisk-core64"
 #else
-# define LOG_TAG "zygisksu32"
+# define LOG_TAG "zygisk-core32"
 #endif
 #endif
 
-#ifdef LOG_DISABLED
-#define LOGD(...)
-#define LOGV(...)
-#define LOGI(...)
-#define LOGW(...)
-#define LOGE(...)
-#else
 #ifndef NDEBUG
 #define LOGD(...)  logging::log(ANDROID_LOG_DEBUG, LOG_TAG, __VA_ARGS__)
 #define LOGV(...)  logging::log(ANDROID_LOG_VERBOSE, LOG_TAG, __VA_ARGS__)
@@ -31,7 +24,6 @@
 #define LOGE(...)  logging::log(ANDROID_LOG_ERROR, LOG_TAG, __VA_ARGS__)
 #define LOGF(...)  logging::log(ANDROID_LOG_FATAL, LOG_TAG, __VA_ARGS__)
 #define PLOGE(fmt, args...) LOGE(fmt " failed with %d: %s", ##args, errno, strerror(errno))
-#endif
 
 namespace logging {
     void setfd(int fd);

@@ -1,4 +1,4 @@
-use log::{debug, error, info};
+use log::{debug, info};
 use std::ffi::CString;
 use std::env;
 use std::io::Write;
@@ -6,7 +6,7 @@ use rustix::path::Arg;
 use proc_maps::{get_process_maps, MapRange, Pid};
 use ptrace_do::{RawProcess, TracedProcess};
 use rustix::process::getpid;
-use crate::{constants, dl, lp_select};
+use crate::{constants, lp_select};
 use anyhow::{bail, Result};
 
 const ANDROID_LIBC: &str = "bionic/libc.so";
@@ -48,9 +48,7 @@ fn find_remote_procedure(
 
 fn ptrace_zygote(pid: u32) -> Result<()> {
     info!("Injecting into pid {}", pid);
-    let zygisk_lib = format!("{}/{}", constants::PATH_SYSTEM_LIB, constants::ZYGISK_LIBRARY);
-    let lib_dir = CString::new(constants::PATH_SYSTEM_LIB)?;
-    let zygisk_lib = CString::new(zygisk_lib)?;
+    let zygisk_lib = CString::new(constants::PATH_ZYGISK_LIB)?;
     let libc_base = find_module_for_pid(pid as i32, ANDROID_LIBC)?.start();
     let mmap_remote = find_remote_procedure(
         pid as i32,
@@ -118,19 +116,25 @@ fn ptrace_zygote(pid: u32) -> Result<()> {
     let buf_addr = regs.return_value();
     debug!("remote stopped at addr {:x}", regs.program_counter());
     if regs.program_counter() != libc_base {
-        let mut data = std::mem::MaybeUninit::<libc::siginfo_t>::uninit();
+        let data = std::mem::MaybeUninit::<libc::siginfo_t>::uninit();
         let siginfo = unsafe {
             libc::ptrace(libc::PTRACE_GETSIGINFO, pid, 0, &data);
             data.assume_init()
         };
-        bail!("stopped at unexpected addr {:x} signo {} si_code {} si_addr {:?}", regs.program_counter(), siginfo.si_signo, siginfo.si_code, unsafe { siginfo.si_addr() });
+        bail!(
+            "stopped at unexpected addr {:x} signo {} si_code {} si_addr {:?}",
+            regs.program_counter(),
+            siginfo.si_signo,
+            siginfo.si_code,
+            unsafe { siginfo.si_addr() },
+        );
     }
     if buf_addr == usize::MAX {
         debug!("errno remote {:x}", errno_remote);
-        let (regs, mut frame) = frame.invoke_remote(
+        let (regs, frame) = frame.invoke_remote(
             errno_remote,
             libc_base,
-            & [],
+            &[],
         )?;
         debug!("errno called");
         if regs.program_counter() != libc_base {
@@ -144,7 +148,7 @@ fn ptrace_zygote(pid: u32) -> Result<()> {
     }
     debug!("Buffer addr: {:x}", buf_addr);
 
-    // Load zygisk into remote process=
+    // Load zygisk into remote process
     frame.write_memory(buf_addr, zygisk_lib.as_bytes_with_nul())?;
     let (regs, mut frame) = frame.invoke_remote(
         dlopen_remote,
@@ -154,29 +158,35 @@ fn ptrace_zygote(pid: u32) -> Result<()> {
     let handle = regs.return_value();
     debug!("Load zygisk into remote process: {:x}", handle);
     if regs.program_counter() != libc_base {
-        let mut data = std::mem::MaybeUninit::<libc::siginfo_t>::uninit();
+        let data = std::mem::MaybeUninit::<libc::siginfo_t>::uninit();
         let siginfo = unsafe {
             libc::ptrace(libc::PTRACE_GETSIGINFO, pid, 0, &data);
             data.assume_init()
         };
-        bail!("stopped at unexpected addr {:x} signo {} si_code {} si_addr {:?}", regs.program_counter(), siginfo.si_signo, siginfo.si_code, unsafe { siginfo.si_addr() });
+        bail!(
+            "stopped at unexpected addr {:x} signo {} si_code {} si_addr {:?}",
+            regs.program_counter(),
+            siginfo.si_signo,
+            siginfo.si_code,
+            unsafe { siginfo.si_addr() },
+        );
     }
     if handle == 0 {
         debug!("got handle 0");
-        let (regs, mut frame) = frame.invoke_remote(
+        let (regs, frame) = frame.invoke_remote(
             dlerror_remote,
             libc_base,
-            & [],
+            &[],
         )?;
         let err_addr = regs.return_value();
         if err_addr == 0 {
             bail!("dlerror err addr 0");
         }
         debug!("err addr {:x}", err_addr);
-        let (regs, mut frame) = frame.invoke_remote(
+        let (regs, frame) = frame.invoke_remote(
             strlen_remote,
             libc_base,
-            & [err_addr],
+            &[err_addr],
         )?;
         let len = regs.return_value();
         if len == 0 {

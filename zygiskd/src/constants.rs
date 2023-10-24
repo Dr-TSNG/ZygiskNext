@@ -6,9 +6,6 @@ use log::LevelFilter;
 use num_enum::TryFromPrimitive;
 use crate::lp_select;
 
-pub const VERSION_NAME: &str = env!("VERSION_NAME");
-pub const VERSION_CODE: &str = env!("VERSION_CODE");
-pub const VERSION_FULL: &str = concatcp!(VERSION_NAME, " (", VERSION_CODE, ")");
 pub const MIN_KSU_VERSION: i32 = unwrap_ctx!(parse_i32(env!("MIN_KSU_VERSION")));
 pub const MAX_KSU_VERSION: i32 = unwrap_ctx!(parse_i32(env!("MAX_KSU_VERSION")));
 pub const MIN_MAGISK_VERSION: i32 = unwrap_ctx!(parse_i32(env!("MIN_MAGISK_VERSION")));
@@ -19,10 +16,9 @@ pub const MAX_LOG_LEVEL: LevelFilter = LevelFilter::Trace;
 pub const MAX_LOG_LEVEL: LevelFilter = LevelFilter::Info;
 
 pub const PROP_CTL_RESTART: &str = "ctl.restart";
-pub const ZYGISK_LIBRARY: &str = "libzygisk.so";
 
 pub const PATH_PCL: &str = "/system/etc/preloaded-classes";
-pub const PATH_SYSTEM_LIB: &str = lp_select!("/system/lib", "/system/lib64");
+pub const PATH_ZYGISK_LIB: &str = concatcp!(lp_select!("/system/lib", "/system/lib64"), "/libzygisk.so");
 pub const PATH_WORK_DIR: &str = "/dev/zygisk"; // TODO: Replace with /debug_ramdisk/zygisk
 pub const PATH_PROP_OVERLAY: &str = concatcp!(PATH_WORK_DIR, "/module.prop");
 pub const PATH_CP_SOCKET: &str = concatcp!(PATH_WORK_DIR, lp_select!("/cp32.sock", "/cp64.sock"));

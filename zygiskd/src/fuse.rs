@@ -1,6 +1,6 @@
 use std::cmp::min;
 use anyhow::{bail, Result};
-use std::ffi::{CString, OsStr};
+use std::ffi::OsStr;
 use std::{fs, thread};
 use std::io::Read;
 use std::process::{Command, Stdio};
@@ -35,7 +35,6 @@ const fn attr(inode: u64, size: u64, kind: FileType) -> FileAttr {
         flags: 0,
     }
 }
-
 
 const INO_DIR: u64 = 1;
 const INO_PCL: u64 = 2;
@@ -140,10 +139,10 @@ impl Filesystem for DelegateFilesystem {
             let process = fs::read_to_string(process).unwrap();
             let process = &process[..process.find('\0').unwrap()];
             info!("Process {} is reading preloaded-classes", process);
-            if process == "zygote64" {
-                ptrace_zygote64(pid).unwrap();
-            } else if process == "zygote" {
-                ptrace_zygote32(pid).unwrap();
+            match process {
+                "zygote64" => ptrace_zygote64(pid).unwrap(),
+                "zygote" => ptrace_zygote32(pid).unwrap(),
+                _ => (),
             }
         }
         reply.opened(0, 0);
