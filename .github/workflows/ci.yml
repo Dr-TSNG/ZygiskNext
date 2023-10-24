@@ -71,10 +71,10 @@ jobs:
         if: success()
         id: prepareArtifact
         run: |
-          releaseName=`ls module/build/outputs/release/Zygisk-on-KernelSU-v*-release.zip | awk -F '(/|.zip)' '{print $5}'` && echo "releaseName=$releaseName" >> $GITHUB_OUTPUT
-          debugName=`ls module/build/outputs/release/Zygisk-on-KernelSU-v*-debug.zip | awk -F '(/|.zip)' '{print $5}'` && echo "debugName=$debugName" >> $GITHUB_OUTPUT
-          unzip module/build/outputs/release/Zygisk-on-KernelSU-v*-release.zip -d zksu-release
-          unzip module/build/outputs/release/Zygisk-on-KernelSU-v*-debug.zip -d zksu-debug
+          releaseName=`ls module/build/outputs/release/Zygisk-Next-v*-release.zip | awk -F '(/|.zip)' '{print $5}'` && echo "releaseName=$releaseName" >> $GITHUB_OUTPUT
+          debugName=`ls module/build/outputs/release/Zygisk-Next-v*-debug.zip | awk -F '(/|.zip)' '{print $5}'` && echo "debugName=$debugName" >> $GITHUB_OUTPUT
+          unzip module/build/outputs/release/Zygisk-Next-v*-release.zip -d zksu-release
+          unzip module/build/outputs/release/Zygisk-Next-v*-debug.zip -d zksu-debug
 
       - name: Upload release
         uses: actions/upload-artifact@v3
