@@ -24,6 +24,7 @@ pub const PATH_PROP_OVERLAY: &str = concatcp!(PATH_WORK_DIR, "/module.prop");
 pub const PATH_CP_SOCKET: &str = concatcp!(PATH_WORK_DIR, lp_select!("/cp32.sock", "/cp64.sock"));
 pub const PATH_FUSE_DIR: &str = concatcp!(PATH_WORK_DIR, "/fuse");
 pub const PATH_FUSE_PCL: &str = concatcp!(PATH_FUSE_DIR, "/preloaded-classes");
+pub const PATH_FUSE_ABORT_OVERLAY: &str = concatcp!(PATH_WORK_DIR, "/abort");
 
 pub const PATH_MODULES_DIR: &str = "..";
 pub const PATH_MODULE_PROP: &str = "module.prop";

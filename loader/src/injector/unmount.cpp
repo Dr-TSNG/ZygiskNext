@@ -51,6 +51,10 @@ void revert_unmount_ksu() {
         if (info.type == "fuse" && info.source == ZYGISK_FUSE_SOURCE) {
             targets.emplace_back(info.target);
         }
+        // Unmount abort overlay
+        if (info.root == "/zygisk/abort" && info.target.starts_with("/sys/fs/fuse/connections/") && info.target.ends_with("/abort")) {
+            targets.emplace_back(info.target);
+        }
     }
     for (auto& info: parse_mount_info("self")) {
         // Unmount everything from ksu loop except ksu module dir
@@ -81,6 +85,10 @@ void revert_unmount_magisk() {
         }
         // Unmount fuse
         if (info.type == "fuse" && info.source == ZYGISK_FUSE_SOURCE) {
+            targets.emplace_back(info.target);
+        }
+        // Unmount abort overlay
+        if (info.root == "/zygisk/abort" && info.target.starts_with("/sys/fs/fuse/connections/") && info.target.ends_with("/abort")) {
             targets.emplace_back(info.target);
         }
     }

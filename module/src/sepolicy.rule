@@ -1,8 +1,7 @@
-deny vold fusectlfs file write
-
 allow * tmpfs * *
 allow zygote appdomain_tmpfs dir *
 allow zygote appdomain_tmpfs file *
+allow zygote fusectlfs dir search
 
 type magisk_file file_type
 typeattribute magisk_file mlstrustedobject

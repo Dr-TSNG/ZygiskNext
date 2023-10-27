@@ -3,6 +3,7 @@ use anyhow::{bail, Result};
 use std::ffi::OsStr;
 use std::{fs, thread};
 use std::io::Read;
+use std::os::unix::fs::MetadataExt;
 use std::process::{Command, Stdio};
 use std::sync::{mpsc, Mutex};
 use std::time::{Duration, SystemTime};
@@ -179,6 +180,14 @@ impl Filesystem for DelegateFilesystem {
     }
 }
 
+fn prevent_abort() -> Result<()> {
+    let stat = fs::metadata(constants::PATH_FUSE_DIR)?;
+    let dev = stat.dev();
+    fs::File::create(constants::PATH_FUSE_ABORT_OVERLAY)?;
+    mount_bind(constants::PATH_FUSE_ABORT_OVERLAY, format!("/sys/fs/fuse/connections/{}/abort", dev))?;
+    Ok(())
+}
+
 pub fn main() -> Result<()> {
     info!("Start zygisk fuse");
     fs::create_dir(constants::PATH_WORK_DIR)?;
@@ -196,6 +205,9 @@ pub fn main() -> Result<()> {
         &options,
     )?;
     mount_bind(constants::PATH_FUSE_PCL, constants::PATH_PCL)?;
+    if let Err(e) = prevent_abort() {
+        error!("failed to prevent from aborting: {e}\n{}", e.backtrace());
+    }
     let crash = session.guard.join();
     unmount(constants::PATH_PCL, UnmountFlags::DETACH)?;
     match crash {
