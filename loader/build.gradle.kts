@@ -15,11 +15,26 @@ fun Project.findInPath(executable: String, property: String): String? {
     }?.absolutePath ?: properties.getOrDefault(property, null) as? String?
 }
 
-val ccachePatch by lazy {
+val ccachePath by lazy {
     project.findInPath("ccache", "ccache.path")?.also {
         println("loader: Use ccache: $it")
     }
 }
+
+val defaultCFlags = arrayOf(
+    "-Wall", "-Wextra",
+    "-fno-rtti", "-fno-exceptions",
+    "-fno-stack-protector", "-fomit-frame-pointer",
+    "-Wno-builtin-macro-redefined", "-D__FILE__=__FILE_NAME__"
+)
+
+val releaseFlags = arrayOf(
+    "-Oz", "-flto",
+    "-Wno-unused", "-Wno-unused-parameter",
+    "-fvisibility=hidden", "-fvisibility-inlines-hidden",
+    "-fno-unwind-tables", "-fno-asynchronous-unwind-tables",
+    "-Wl,--exclude-libs,ALL", "-Wl,--gc-sections", "-Wl,--strip-all"
+)
 
 android {
     buildFeatures {
@@ -28,16 +43,27 @@ android {
         prefab = true
     }
 
-    externalNativeBuild.ndkBuild {
-        path("src/Android.mk")
+    externalNativeBuild.cmake {
+        path("src/CMakeLists.txt")
     }
 
     defaultConfig {
-        externalNativeBuild {
-            ndkBuild {
-                ccachePatch?.let {
-                    arguments += "NDK_CCACHE=$it"
-                }
+        externalNativeBuild.cmake {
+            arguments += "-DANDROID_STL=none"
+            arguments += "-DLSPLT_STANDALONE=ON"
+            cFlags("-std=c18", *defaultCFlags)
+            cppFlags("-std=c++20", *defaultCFlags)
+            ccachePath?.let {
+                arguments += "-DNDK_CCACHE=$it"
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            externalNativeBuild.cmake {
+                cFlags += releaseFlags
+                cppFlags += releaseFlags
             }
         }
     }
