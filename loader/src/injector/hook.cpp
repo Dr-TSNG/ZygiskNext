@@ -284,6 +284,14 @@ DCL_HOOK_FUNC(int, pthread_attr_destroy, void *target) {
     return res;
 }
 
+    DCL_HOOK_FUNC(char *, strdup, const char *s) {
+        if (s == "com.android.internal.os.ZygoteInit"sv) {
+            LOGD("strdup %s\n", s);
+            replace_jni_methods();
+        }
+        return old_strdup(s);
+    }
+
 #undef DCL_HOOK_FUNC
 
 // -----------------------------------------------------------------
@@ -762,6 +770,7 @@ void hook_functions() {
 
     PLT_HOOK_REGISTER(android_runtime_dev, android_runtime_inode, fork);
     PLT_HOOK_REGISTER(android_runtime_dev, android_runtime_inode, unshare);
+    PLT_HOOK_REGISTER(android_runtime_dev, android_runtime_inode, strdup);
     PLT_HOOK_REGISTER_SYM(android_runtime_dev, android_runtime_inode, "__android_log_close", android_log_close);
     hook_commit();
 
@@ -770,8 +779,6 @@ void hook_functions() {
             std::remove_if(plt_hook_list->begin(), plt_hook_list->end(),
                            [](auto &t) { return *std::get<3>(t) == nullptr;}),
             plt_hook_list->end());
-
-    replace_jni_methods();
 }
 
 static void hook_unloader() {

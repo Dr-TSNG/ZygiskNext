@@ -4,8 +4,6 @@ use std::fs;
 use std::future::Future;
 use std::io::{BufRead, BufReader, Write};
 use std::pin::Pin;
-use std::time::Duration;
-use binder::IBinder;
 use futures::stream::FuturesUnordered;
 use futures::StreamExt;
 use log::{debug, error, info};
@@ -127,27 +125,6 @@ async fn spawn_daemon() -> Result<()> {
             child_ids.push(it.id().unwrap());
             futures.push(Box::pin(spawn_daemon(it)));
         }
-
-        async fn binder_listener() -> Result<()> {
-            let mut binder = loop {
-                match binder::get_service("activity") {
-                    Some(binder) => break binder,
-                    None => {
-                        log::trace!("System server not ready, wait for 1s...");
-                        tokio::time::sleep(Duration::from_secs(1)).await;
-                    }
-                };
-            };
-
-            info!("System server ready");
-
-            loop {
-                if binder.ping_binder().is_err() { break; }
-                tokio::time::sleep(Duration::from_secs(1)).await;
-            }
-            bail!("System server died");
-        }
-        futures.push(Box::pin(binder_listener()));
 
         if let Err(e) = futures.next().await.unwrap() {
             error!("{}", e);
