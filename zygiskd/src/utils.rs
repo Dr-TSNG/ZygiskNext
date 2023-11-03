@@ -1,6 +1,6 @@
 use anyhow::Result;
 use std::{fs, io::{Read, Write}, os::unix::net::UnixStream};
-use std::ffi::{c_char, CStr, CString};
+use std::ffi::{c_char, c_void, CStr, CString};
 use std::os::fd::AsFd;
 use std::os::unix::net::UnixListener;
 use std::process::Command;
@@ -96,6 +96,28 @@ pub fn set_property(name: &str, value: &str) -> Result<()> {
     Ok(())
 }
 
+pub fn wait_property(name: &str, serial: u32) -> Result<u32> {
+    let name = CString::new(name)?;
+    let info = unsafe {
+        __system_property_find(name.as_ptr())
+    };
+    let mut serial = serial;
+    unsafe {
+        __system_property_wait(info, serial, &mut serial, std::ptr::null());
+    }
+    Ok(serial)
+}
+
+pub fn get_property_serial(name: &str) -> Result<u32> {
+    let name = CString::new(name)?;
+    let info = unsafe {
+        __system_property_find(name.as_ptr())
+    };
+    Ok(unsafe {
+        __system_property_serial(info)
+    })
+}
+
 pub fn switch_mount_namespace(pid: i32) -> Result<()> {
     let cwd = std::env::current_dir()?;
     let mnt = fs::File::open(format!("/proc/{}/ns/mnt", pid))?;
@@ -177,4 +199,7 @@ extern "C" {
     fn __android_log_print(prio: i32, tag: *const c_char, fmt: *const c_char, ...) -> i32;
     fn __system_property_get(name: *const c_char, value: *mut c_char) -> u32;
     fn __system_property_set(name: *const c_char, value: *const c_char) -> u32;
+    fn __system_property_find(name: *const c_char) -> *const c_void;
+    fn __system_property_wait(info: *const c_void, old_serial: u32, new_serial: *mut u32, timeout: *const libc::timespec) -> bool;
+    fn __system_property_serial(info: *const c_void) -> u32;
 }

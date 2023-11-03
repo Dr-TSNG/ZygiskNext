@@ -1,18 +1,17 @@
 use crate::{constants, root_impl, utils};
 use anyhow::{bail, Result};
 use std::fs;
-use std::future::Future;
 use std::io::{BufRead, BufReader, Write};
-use std::pin::Pin;
 use std::time::Duration;
-use binder::IBinder;
-use futures::stream::FuturesUnordered;
-use futures::StreamExt;
+use futures::{FutureExt, join, pin_mut};
+use futures::future::{Fuse, FusedFuture};
 use log::{debug, error, info};
 use rustix::mount::mount_bind;
-use rustix::process::{getgid, getuid, kill_process, Pid, Signal};
+use rustix::process::{getgid, getuid};
 use tokio::process::{Child, Command};
-use crate::utils::LateInit;
+use tokio::{select, task};
+use tokio::time::Instant;
+use crate::utils::{get_property, get_property_serial, LateInit, wait_property};
 
 static PROP_SECTIONS: LateInit<[String; 2]> = LateInit::new();
 
@@ -108,62 +107,111 @@ fn check_and_set_hint() -> Result<bool> {
 }
 
 async fn spawn_daemon() -> Result<()> {
-    let mut lives = 5;
+    let mut lives = constants::MAX_RESTART_COUNT;
+    let mut last_restart_time = Instant::now();
+    let (sender, mut receiver) = tokio::sync::mpsc::channel(1);
+    task::spawn_blocking(move || {
+        let mut serial = 0u32;
+        let mut last_state = "running".to_string();
+        info!("zygote property monitor started");
+        loop {
+            let old_serial = serial;
+            serial = wait_property(constants::ZYGOTE_SERVICE_PROP, serial).expect("failed to wait on property");
+            let new_state = get_property(constants::ZYGOTE_SERVICE_PROP).expect("failed to get property");
+            if last_state == "running" && new_state != "running" {
+                info!("new zygote state: {} serial {} -> {}", new_state, old_serial, serial);
+                sender.blocking_send(old_serial).expect("failed to notify");
+            }
+            last_state = new_state
+        }
+    });
+    let mut restart_serial = 0u32;
     loop {
-        let mut futures = FuturesUnordered::<Pin<Box<dyn Future<Output=Result<()>>>>>::new();
-        let mut child_ids = vec![];
         let daemon32 = Command::new(constants::PATH_CP_BIN32).arg("daemon").spawn();
         let daemon64 = Command::new(constants::PATH_CP_BIN64).arg("daemon").spawn();
-        async fn spawn_daemon(mut daemon: Child) -> Result<()> {
-            let result = daemon.wait().await?;
-            log::error!("Daemon process {} died: {}", daemon.id().unwrap(), result);
-            Ok(())
-        }
-        if let Ok(it) = daemon32 {
-            child_ids.push(it.id().unwrap());
-            futures.push(Box::pin(spawn_daemon(it)));
-        }
-        if let Ok(it) = daemon64 {
-            child_ids.push(it.id().unwrap());
-            futures.push(Box::pin(spawn_daemon(it)));
-        }
-
-        async fn binder_listener() -> Result<()> {
-            let mut binder = loop {
-                match binder::get_service("activity") {
-                    Some(binder) => break binder,
-                    None => {
-                        log::trace!("System server not ready, wait for 1s...");
-                        tokio::time::sleep(Duration::from_secs(1)).await;
-                    }
-                };
-            };
-
-            info!("System server ready");
-
-            loop {
-                if binder.ping_binder().is_err() { break; }
-                tokio::time::sleep(Duration::from_secs(1)).await;
+        async fn spawn_daemon(mut daemon: Child, mut killer: tokio::sync::watch::Receiver<()>) {
+            let id = daemon.id().unwrap();
+            select! {
+                result = daemon.wait() => {
+                    log::error!("Daemon process {} died: {}", id, result
+                        .expect("failed to get daemon process exit reason")
+                    );
+                },
+                _ = killer.changed() => {
+                    log::warn!("Kill daemon process {}", id);
+                    daemon.kill().await.expect("failed to kill");
+                }
             }
-            bail!("System server died");
         }
-        futures.push(Box::pin(binder_listener()));
+        let (tx, rx) = tokio::sync::watch::channel(());
+        let wait32 = match daemon32 {
+            Ok(child) => {
+                spawn_daemon(child, rx.clone()).fuse()
+            }
+            Err(..) => {
+                Fuse::terminated()
+            }
+        };
+        let wait64 = match daemon64 {
+            Ok(child) => {
+                spawn_daemon(child, rx.clone()).fuse()
+            }
+            Err(..) => {
+                Fuse::terminated()
+            }
+        };
 
-        if let Err(e) = futures.next().await.unwrap() {
-            error!("{}", e);
+        pin_mut!(wait32, wait64);
+
+        let mut restart_zygote = true;
+
+        select! {
+            _ = &mut wait32 => {},
+            _ = &mut wait64 => {},
+            _ = async {
+                // we expect a serial different from last restart
+                loop {
+                    if restart_serial != receiver.recv().await.expect("no serial received") {
+                        break;
+                    }
+                }
+            } => {
+                restart_zygote = false;
+            }
         }
 
-        for child in child_ids {
-            debug!("Killing child process {}", child);
-            let _ = kill_process(Pid::from_raw(child as i32).unwrap(), Signal::Kill);
+        // kill all remain daemons
+        tx.send(())?;
+
+        // wait for all daemons
+        loop {
+            futures::select! {
+                _ = wait32 => {},
+                _ = wait64 => {},
+                complete => { break; }
+            }
         }
 
-        lives -= 1;
+        let current = Instant::now();
+        if current - last_restart_time >= Duration::new(30, 0) {
+            lives = constants::MAX_RESTART_COUNT;
+            log::warn!("reset live count to {}", lives);
+        } else {
+            lives -= 1;
+            log::warn!("remain live count {}", lives);
+        }
         if lives == 0 {
             bail!("Too many crashes, abort");
         }
+        last_restart_time = current;
 
-        error!("Restarting zygote...");
-        utils::set_property(constants::PROP_CTL_RESTART, "zygote")?;
+        error!("Daemons are going to restart ...");
+
+        if restart_zygote {
+            error!("Restarting zygote...");
+            restart_serial = get_property_serial(constants::ZYGOTE_SERVICE_PROP)?;
+            debug!("serial before restart {}", restart_serial);
+            utils::set_property(constants::PROP_CTL_RESTART, "zygote")?;
+        }
     }
 }

@@ -40,6 +40,9 @@ pub const STATUS_ROOT_IMPL_TOO_OLD: &str = "❌ Root implementation version too 
 pub const STATUS_ROOT_IMPL_ABNORMAL: &str = "❌ Abnormal root implementation version";
 pub const STATUS_ROOT_IMPL_MULTIPLE: &str = "❌ Multiple root implementations installed";
 
+pub const MAX_RESTART_COUNT: i32 = 5;
+pub const ZYGOTE_SERVICE_PROP: &str = "init.svc.zygote";
+
 #[derive(Debug, Eq, PartialEq, TryFromPrimitive)]
 #[repr(u8)]
 pub enum DaemonSocketAction {
