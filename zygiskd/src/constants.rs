@@ -16,19 +16,20 @@ pub const MAX_LOG_LEVEL: LevelFilter = LevelFilter::Trace;
 pub const MAX_LOG_LEVEL: LevelFilter = LevelFilter::Info;
 
 pub const PROP_CTL_RESTART: &str = "ctl.restart";
+pub const PROP_CTL_SIGSTOP_OFF: &str = "ctl.sigstop_off";
 
-pub const PATH_PCL: &str = "/system/etc/preloaded-classes";
-pub const PATH_ZYGISK_LIB: &str = concatcp!(lp_select!("/system/lib", "/system/lib64"), "/libzygisk.so");
 pub const PATH_WORK_DIR: &str = "/dev/zygisk"; // TODO: Replace with /debug_ramdisk/zygisk
 pub const PATH_PROP_OVERLAY: &str = concatcp!(PATH_WORK_DIR, "/module.prop");
 pub const PATH_CP_SOCKET: &str = concatcp!(PATH_WORK_DIR, lp_select!("/cp32.sock", "/cp64.sock"));
+pub const PATH_PT_LOCK32: &str = concatcp!(PATH_WORK_DIR, "/lock32");
+pub const PATH_PT_LOCK64: &str = concatcp!(PATH_WORK_DIR, "/lock64");
 
 pub const PATH_MODULES_DIR: &str = "..";
 pub const PATH_MODULE_PROP: &str = "module.prop";
 pub const PATH_CP_BIN32: &str = "bin/zygisk-cp32";
 pub const PATH_CP_BIN64: &str = "bin/zygisk-cp64";
-pub const PATH_PTRACE_BIN32: &str = "bin/zygisk-ptrace32";
-pub const PATH_PTRACE_BIN64: &str = "bin/zygisk-ptrace64";
+pub const PATH_PT_BIN32: &str = "bin/zygisk-ptracer32";
+pub const PATH_PT_BIN64: &str = "bin/zygisk-ptracer64";
 
 
 pub const STATUS_LOADED: &str = "😋 Zygisk Next is loaded";
@@ -47,6 +48,7 @@ pub enum DaemonSocketAction {
     ReadModules,
     RequestCompanionSocket,
     GetModuleDir,
+    ZygoteRestarted,
 }
 
 // Zygisk process flags

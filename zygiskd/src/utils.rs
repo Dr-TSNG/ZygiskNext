@@ -1,6 +1,6 @@
 use anyhow::Result;
 use std::{fs, io::{Read, Write}, os::unix::net::UnixStream};
-use std::ffi::{c_char, CStr, CString};
+use std::ffi::{c_char, c_void, CStr, CString};
 use std::os::fd::AsFd;
 use std::os::unix::net::UnixListener;
 use std::process::Command;
@@ -177,4 +177,6 @@ extern "C" {
     fn __android_log_print(prio: i32, tag: *const c_char, fmt: *const c_char, ...) -> i32;
     fn __system_property_get(name: *const c_char, value: *mut c_char) -> u32;
     fn __system_property_set(name: *const c_char, value: *const c_char) -> u32;
+    fn __system_property_find(name: *const c_char) -> *const c_void;
+    fn __system_property_wait(info: *const c_void, old_serial: u32, new_serial: *u32, timeout: *const libc::timespec) -> bool;
 }

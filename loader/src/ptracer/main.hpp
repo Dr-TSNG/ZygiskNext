@@ -1,4 +1,5 @@
 #pragma once
 
-void prop_monitor_main();
-void trace_zygote_main(int pid);
+int wait_for_zygote();
+bool trace_zygote(int pid);
+int find_zygote();

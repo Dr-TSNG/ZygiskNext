@@ -62,6 +62,37 @@ std::vector<MapInfo> MapInfo::Scan(const std::string& pid) {
     return info;
 }
 
+// https://cs.android.com/android/platform/superproject/main/+/main:external/toybox/toys/net/netstat.c;l=200;drc=657f94698c7fc7d4f9838cbcf3b4b78e38939d5c
+std::map<ino_t, std::string> ScanUnixSockets() {
+    constexpr static auto kSocketEntry = 1;
+    LOGD("scanning unix sockets");
+    std::map<ino_t, std::string> info;
+    auto sockets = std::unique_ptr<FILE, decltype(&fclose)>{fopen("/proc/net/unix", "r"), &fclose};
+    char *line = nullptr;
+    size_t len = 0;
+    // skip header
+    getline(&line, &len, sockets.get());
+    if (sockets) {
+        ssize_t read;
+        while ((read = getline(&line, &len, sockets.get())) > 0) {
+            line[read - 1] = '\0';
+            ino_t ino;
+            char *path = nullptr;
+            // Num RefCount Protocol Flags    Type St Inode Path
+            if (sscanf(line, "%*p: %*lx %*lx %*lx %*lx %*lx %lu%m[^\n]", &ino, &path) < kSocketEntry) {
+                continue;
+            }
+            if (path != nullptr) {
+                LOGD("%ld -> %s", ino, path + 1);
+                info.emplace(ino, path + 1);
+                free(path);
+            }
+        }
+        free(line);
+    }
+    return info;
+}
+
 ssize_t write_proc(int pid, uintptr_t *remote_addr, const void *buf, size_t len) {
     LOGD("write to remote addr %p size %zu", remote_addr, len);
     struct iovec local{

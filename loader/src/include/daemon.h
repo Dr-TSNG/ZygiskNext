@@ -58,6 +58,7 @@ namespace zygiskd {
         ReadModules,
         RequestCompanionSocket,
         GetModuleDir,
+        ZygoteRestart,
     };
 
     bool PingHeartbeat();
@@ -71,4 +72,6 @@ namespace zygiskd {
     int ConnectCompanion(size_t index);
 
     int GetModuleDir(size_t index);
+
+    void ZygoteRestart();
 }

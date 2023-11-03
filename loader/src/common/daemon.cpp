@@ -93,7 +93,7 @@ namespace zygiskd {
     }
 
     int GetModuleDir(size_t index) {
-        int fd = Connect(1);
+        UniqueFd fd = Connect(1);
         if (fd == -1) {
             PLOGE("GetModuleDir");
             return -1;
@@ -101,5 +101,14 @@ namespace zygiskd {
         socket_utils::write_u8(fd, (uint8_t) SocketAction::GetModuleDir);
         socket_utils::write_usize(fd, index);
         return socket_utils::recv_fd(fd);
+    }
+
+    void ZygoteRestart() {
+        UniqueFd fd = Connect(1);
+        if (fd == -1) {
+            PLOGE("Could not notify ZygoteRestart");
+            return;
+        }
+        socket_utils::write_u8(fd, (uint8_t) SocketAction::ZygoteRestart);
     }
 }

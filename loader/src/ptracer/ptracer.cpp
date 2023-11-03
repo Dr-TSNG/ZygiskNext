@@ -152,49 +152,65 @@ bool inject_on_main(int pid, const char *lib_path) {
 
 #define STOPPED_WITH(sig, event) (WIFSTOPPED(status) && WSTOPSIG(status) == (sig) && (status >> 16) == (event))
 
-void trace_zygote_main(int pid) {
+bool trace_zygote(int pid) {
+#define WAIT_OR_DIE if (wait_pid(pid, &status, __WALL) != pid) return false;
+#define CONT_OR_DIE \
+    if (ptrace(PTRACE_CONT, pid, 0, 0) == -1) { \
+        PLOGE("cont"); \
+        return false; \
+    }
     int status;
     LOGI("tracing %d (tracer %d)", pid, getpid());
     if (ptrace(PTRACE_SEIZE, pid, 0, PTRACE_O_TRACEEXEC) == -1) {
         PLOGE("seize");
-        return;
+        return false;
     }
-    wait_pid(pid, &status, __WALL);
+    struct finally {
+        int pid;
+        ~finally() {
+            ptrace(PTRACE_DETACH, pid, 0, 0);
+        }
+    } _{pid};
+    WAIT_OR_DIE
     if (STOPPED_WITH(SIGSTOP, PTRACE_EVENT_STOP)) {
         // if SIGSTOP is delivered before we seized it
         LOGD("process is already stopped");
-        kill(pid, SIGCONT);
-        ptrace(PTRACE_CONT, pid, 0, 0);
-        wait_pid(pid, &status, __WALL);
+        if (kill(pid, SIGCONT)) {
+            PLOGE("kill");
+            return false;
+        }
+        CONT_OR_DIE
+        WAIT_OR_DIE
         if (STOPPED_WITH(SIGTRAP, PTRACE_EVENT_STOP)) {
-            ptrace(PTRACE_CONT, pid, 0, 0);
-            wait_pid(pid, &status, __WALL);
+            CONT_OR_DIE
+            WAIT_OR_DIE
             if (STOPPED_WITH(SIGCONT, 0)) {
                 LOGD("received SIGCONT");
                 ptrace(PTRACE_CONT, pid, 0, 0);
             }
         } else {
             LOGE("unknown state %s, not SIGTRAP + EVENT_STOP", parse_status(status).c_str());
+            return false;
         }
     } else if (STOPPED_WITH(SIGSTOP, 0)) {
         // if SIGSTOP is delivered after we seized it
         LOGD("process received SIGSTOP, suppress");
-        ptrace(PTRACE_CONT, pid, 0, 0);
+        CONT_OR_DIE
     } else {
         LOGE("unknown state %s, neither EVENT_STOP nor SIGSTOP", parse_status(status).c_str());
-        exit(1);
+        return false;
     }
-    wait_pid(pid, &status, __WALL);
+    WAIT_OR_DIE
     // enter the app_process
     if (STOPPED_WITH(SIGTRAP, PTRACE_EVENT_EXEC)) {
-        LOGD("app_process exec-ed");
+        LOGI("app_process exec-ed");
         if (!inject_on_main(pid, "/dev/zygisk/lib" LP_SELECT("", "64") "/libzygisk.so")) {
             LOGE("failed to inject");
-            exit(1);
+            return false;
         }
     } else {
-        LOGE("unknown status %d", status);
-        exit(1);
+        LOGE("unknown status %s", parse_status(status).c_str());
+        return false;
     }
-    ptrace(PTRACE_DETACH, pid, 0, 0);
+    return true;
 }

@@ -13,6 +13,8 @@ use std::os::unix::{
     prelude::AsRawFd,
 };
 use std::path::PathBuf;
+use std::process::exit;
+use log::info;
 use rustix::fs::fstat;
 use rustix::process::{set_parent_process_death_signal, Signal};
 
@@ -222,6 +224,10 @@ fn handle_daemon_action(mut stream: UnixStream, context: &Context) -> Result<()>
             let dir = format!("{}/{}", constants::PATH_MODULES_DIR, module.name);
             let dir = fs::File::open(dir)?;
             stream.send_fd(dir.as_raw_fd())?;
+        }
+        DaemonSocketAction::ZygoteRestarted => {
+            info!("zygote restarted, exit");
+            exit(0);
         }
     }
     Ok(())

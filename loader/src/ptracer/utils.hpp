@@ -1,6 +1,7 @@
 #pragma once
 #include <string>
 #include <sys/ptrace.h>
+#include <map>
 
 #include "daemon.h"
 
@@ -37,7 +38,7 @@ struct MapInfo {
     /// \brief Scans /proc/self/maps and returns a list of \ref MapInfo entries.
     /// This is useful to find out the inode of the library to hook.
     /// \return A list of \ref MapInfo entries.
-    [[maybe_unused, gnu::visibility("default")]] static std::vector<MapInfo> Scan(const std::string& pid = "self");
+    static std::vector<MapInfo> Scan(const std::string& pid = "self");
 };
 
 #if defined(__x86_64__)
@@ -112,3 +113,6 @@ inline const char* sigabbrev_np(int sig) {
     if (sig > 0 && sig < NSIG) return sys_signame[sig];
     return "(unknown)";
 }
+
+std::map<ino_t, std::string> ScanUnixSockets();
+
