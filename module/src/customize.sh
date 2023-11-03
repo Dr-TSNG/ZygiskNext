@@ -53,9 +53,9 @@ VERSION=$(grep_prop version "${TMPDIR}/module.prop")
 ui_print "- Installing Zygisk Next $VERSION"
 
 # check android
-if [ "$API" -lt 29 ]; then
+if [ "$API" -lt 26 ]; then
   ui_print "! Unsupported sdk: $API"
-  abort "! Minimal supported sdk is 29 (Android 10)"
+  abort "! Minimal supported sdk is 26 (Android 8.0)"
 else
   ui_print "- Device sdk: $API"
 fi
