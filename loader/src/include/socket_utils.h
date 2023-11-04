@@ -9,7 +9,7 @@ namespace socket_utils {
 
     ssize_t xread(int fd, void *buf, size_t count);
 
-    ssize_t xwrite(int fd, const void *buf, size_t count);
+    size_t xwrite(int fd, const void *buf, size_t count);
 
     uint8_t read_u8(int fd);
 
