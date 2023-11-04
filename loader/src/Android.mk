@@ -17,7 +17,7 @@ LOCAL_MODULE           := zygisk
 LOCAL_C_INCLUDES       := $(LOCAL_PATH)/include
 FILE_LIST              := $(filter %.cpp, $(call walk, $(LOCAL_PATH)/injector))
 LOCAL_SRC_FILES        := $(FILE_LIST:COMMON_FILE_LIST:$(LOCAL_PATH)/%=%)
-LOCAL_STATIC_LIBRARIES := cxx common liblsplt libphmap
+LOCAL_STATIC_LIBRARIES := cxx common liblsplt
 LOCAL_LDLIBS           := -llog
 include $(BUILD_SHARED_LIBRARY)
 
