@@ -15,6 +15,13 @@ touch /dev/zygisk/wd
 
 cd "$MODDIR"
 
+# temporary fix AVD 11 magisk
+# if [ -f /dev/zygisk_service ];then
+#  log -p i -t "zygisk-sh" "service called twice";
+#   exit;
+# fi
+# touch /dev/zygisk_service
+
 if [ "$(which magisk)" ]; then
   for file in ../*; do
     if [ -d "$file" ] && [ -d "$file/zygisk" ] && ! [ -f "$file/disable" ]; then

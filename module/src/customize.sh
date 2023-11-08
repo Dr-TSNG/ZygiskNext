@@ -53,9 +53,9 @@ VERSION=$(grep_prop version "${TMPDIR}/module.prop")
 ui_print "- Installing Zygisk Next $VERSION"
 
 # check android
-if [ "$API" -lt 30 ]; then
+if [ "$API" -lt 26 ]; then
   ui_print "! Unsupported sdk: $API"
-  abort "! Minimal supported sdk is 30 (Android 11)"
+  abort "! Minimal supported sdk is 26 (Android 8.0)"
 else
   ui_print "- Device sdk: $API"
 fi
@@ -101,7 +101,7 @@ extract "$ZIPFILE" 'post-fs-data.sh' "$MODPATH"
 extract "$ZIPFILE" 'service.sh'      "$MODPATH"
 mv "$TMPDIR/sepolicy.rule" "$MODPATH"
 
-HAS32BIT=false && [ -d "/system/lib" ] && HAS32BIT=true
+HAS32BIT=false && [ $(getprop ro.product.cpu.abilist32) ] && HAS32BIT=true
 
 mkdir "$MODPATH/bin"
 mkdir "$MODPATH/lib"

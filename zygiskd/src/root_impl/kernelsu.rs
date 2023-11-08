@@ -23,10 +23,11 @@ pub fn get_kernel_su() -> Option<Version> {
             0,
         )
     };
+    const MAX_OLD_VERSION: i32 = MIN_KSU_VERSION - 1;
     match version {
         0 => None,
         MIN_KSU_VERSION..=MAX_KSU_VERSION => Some(Version::Supported),
-        1..=MIN_KSU_VERSION => Some(Version::TooOld),
+        1..=MAX_OLD_VERSION => Some(Version::TooOld),
         _ => Some(Version::Abnormal),
     }
 }

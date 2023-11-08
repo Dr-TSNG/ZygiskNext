@@ -4,29 +4,30 @@
 #include <regex.h>
 #include <bitset>
 #include <list>
+#include <map>
+#include <array>
 
 #include <lsplt.hpp>
 
 #include <fcntl.h>
 #include <sys/prctl.h>
 #include <sys/stat.h>
+#include <sys/mman.h>
 #include <unistd.h>
 
 #include "dl.h"
 #include "daemon.h"
 #include "zygisk.hpp"
-#include "memory.hpp"
 #include "module.hpp"
 #include "files.hpp"
+#include "misc.hpp"
+
+#include "art_method.hpp"
 
 using namespace std;
-using jni_hook::hash_map;
-using jni_hook::tree_map;
-using xstring = jni_hook::string;
 
 static void hook_unloader();
 static void unhook_functions();
-static void restore_jni_env(JNIEnv *env);
 
 namespace {
 
@@ -88,11 +89,6 @@ struct HookContext {
     HookContext(JNIEnv *env, void *args) :
     env(env), args{args}, process(nullptr), pid(-1), info_flags(0),
     hook_info_lock(PTHREAD_MUTEX_INITIALIZER) {
-        static bool restored_env = false;
-        if (!restored_env) {
-            restore_jni_env(env);
-            restored_env = true;
-        }
         g_ctx = this;
     }
     ~HookContext();
@@ -123,97 +119,11 @@ struct HookContext {
 // Global variables
 vector<tuple<dev_t, ino_t, const char *, void **>> *plt_hook_list;
 map<string, vector<JNINativeMethod>, StringCmp> *jni_hook_list;
-hash_map<xstring, tree_map<xstring, tree_map<xstring, void *>>> *jni_method_map;
 bool should_unmap_zygisk = false;
-
-const JNINativeInterface *old_functions = nullptr;
-JNINativeInterface *new_functions = nullptr;
 
 } // namespace
 
-#define HOOK_JNI(method)                                                                     \
-if (methods[i].name == #method##sv) {                                                        \
-    int j = 0;                                                                               \
-    for (; j < method##_methods_num; ++j) {                                                  \
-        if (strcmp(methods[i].signature, method##_methods[j].signature) == 0) {              \
-            jni_hook_list->try_emplace(className).first->second.push_back(methods[i]);       \
-            method##_orig = methods[i].fnPtr;                                                \
-            newMethods[i] = method##_methods[j];                                             \
-            LOGI("replaced %s#" #method "\n", className);                                    \
-            --hook_cnt;                                                                      \
-            break;                                                                           \
-        }                                                                                    \
-    }                                                                                        \
-    if (j == method##_methods_num) {                                                         \
-        LOGE("unknown signature of %s#" #method ": %s\n", className, methods[i].signature);  \
-    }                                                                                        \
-    continue;                                                                                \
-}
-
-// JNI method hook definitions, auto generated
-#include "jni_hooks.hpp"
-
-#undef HOOK_JNI
-
 namespace {
-
-string get_class_name(JNIEnv *env, jclass clazz) {
-    static auto class_getName = env->GetMethodID(env->FindClass("java/lang/Class"), "getName", "()Ljava/lang/String;");
-    auto nameRef = (jstring) env->CallObjectMethod(clazz, class_getName);
-    const char *name = env->GetStringUTFChars(nameRef, nullptr);
-    string className(name);
-    env->ReleaseStringUTFChars(nameRef, name);
-    std::replace(className.begin(), className.end(), '.', '/');
-    return className;
-}
-
-jint env_RegisterNatives(
-        JNIEnv *env, jclass clazz, const JNINativeMethod *methods, jint numMethods) {
-    auto className = get_class_name(env, clazz);
-    LOGV("JNIEnv->RegisterNatives [%s]\n", className.data());
-    auto newMethods = hookAndSaveJNIMethods(className.data(), methods, numMethods);
-    return old_functions->RegisterNatives(env, clazz, newMethods.get() ?: methods, numMethods);
-}
-
-void replace_jni_methods() {
-    auto get_created_java_vms = reinterpret_cast<jint (*)(JavaVM **, jsize, jsize *)>(
-            dlsym(RTLD_DEFAULT, "JNI_GetCreatedJavaVMs"));
-    if (!get_created_java_vms) {
-        for (auto &map: lsplt::MapInfo::Scan()) {
-            if (!map.path.ends_with("/libnativehelper.so")) continue;
-            void *h = dlopen(map.path.data(), RTLD_LAZY);
-            if (!h) {
-                LOGW("cannot dlopen libnativehelper.so: %s\n", dlerror());
-                break;
-            }
-            get_created_java_vms = reinterpret_cast<decltype(get_created_java_vms)>(dlsym(h, "JNI_GetCreatedJavaVMs"));
-            dlclose(h);
-            break;
-        }
-        if (!get_created_java_vms) {
-            LOGW("JNI_GetCreatedJavaVMs not found\n");
-            return;
-        }
-    }
-    JavaVM *vm = nullptr;
-    jsize num = 0;
-    jint res = get_created_java_vms(&vm, 1, &num);
-    if (res != JNI_OK || vm == nullptr) return;
-    JNIEnv *env = nullptr;
-    res = vm->GetEnv(reinterpret_cast<void **>(&env), JNI_VERSION_1_6);
-    if (res != JNI_OK || env == nullptr) return;
-    default_new(new_functions);
-    memcpy(new_functions, env->functions, sizeof(*new_functions));
-    new_functions->RegisterNatives = &env_RegisterNatives;
-
-    // Replace the function table in JNIEnv to hook RegisterNatives
-    old_functions = env->functions;
-    env->functions = new_functions;
-
-    // Re-run register_com_android_internal_os_Zygote to hook JNI methods
-    auto register_zygote = dlsym(RTLD_DEFAULT, "_ZN7android39register_com_android_internal_os_ZygoteEP7_JNIEnv");
-    reinterpret_cast<void (*)(JNIEnv *)>(register_zygote)(env);
-}
 
 #define DCL_HOOK_FUNC(ret, func, ...) \
 ret (*old_##func)(__VA_ARGS__);       \
@@ -284,51 +194,116 @@ DCL_HOOK_FUNC(int, pthread_attr_destroy, void *target) {
     return res;
 }
 
-    DCL_HOOK_FUNC(char *, strdup, const char *s) {
-        if (s == "com.android.internal.os.ZygoteInit"sv) {
-            LOGD("strdup %s\n", s);
-            replace_jni_methods();
-        }
-        return old_strdup(s);
+void initialize_jni_hook();
+
+DCL_HOOK_FUNC(char *, strdup, const char *s) {
+    if (s == "com.android.internal.os.ZygoteInit"sv) {
+        LOGD("strdup %s\n", s);
+        initialize_jni_hook();
     }
+    return old_strdup(s);
+}
 
 #undef DCL_HOOK_FUNC
 
 // -----------------------------------------------------------------
 
+static bool can_hook_jni = false;
+static jint MODIFIER_NATIVE = 0;
+static jmethodID member_getModifiers = nullptr;
+
 void hookJniNativeMethods(JNIEnv *env, const char *clz, JNINativeMethod *methods, int numMethods) {
-    auto class_map = jni_method_map->find(clz);
-    if (class_map == jni_method_map->end()) {
-        for (int i = 0; i < numMethods; ++i) {
+    if (!can_hook_jni) return;
+    auto clazz = env->FindClass(clz);
+    if (clazz == nullptr) {
+        env->ExceptionClear();
+        for (int i = 0; i < numMethods; i++) {
             methods[i].fnPtr = nullptr;
         }
         return;
     }
 
     vector<JNINativeMethod> hooks;
-    for (int i = 0; i < numMethods; ++i) {
-        auto method_map = class_map->second.find(methods[i].name);
-        if (method_map != class_map->second.end()) {
-            auto it = method_map->second.find(methods[i].signature);
-            if (it != method_map->second.end()) {
-                // Copy the JNINativeMethod
-                hooks.push_back(methods[i]);
-                // Save the original function pointer
-                methods[i].fnPtr = it->second;
-                // Do not allow double hook, remove method from map
-                method_map->second.erase(it);
-                continue;
-            }
+    for (int i = 0; i < numMethods; i++) {
+        auto &nm = methods[i];
+        auto mid = env->GetMethodID(clazz, nm.name, nm.signature);
+        bool is_static = false;
+        if (mid == nullptr) {
+            env->ExceptionClear();
+            mid = env->GetStaticMethodID(clazz, nm.name, nm.signature);
+            is_static = true;
         }
-        // No matching method found, set fnPtr to null
-        methods[i].fnPtr = nullptr;
+        if (mid == nullptr) {
+            env->ExceptionClear();
+            nm.fnPtr = nullptr;
+            continue;
+        }
+        auto method = lsplant::JNI_ToReflectedMethod(env, clazz, mid, is_static);
+        auto modifier = lsplant::JNI_CallIntMethod(env, method, member_getModifiers);
+        if ((modifier & MODIFIER_NATIVE) == 0) {
+            nm.fnPtr = nullptr;
+            continue;
+        }
+        auto artMethod = lsplant::art::ArtMethod::FromReflectedMethod(env, method);
+        hooks.push_back(nm);
+        auto orig = artMethod->GetData();
+        LOGD("replaced %s %s orig %p", clz, nm.name, orig);
+        nm.fnPtr = orig;
     }
 
-    if (hooks.empty())
-        return;
-
-    old_functions->RegisterNatives(env, env->FindClass(clz), hooks.data(), static_cast<int>(hooks.size()));
+    if (hooks.empty()) return;
+    env->RegisterNatives(clazz, hooks.data(), hooks.size());
 }
+
+// JNI method hook definitions, auto generated
+#include "jni_hooks.hpp"
+
+void initialize_jni_hook() {
+    auto get_created_java_vms = reinterpret_cast<jint (*)(JavaVM **, jsize, jsize *)>(
+            dlsym(RTLD_DEFAULT, "JNI_GetCreatedJavaVMs"));
+    if (!get_created_java_vms) {
+        for (auto &map: lsplt::MapInfo::Scan()) {
+            if (!map.path.ends_with("/libnativehelper.so")) continue;
+            void *h = dlopen(map.path.data(), RTLD_LAZY);
+            if (!h) {
+                LOGW("cannot dlopen libnativehelper.so: %s\n", dlerror());
+                break;
+            }
+            get_created_java_vms = reinterpret_cast<decltype(get_created_java_vms)>(dlsym(h, "JNI_GetCreatedJavaVMs"));
+            dlclose(h);
+            break;
+        }
+        if (!get_created_java_vms) {
+            LOGW("JNI_GetCreatedJavaVMs not found\n");
+            return;
+        }
+    }
+    JavaVM *vm = nullptr;
+    jsize num = 0;
+    jint res = get_created_java_vms(&vm, 1, &num);
+    if (res != JNI_OK || vm == nullptr) return;
+    JNIEnv *env = nullptr;
+    res = vm->GetEnv(reinterpret_cast<void **>(&env), JNI_VERSION_1_6);
+    if (res != JNI_OK || env == nullptr) return;
+
+    auto classMember = lsplant::JNI_FindClass(env, "java/lang/reflect/Member");
+    if (classMember != nullptr) member_getModifiers = lsplant::JNI_GetMethodID(env, classMember, "getModifiers", "()I");
+    auto classModifier = lsplant::JNI_FindClass(env, "java/lang/reflect/Modifier");
+    if (classModifier != nullptr) {
+        auto fieldId = lsplant::JNI_GetStaticFieldID(env, classModifier, "NATIVE", "I");
+        if (fieldId != nullptr) MODIFIER_NATIVE = lsplant::JNI_GetStaticIntField(env, classModifier, fieldId);
+    }
+    if (member_getModifiers == nullptr || MODIFIER_NATIVE == 0) return;
+    if (!lsplant::art::ArtMethod::Init(env)) {
+        LOGE("failed to init ArtMethod");
+        return;
+    }
+
+    can_hook_jni = true;
+    do_hook_zygote(env);
+}
+
+// -----------------------------------------------------------------
 
 ZygiskModule::ZygiskModule(int id, void *handle, void *entry)
 : id(id), handle(handle), entry{entry}, api{}, mod{nullptr} {
@@ -724,12 +699,6 @@ HookContext::~HookContext() {
 
 } // namespace
 
-static void restore_jni_env(JNIEnv *env) {
-    env->functions = old_functions;
-    delete new_functions;
-    new_functions = nullptr;
-}
-
 static bool hook_commit() {
     if (lsplt::CommitHook()) {
         return true;
@@ -756,7 +725,6 @@ static void hook_register(dev_t dev, ino_t inode, const char *symbol, void *new_
 void hook_functions() {
     default_new(plt_hook_list);
     default_new(jni_hook_list);
-    default_new(jni_method_map);
 
     ino_t android_runtime_inode = 0;
     dev_t android_runtime_dev = 0;
@@ -779,6 +747,8 @@ void hook_functions() {
             std::remove_if(plt_hook_list->begin(), plt_hook_list->end(),
                            [](auto &t) { return *std::get<3>(t) == nullptr;}),
             plt_hook_list->end());
+
+    initialize_jni_hook();
 }
 
 static void hook_unloader() {
