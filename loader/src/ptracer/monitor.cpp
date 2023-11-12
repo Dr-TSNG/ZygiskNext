@@ -234,12 +234,17 @@ public:
                         LOGI("stop tracing init");
                         continue;
                     }
-                    // suppress
-                    // TODO: inject signal
                     if (WIFSTOPPED(status)) {
                         if (WPTEVENT(status) == 0) {
-                            LOGW("suppressed signal sent to init: %s %d",
-                                 sigabbrev_np(WSTOPSIG(status)), WSTOPSIG(status));
+                            if (WSTOPSIG(status) != SIGSTOP && WSTOPSIG(status) != SIGTSTP && WSTOPSIG(status) != SIGTTIN && WSTOPSIG(status) != SIGTTOU) {
+                                LOGW("inject signal sent to init: %s %d",
+                                     sigabbrev_np(WSTOPSIG(status)), WSTOPSIG(status));
+                                ptrace(PTRACE_CONT, pid, 0, WSTOPSIG(status));
+                            } else {
+                                LOGW("suppress stopping signal sent to init: %s %d",
+                                     sigabbrev_np(WSTOPSIG(status)), WSTOPSIG(status));
+                            }
+                            continue;
                         }
                         ptrace(PTRACE_CONT, pid, 0, 0);
                     }
