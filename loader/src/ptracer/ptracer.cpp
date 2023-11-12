@@ -74,7 +74,7 @@ bool inject_on_main(int pid, const char *lib_path) {
     }
     if (WIFSTOPPED(status) && WSTOPSIG(status) == SIGSEGV) {
         if (!get_regs(pid, regs)) return false;
-        if (regs.REG_IP != break_addr) {
+        if ((regs.REG_IP & ~1) != (break_addr & ~1)) {
             LOGE("stopped at unknown addr %p", (void *) regs.REG_IP);
             return false;
         }

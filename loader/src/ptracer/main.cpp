@@ -18,7 +18,11 @@ int main(int argc, char **argv) {
         return 0;
     } else if (argc >= 3 && argv[1] == "trace"sv) {
         auto pid = strtol(argv[2], 0, 0);
-        return !trace_zygote(pid);
+        if (!trace_zygote(pid)) {
+            kill(pid, SIGKILL);
+            return 1;
+        }
+        return 0;
     } else if (argc >= 3 && argv[1] == "ctl"sv) {
         if (argv[2] == "start"sv) {
             send_control_command(START);
