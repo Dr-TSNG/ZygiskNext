@@ -20,8 +20,17 @@ int main(int argc, char **argv) {
         auto pid = strtol(argv[2], 0, 0);
         return !trace_zygote(pid);
     } else if (argc >= 3 && argv[1] == "ctl"sv) {
-        // TODO
-        return 1;
+        if (argv[2] == "start"sv) {
+            send_control_command(START);
+        } else if (argv[2] == "stop"sv) {
+            send_control_command(STOP);
+        } else if (argv[2] == "exit"sv) {
+            send_control_command(EXIT);
+        } else {
+            printf("Usage: %s ctl start|stop|exit\n", argv[0]);
+            return 1;
+        }
+        return 0;
     } else {
         LOGE("usage: %s monitor | trace <pid> | ctl <command>", argv[0]);
         return 1;

@@ -23,11 +23,6 @@ using namespace std::string_view_literals;
 
 #define STOPPED_WITH(sig, event) WIFSTOPPED(status) && (status >> 8 == ((sig) | (event << 8)))
 
-enum Command {
-    START = 1,
-    STOP,
-    EXIT
-};
 
 enum TracingState {
     TRACING = 1,
@@ -105,7 +100,6 @@ public:
 };
 
 static TracingState tracing_state = TRACING;
-static bool exit_requested = false;
 
 struct SocketHandler : public EventHandler {
     int sock_fd_;
@@ -149,7 +143,6 @@ struct SocketHandler : public EventHandler {
             }
             switch (cmd) {
                 case START:
-                    if (exit_requested) break;
                     if (tracing_state == STOPPING) {
                         tracing_state = TRACING;
                     } else if (tracing_state == STOPPED) {
@@ -159,7 +152,6 @@ struct SocketHandler : public EventHandler {
                     }
                     break;
                 case STOP:
-                    if (exit_requested) break;
                     if (tracing_state == TRACING) {
                         LOGI("stop tracing requested");
                         tracing_state = STOPPING;
@@ -168,12 +160,7 @@ struct SocketHandler : public EventHandler {
                     break;
                 case EXIT:
                     LOGI("prepare for exit ...");
-                    exit_requested = true;
-                    if (tracing_state == TRACING) {
-                        LOGI("stop tracing requested");
-                        tracing_state = STOPPING;
-                        ptrace(PTRACE_INTERRUPT, 1, 0, 0);
-                    }
+                    loop.Stop();
                     break;
             }
         }
@@ -232,7 +219,7 @@ public:
             while ((pid = waitpid(-1, &status, __WALL | WNOHANG)) != 0) {
                 if (pid == -1) {
                     if (tracing_state == STOPPED && errno == ECHILD) break;
-                    err(EXIT_FAILURE, "waitpid");
+                    PLOGE("waitpid");
                 }
                 if (pid == 1) {
                     if (STOPPED_WITH(SIGTRAP, PTRACE_EVENT_FORK)) {
@@ -346,4 +333,5 @@ void send_control_command(Command cmd) {
         printf("send %ld != %ld\n", nsend, sizeof(cmd));
         exit(1);
     }
+    printf("command sent\n");
 }
