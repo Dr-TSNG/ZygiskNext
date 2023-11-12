@@ -2,7 +2,6 @@ mod constants;
 mod dl;
 mod root_impl;
 mod utils;
-mod watchdog;
 mod zygiskd;
 
 use std::future::Future;
@@ -25,9 +24,8 @@ fn start(name: &str) -> Result<()> {
     utils::switch_mount_namespace(1)?;
     root_impl::setup();
     match name.trim_start_matches("zygisk-") {
-        "wd" => async_start(watchdog::main())?,
         lp_select!("cp32", "cp64") => zygiskd::main()?,
-        _ => println!("Available commands: wd, fuse, cp, ptrace"),
+        _ => println!("Available command: cp[32|64]"),
     }
     Ok(())
 }

@@ -6,9 +6,9 @@
 #include "daemon.h"
 
 #ifdef __LP64__
-#define LOG_TAG "zygisk-ptracer64"
+#define LOG_TAG "zygisk-ptrace64"
 #else
-#define LOG_TAG "zygisk-ptracer32"
+#define LOG_TAG "zygisk-ptrace32"
 #endif
 #include "logging.h"
 
@@ -91,6 +91,8 @@ int wait_pid(int pid, int* status, int flags);
 
 std::string parse_status(int status);
 
+#define WPTEVENT(x) (x >> 16)
+
 #define CASE_CONST_RETURN(x) case x: return #x;
 
 inline const char* parse_ptrace_event(int status) {
@@ -114,5 +116,5 @@ inline const char* sigabbrev_np(int sig) {
     return "(unknown)";
 }
 
-std::map<ino_t, std::string> ScanUnixSockets();
+std::string get_program(int pid);
 

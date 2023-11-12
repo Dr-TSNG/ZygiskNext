@@ -20,6 +20,7 @@
 #include <sstream>
 #include <ios>
 #include <cstring>
+#include <sys/stat.h>
 
 #include "utils.hpp"
 #include "logging.h"
@@ -56,37 +57,6 @@ std::vector<MapInfo> MapInfo::Scan(const std::string& pid) {
             if (perm[0] == 'r') ref.perms |= PROT_READ;
             if (perm[1] == 'w') ref.perms |= PROT_WRITE;
             if (perm[2] == 'x') ref.perms |= PROT_EXEC;
-        }
-        free(line);
-    }
-    return info;
-}
-
-// https://cs.android.com/android/platform/superproject/main/+/main:external/toybox/toys/net/netstat.c;l=200;drc=657f94698c7fc7d4f9838cbcf3b4b78e38939d5c
-std::map<ino_t, std::string> ScanUnixSockets() {
-    constexpr static auto kSocketEntry = 1;
-    LOGD("scanning unix sockets");
-    std::map<ino_t, std::string> info;
-    auto sockets = std::unique_ptr<FILE, decltype(&fclose)>{fopen("/proc/net/unix", "r"), &fclose};
-    char *line = nullptr;
-    size_t len = 0;
-    // skip header
-    getline(&line, &len, sockets.get());
-    if (sockets) {
-        ssize_t read;
-        while ((read = getline(&line, &len, sockets.get())) > 0) {
-            line[read - 1] = '\0';
-            ino_t ino;
-            char *path = nullptr;
-            // Num RefCount Protocol Flags    Type St Inode Path
-            if (sscanf(line, "%*p: %*lx %*lx %*lx %*lx %*lx %lu%m[^\n]", &ino, &path) < kSocketEntry) {
-                continue;
-            }
-            if (path != nullptr) {
-                LOGD("%ld -> %s", ino, path + 1);
-                info.emplace(ino, path + 1);
-                free(path);
-            }
         }
         free(line);
     }
@@ -342,7 +312,7 @@ uintptr_t remote_call(int pid, struct user_regs_struct &regs, uintptr_t func_add
         }
         return regs.REG_RET;
     } else {
-        LOGE("stopped by other reason %d", status);
+        LOGE("stopped by other reason %s", parse_status(status).c_str());
     }
     return 0;
 }
@@ -375,19 +345,33 @@ int wait_pid(int pid, int* status, int flags) {
 
 std::string parse_status(int status) {
     std::ostringstream os;
-    os << "status " << std::hex << status;
-    os << std::dec << " ";
+    os << "0x" << std::hex << status << std::dec << " ";
     if (WIFEXITED(status)) {
         os << "exited with " << WEXITSTATUS(status);
     } else if (WIFSIGNALED(status)) {
         os << "signaled with " << sigabbrev_np(WTERMSIG(status)) << "(" << WTERMSIG(status) << ")";
     } else if (WIFSTOPPED(status)) {
-        os << "stopped by";
+        os << "stopped by ";
         auto stop_sig = WSTOPSIG(status);
-        os << "signal " << sigabbrev_np(stop_sig) << "(" << stop_sig << "),";
+        os << "signal=" << sigabbrev_np(stop_sig) << "(" << stop_sig << "),";
         os << "event=" << parse_ptrace_event(status);
     } else {
         os << "unknown";
     }
     return os.str();
+}
+
+std::string get_program(int pid) {
+    std::string path = "/proc/";
+    path += std::to_string(pid);
+    path += "/exe";
+    constexpr const auto SIZE = 256;
+    char buf[SIZE + 1];
+    auto sz = readlink(path.c_str(), buf, SIZE);
+    if (sz == -1) {
+        PLOGE("readlink /proc/%d/exe", pid);
+        return "";
+    }
+    buf[sz] = 0;
+    return buf;
 }

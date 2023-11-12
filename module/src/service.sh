@@ -6,6 +6,7 @@ MODDIR=${0%/*}
 if [ "$ZYGISK_ENABLED" ]; then
   exit 0
 fi
+
 # temporary fix for AVD 30
 if [ -f /dev/zygisk/wd ]; then
   log -p i -t "zygisk-sh" "prevent from instance duplicated"
@@ -14,13 +15,6 @@ fi
 touch /dev/zygisk/wd
 
 cd "$MODDIR"
-
-# temporary fix AVD 11 magisk
-# if [ -f /dev/zygisk_service ];then
-#  log -p i -t "zygisk-sh" "service called twice";
-#   exit;
-# fi
-# touch /dev/zygisk_service
 
 if [ "$(which magisk)" ]; then
   for file in ../*; do
@@ -36,4 +30,5 @@ if [ "$(which magisk)" ]; then
 fi
 
 [ "$DEBUG" = true ] && export RUST_BACKTRACE=1
-unshare -m sh -c "bin/zygisk-wd &"
+unshare -m sh -c "bin/zygisk-cp64 &"
+unshare -m sh -c "bin/zygisk-cp32 &"

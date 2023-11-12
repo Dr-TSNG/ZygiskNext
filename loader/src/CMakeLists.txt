@@ -14,8 +14,8 @@ target_include_directories(zygisk PRIVATE include)
 target_link_libraries(zygisk cxx::cxx log common lsplt_static phmap)
 
 aux_source_directory(ptracer PTRACER_SRC_LIST)
-add_executable(libptracer.so ${PTRACER_SRC_LIST})
-target_include_directories(libptracer.so PRIVATE include)
-target_link_libraries(libptracer.so cxx::cxx log common)
+add_executable(libzygisk_ptrace.so ${PTRACER_SRC_LIST})
+target_include_directories(libzygisk_ptrace.so PRIVATE include)
+target_link_libraries(libzygisk_ptrace.so cxx::cxx log common)
 
 add_subdirectory(external)

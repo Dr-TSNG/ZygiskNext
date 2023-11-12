@@ -747,8 +747,6 @@ void hook_functions() {
             std::remove_if(plt_hook_list->begin(), plt_hook_list->end(),
                            [](auto &t) { return *std::get<3>(t) == nullptr;}),
             plt_hook_list->end());
-
-    initialize_jni_hook();
 }
 
 static void hook_unloader() {

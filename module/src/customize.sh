@@ -114,18 +114,17 @@ if [ "$ARCH" = "x86" ] || [ "$ARCH" = "x64" ]; then
     mv "$MODPATH/bin/zygiskd" "$MODPATH/bin/zygiskd32"
     extract "$ZIPFILE" 'lib/x86/libzygisk.so' "$MODPATH/lib" true
     ln -sf "zygiskd32" "$MODPATH/bin/zygisk-cp32"
-    extract "$ZIPFILE" 'lib/x86/libptracer.so' "$MODPATH/bin" true
-    mv "$MODPATH/bin/libptracer.so" "$MODPATH/bin/zygisk-ptracer32"
+    extract "$ZIPFILE" 'lib/x86/libzygisk_ptrace.so' "$MODPATH/bin" true
+    mv "$MODPATH/bin/libzygisk_ptrace.so" "$MODPATH/bin/zygisk-ptrace32"
   fi
 
   ui_print "- Extracting x64 libraries"
   extract "$ZIPFILE" 'bin/x86_64/zygiskd' "$MODPATH/bin" true
   mv "$MODPATH/bin/zygiskd" "$MODPATH/bin/zygiskd64"
   extract "$ZIPFILE" 'lib/x86_64/libzygisk.so' "$MODPATH/lib64" true
-  ln -sf "zygiskd64" "$MODPATH/bin/zygisk-wd"
   ln -sf "zygiskd64" "$MODPATH/bin/zygisk-cp64"
-  extract "$ZIPFILE" 'lib/x86_64/libptracer.so' "$MODPATH/bin" true
-  mv "$MODPATH/bin/libptracer.so" "$MODPATH/bin/zygisk-ptracer64"
+  extract "$ZIPFILE" 'lib/x86_64/libzygisk_ptrace.so' "$MODPATH/bin" true
+  mv "$MODPATH/bin/libzygisk_ptrace.so" "$MODPATH/bin/zygisk-ptrace64"
 else
   if [ "$HAS32BIT" = true ]; then
     ui_print "- Extracting arm libraries"
@@ -133,18 +132,17 @@ else
     mv "$MODPATH/bin/zygiskd" "$MODPATH/bin/zygiskd32"
     extract "$ZIPFILE" 'lib/armeabi-v7a/libzygisk.so' "$MODPATH/lib" true
     ln -sf "zygiskd32" "$MODPATH/bin/zygisk-cp32"
-    extract "$ZIPFILE" 'lib/armeabi-v7a/libptracer.so' "$MODPATH/bin" true
-    mv "$MODPATH/bin/libptracer.so" "$MODPATH/bin/zygisk-ptracer32"
+    extract "$ZIPFILE" 'lib/armeabi-v7a/libzygisk_ptrace.so' "$MODPATH/bin" true
+    mv "$MODPATH/bin/libzygisk_ptrace.so" "$MODPATH/bin/zygisk-ptrace32"
   fi
 
   ui_print "- Extracting arm64 libraries"
   extract "$ZIPFILE" 'bin/arm64-v8a/zygiskd' "$MODPATH/bin" true
   mv "$MODPATH/bin/zygiskd" "$MODPATH/bin/zygiskd64"
   extract "$ZIPFILE" 'lib/arm64-v8a/libzygisk.so' "$MODPATH/lib64" true
-  ln -sf "zygiskd64" "$MODPATH/bin/zygisk-wd"
   ln -sf "zygiskd64" "$MODPATH/bin/zygisk-cp64"
-  extract "$ZIPFILE" 'lib/arm64-v8a/libptracer.so' "$MODPATH/bin" true
-  mv "$MODPATH/bin/libptracer.so" "$MODPATH/bin/zygisk-ptracer64"
+  extract "$ZIPFILE" 'lib/arm64-v8a/libzygisk_ptrace.so' "$MODPATH/bin" true
+  mv "$MODPATH/bin/libzygisk_ptrace.so" "$MODPATH/bin/zygisk-ptrace64"
 fi
 
 ui_print "- Setting permissions"

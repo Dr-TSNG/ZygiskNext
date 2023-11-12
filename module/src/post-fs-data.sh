@@ -32,15 +32,12 @@ if [ -f $MODDIR/lib64/libzygisk.so ];then
   create_sys_perm /dev/zygisk/lib64
   cp $MODDIR/lib64/libzygisk.so /dev/zygisk/lib64/libzygisk.so
   chcon u:object_r:system_lib_file:s0 /dev/zygisk/lib64/libzygisk.so
-  setprop ctl.sigstop_on zygote
-  unshare -m sh -c "./bin/zygisk-ptracer64 prop_monitor &"
 fi
 
 if [ -f $MODDIR/lib/libzygisk.so ];then
   create_sys_perm /dev/zygisk/lib
   cp $MODDIR/lib/libzygisk.so /dev/zygisk/lib/libzygisk.so
   chcon u:object_r:system_lib_file:s0 /dev/zygisk/lib/libzygisk.so
-  setprop ctl.sigstop_on zygote_secondary
-  unshare -m sh -c "./bin/zygisk-ptracer32 prop_monitor &"
 fi
 
+unshare -m sh -c "./bin/zygisk-ptrace64 monitor &"
