@@ -12,6 +12,7 @@
 #include <sys/un.h>
 #include <sys/epoll.h>
 #include <sys/wait.h>
+#include <time.h>
 
 #include "main.hpp"
 #include "utils.hpp"
@@ -171,6 +172,34 @@ struct SocketHandler : public EventHandler {
     }
 };
 
+struct timespec last_zygote64{.tv_sec = 0, .tv_nsec = 0};
+int count_zygote64 = 0;
+bool should_stop_inject64() {
+    struct timespec now{};
+    clock_gettime(CLOCK_MONOTONIC, &now);
+    if (now.tv_sec - last_zygote64.tv_sec < 30) {
+        count_zygote64++;
+    } else {
+        count_zygote64 = 0;
+    }
+    last_zygote64 = now;
+    return count_zygote64 >= 5;
+}
+
+struct timespec last_zygote32{.tv_sec = 0, .tv_nsec = 0};
+int count_zygote32 = 0;
+bool should_stop_inject32() {
+    struct timespec now{};
+    clock_gettime(CLOCK_MONOTONIC, &now);
+    if (now.tv_sec - last_zygote32.tv_sec < 30) {
+        count_zygote32++;
+    } else {
+        count_zygote32 = 0;
+    }
+    last_zygote32 = now;
+    return count_zygote32 >= 5;
+}
+
 struct PtraceHandler : public EventHandler {
 private:
     int signal_fd_;
@@ -262,32 +291,52 @@ public:
                         auto program = get_program(pid);
                         LOGD("%d program %s", pid, program.c_str());
                         const char* tracer = nullptr;
-                        if (program == "/system/bin/app_process64") {
-                            tracer = "./bin/zygisk-ptrace64";
-                        } else if (program == "/system/bin/app_process32") {
-                            tracer = "./bin/zygisk-ptrace32";
-                        }
-                        if (tracer != nullptr) {
-                            LOGD("stopping %d", pid);
-                            kill(pid, SIGSTOP);
-                            ptrace(PTRACE_CONT, pid, 0, 0);
-                            wait_pid(pid, &status, __WALL);
-                            if (STOPPED_WITH(SIGSTOP, 0)) {
-                                LOGD("detaching %d", pid);
-                                ptrace(PTRACE_DETACH, pid, 0, SIGSTOP);
-                                status = 0;
-                                auto p = fork_dont_care();
-                                if (p == 0) {
-                                    execl(tracer, basename(tracer), "trace", std::to_string(pid).c_str(), nullptr);
-                                    PLOGE("failed to exec, kill");
-                                    kill(pid, SIGKILL);
-                                    exit(1);
-                                } else if (p == -1) {
-                                    PLOGE("failed to fork, kill");
-                                    kill(pid, SIGKILL);
+                        do {
+                            if (tracing_state != TRACING) {
+                                LOGW("stop injecting %d because not tracing", pid);
+                                break;
+                            }
+                            if (program == "/system/bin/app_process64") {
+                                tracer = "./bin/zygisk-ptrace64";
+                                if (should_stop_inject64()) {
+                                    LOGW("zygote64 restart too much times, stop injecting");
+                                    tracing_state = STOPPING;
+                                    ptrace(PTRACE_INTERRUPT, 1, 0, 0);
+                                    break;
+                                }
+                            } else if (program == "/system/bin/app_process32") {
+                                tracer = "./bin/zygisk-ptrace32";
+                                if (should_stop_inject32()) {
+                                    LOGW("zygote32 restart too much times, stop injecting");
+                                    tracing_state = STOPPING;
+                                    ptrace(PTRACE_INTERRUPT, 1, 0, 0);
+                                    break;
                                 }
                             }
-                        }
+                            if (tracer != nullptr) {
+                                LOGD("stopping %d", pid);
+                                kill(pid, SIGSTOP);
+                                ptrace(PTRACE_CONT, pid, 0, 0);
+                                wait_pid(pid, &status, __WALL);
+                                if (STOPPED_WITH(SIGSTOP, 0)) {
+                                    LOGD("detaching %d", pid);
+                                    ptrace(PTRACE_DETACH, pid, 0, SIGSTOP);
+                                    status = 0;
+                                    auto p = fork_dont_care();
+                                    if (p == 0) {
+                                        execl(tracer, basename(tracer), "trace",
+                                              std::to_string(pid).c_str(), nullptr);
+                                        PLOGE("failed to exec, kill");
+                                        kill(pid, SIGKILL);
+                                        exit(1);
+                                    } else if (p == -1) {
+                                        PLOGE("failed to fork, kill");
+                                        kill(pid, SIGKILL);
+                                    }
+                                }
+                            }
+                        } while (false);
+
                     } else {
                         LOGD("process %d received unknown status %s", pid,
                              parse_status(status).c_str());
