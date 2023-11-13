@@ -28,7 +28,3 @@ if [ "$(which magisk)" ]; then
     fi
   done
 fi
-
-[ "$DEBUG" = true ] && export RUST_BACKTRACE=1
-unshare -m sh -c "bin/zygisk-cp64 &"
-unshare -m sh -c "bin/zygisk-cp32 &"
