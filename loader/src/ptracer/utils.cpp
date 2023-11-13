@@ -347,15 +347,18 @@ void wait_for_trace(int pid, int* status, int flags) {
     while (true) {
         auto result = waitpid(pid, status, flags);
         if (result == -1) {
-            if (errno == EINTR) continue;
-        } else {
-            PLOGE("wait %d failed", pid);
-            exit(1);
+            if (errno == EINTR) {
+                continue;
+            } else {
+                PLOGE("wait %d failed", pid);
+                exit(1);
+            }
         }
         if (!WIFSTOPPED(*status)) {
             LOGE("process %d not stopped for trace: %s, exit", pid, parse_status(*status).c_str());
             exit(1);
         }
+        return;
     }
 }
 
