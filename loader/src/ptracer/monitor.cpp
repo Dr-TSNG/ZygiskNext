@@ -172,7 +172,7 @@ struct SocketHandler : public EventHandler {
     }
 };
 
-constexpr auto MAX_RETRY_COUNT = 2;
+constexpr auto MAX_RETRY_COUNT = 5;
 
 struct timespec last_zygote64{.tv_sec = 0, .tv_nsec = 0};
 int count_zygote64 = 0;
