@@ -19,3 +19,5 @@ allow zygote mnt_vendor_file dir search
 allow zygote system_file dir mounton
 allow zygote labeledfs filesystem mount
 allow zygote fs_type filesystem unmount
+# android 9-
+allow zygote zygote process execmem
