@@ -172,6 +172,8 @@ struct SocketHandler : public EventHandler {
     }
 };
 
+constexpr auto MAX_RETRY_COUNT = 2;
+
 struct timespec last_zygote64{.tv_sec = 0, .tv_nsec = 0};
 int count_zygote64 = 0;
 bool should_stop_inject64() {
@@ -183,7 +185,7 @@ bool should_stop_inject64() {
         count_zygote64 = 0;
     }
     last_zygote64 = now;
-    return count_zygote64 >= 5;
+    return count_zygote64 >= MAX_RETRY_COUNT;
 }
 
 struct timespec last_zygote32{.tv_sec = 0, .tv_nsec = 0};
@@ -197,7 +199,7 @@ bool should_stop_inject32() {
         count_zygote32 = 0;
     }
     last_zygote32 = now;
-    return count_zygote32 >= 5;
+    return count_zygote32 >= MAX_RETRY_COUNT;
 }
 
 struct PtraceHandler : public EventHandler {

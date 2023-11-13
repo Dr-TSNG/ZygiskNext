@@ -31,13 +31,13 @@ create_sys_perm /dev/zygisk
 if [ -f $MODDIR/lib64/libzygisk.so ];then
   create_sys_perm /dev/zygisk/lib64
   cp $MODDIR/lib64/libzygisk.so /dev/zygisk/lib64/libzygisk.so
-  chcon u:object_r:system_lib_file:s0 /dev/zygisk/lib64/libzygisk.so
+  chcon u:object_r:system_file:s0 /dev/zygisk/lib64/libzygisk.so
 fi
 
 if [ -f $MODDIR/lib/libzygisk.so ];then
   create_sys_perm /dev/zygisk/lib
   cp $MODDIR/lib/libzygisk.so /dev/zygisk/lib/libzygisk.so
-  chcon u:object_r:system_lib_file:s0 /dev/zygisk/lib/libzygisk.so
+  chcon u:object_r:system_file:s0 /dev/zygisk/lib/libzygisk.so
 fi
 
 unshare -m sh -c "./bin/zygisk-ptrace64 monitor &"

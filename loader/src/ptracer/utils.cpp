@@ -152,6 +152,16 @@ std::string get_addr_mem_region(std::vector<MapInfo> &info, void *addr) {
     return "<unknown>";
 }
 
+
+void *find_module_return_addr(std::vector<MapInfo> &info, std::string_view suffix) {
+    for (auto &map: info) {
+        if ((map.perms & PROT_EXEC) == 0 && map.path.ends_with(suffix)) {
+            return (void *) map.start;
+        }
+    }
+    return nullptr;
+}
+
 void *find_module_base(std::vector<MapInfo> &info, std::string_view suffix) {
     for (auto &map: info) {
         if (map.offset == 0 && map.path.ends_with(suffix)) {
@@ -301,18 +311,18 @@ uintptr_t remote_call(int pid, struct user_regs_struct &regs, uintptr_t func_add
     if (waitpid(pid, &status, __WALL) == -1) {
         PLOGE("wait");
     }
+    if (!get_regs(pid, regs)) {
+        LOGE("failed to get regs after call");
+        return 0;
+    }
     if (WIFSTOPPED(status) && WSTOPSIG(status) == SIGSEGV) {
-        if (!get_regs(pid, regs)) {
-            LOGE("failed to get regs after call");
-            return 0;
-        }
         if (regs.REG_IP != return_addr) {
             LOGE("wrong return addr %p", (void *) regs.REG_IP);
             return 0;
         }
         return regs.REG_RET;
     } else {
-        LOGE("stopped by other reason %s", parse_status(status).c_str());
+        LOGE("stopped by other reason %s at addr %p", parse_status(status).c_str(), (void*) regs.REG_IP);
     }
     return 0;
 }

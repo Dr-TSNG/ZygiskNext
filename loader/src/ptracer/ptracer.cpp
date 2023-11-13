@@ -88,7 +88,8 @@ bool inject_on_main(int pid, const char *lib_path) {
         memcpy(&backup, &regs, sizeof(regs));
         map = MapInfo::Scan(std::to_string(pid));
         auto local_map = MapInfo::Scan();
-        auto libc_base = find_module_base(map, "libc.so");
+        auto libc_return_addr = find_module_return_addr(map, "libc.so");
+        LOGD("libc return addr %p", libc_return_addr);
 
         // call dlopen
         auto dlopen_addr = find_func_addr(local_map, map, "libdl.so", "dlopen");
@@ -98,10 +99,34 @@ bool inject_on_main(int pid, const char *lib_path) {
         args.clear();
         args.push_back((long) str);
         args.push_back((long) RTLD_NOW);
-        auto remote_handle = remote_call(pid, regs, (uintptr_t) dlopen_addr, (uintptr_t) libc_base, args);
+        auto remote_handle = remote_call(pid, regs, (uintptr_t) dlopen_addr, (uintptr_t) libc_return_addr, args);
         LOGD("remote handle %p", (void *) remote_handle);
         if (remote_handle == 0) {
             LOGE("handle is null");
+            // call dlerror
+            auto dlerror_addr = find_func_addr(local_map, map, "libdl.so", "dlerror");
+            if (dlerror_addr == nullptr) {
+                LOGE("find dlerror");
+                return false;
+            }
+            args.clear();
+            auto dlerror_str_addr = remote_call(pid, regs, (uintptr_t) dlerror_addr, (uintptr_t) libc_return_addr, args);
+            LOGD("dlerror str %p", (void*) dlerror_str_addr);
+            if (dlerror_str_addr == 0) return false;
+            auto strlen_addr = find_func_addr(local_map, map, "libc.so", "strlen");
+            if (strlen_addr == nullptr) {
+                LOGE("find strlen");
+                return false;
+            }
+            args.clear();
+            args.push_back(dlerror_str_addr);
+            auto dlerror_len = remote_call(pid, regs, (uintptr_t) strlen_addr, (uintptr_t) libc_return_addr, args);
+            LOGD("dlerror len %ld", dlerror_len);
+            if (dlerror_len <= 0) return false;
+            std::string err;
+            err.resize(dlerror_len + 1, 0);
+            read_proc(pid, (uintptr_t*) dlerror_str_addr, err.data(), dlerror_len);
+            LOGE("dlerror info %s", err.c_str());
             return false;
         }
 
@@ -112,7 +137,7 @@ bool inject_on_main(int pid, const char *lib_path) {
         str = push_string(pid, regs, "entry");
         args.push_back(remote_handle);
         args.push_back((long) str);
-        auto injector_entry = remote_call(pid, regs, (uintptr_t) dlsym_addr, (uintptr_t) libc_base, args);
+        auto injector_entry = remote_call(pid, regs, (uintptr_t) dlsym_addr, (uintptr_t) libc_return_addr, args);
         LOGD("injector entry %p", (void*) injector_entry);
         if (injector_entry == 0) {
             LOGE("injector entry is null");
@@ -122,7 +147,7 @@ bool inject_on_main(int pid, const char *lib_path) {
         // call injector entry(handle)
         args.clear();
         args.push_back(remote_handle);
-        remote_call(pid, regs, injector_entry, (uintptr_t) libc_base, args);
+        remote_call(pid, regs, injector_entry, (uintptr_t) libc_return_addr, args);
 
         // reset pc to entry
         backup.REG_IP = (long) entry_addr;
