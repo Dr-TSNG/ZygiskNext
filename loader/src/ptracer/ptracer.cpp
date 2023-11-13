@@ -68,10 +68,7 @@ bool inject_on_main(int pid, const char *lib_path) {
     if (!write_proc(pid, (uintptr_t *) addr_of_entry_addr, &break_addr, sizeof(break_addr))) return false;
     ptrace(PTRACE_CONT, pid, 0, 0);
     int status;
-    if (waitpid(pid, &status, __WALL) == -1) {
-        PLOGE("wait");
-        return false;
-    }
+    wait_for_trace(pid, &status, __WALL);
     if (WIFSTOPPED(status) && WSTOPSIG(status) == SIGSEGV) {
         if (!get_regs(pid, regs)) return false;
         if ((regs.REG_IP & ~1) != (break_addr & ~1)) {
@@ -156,19 +153,6 @@ bool inject_on_main(int pid, const char *lib_path) {
         if (!set_regs(pid, backup)) return false;
 
         return true;
-
-        /*
-        ptrace(PTRACE_CONT, pid, 0, 0);
-        waitpid(pid, &status, __WALL);
-        if (WIFSTOPPED(status)) {
-            siginfo_t siginfo;
-            ptrace(PTRACE_GETSIGINFO, pid, 0, &siginfo);
-            LOGD("process stopped by signal %d %s si_code=%d si_addr=%p", WSTOPSIG(status),
-                 strsignal(WSTOPSIG(status)), siginfo.si_code, siginfo.si_addr);
-            pause();
-        } else {
-            LOGD("other reason %d", status);
-        }*/
     } else {
         LOGE("stopped by other reason: %s", parse_status(status).c_str());
     }
@@ -179,7 +163,7 @@ bool inject_on_main(int pid, const char *lib_path) {
 
 bool trace_zygote(int pid) {
     LOGI("start tracing %d", pid);
-#define WAIT_OR_DIE if (wait_pid(pid, &status, __WALL) != pid) return false;
+#define WAIT_OR_DIE wait_for_trace(pid, &status, __WALL);
 #define CONT_OR_DIE \
     if (ptrace(PTRACE_CONT, pid, 0, 0) == -1) { \
         PLOGE("cont"); \

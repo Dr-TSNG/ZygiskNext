@@ -308,14 +308,12 @@ uintptr_t remote_call(int pid, struct user_regs_struct &regs, uintptr_t func_add
     }
     ptrace(PTRACE_CONT, pid, 0, 0);
     int status;
-    if (waitpid(pid, &status, __WALL) == -1) {
-        PLOGE("wait");
-    }
+    wait_for_trace(pid, &status, __WALL);
     if (!get_regs(pid, regs)) {
         LOGE("failed to get regs after call");
         return 0;
     }
-    if (WIFSTOPPED(status) && WSTOPSIG(status) == SIGSEGV) {
+    if (WSTOPSIG(status) == SIGSEGV) {
         if (regs.REG_IP != return_addr) {
             LOGE("wrong return addr %p", (void *) regs.REG_IP);
             return 0;
@@ -345,11 +343,19 @@ int fork_dont_care() {
     return pid;
 }
 
-int wait_pid(int pid, int* status, int flags) {
+void wait_for_trace(int pid, int* status, int flags) {
     while (true) {
         auto result = waitpid(pid, status, flags);
-        if (result == -1 && errno == EINTR) continue;
-        return result;
+        if (result == -1) {
+            if (errno == EINTR) continue;
+        } else {
+            PLOGE("wait %d failed", pid);
+            exit(1);
+        }
+        if (!WIFSTOPPED(*status)) {
+            LOGE("process %d not stopped for trace: %s, exit", pid, parse_status(*status).c_str());
+            exit(1);
+        }
     }
 }
 

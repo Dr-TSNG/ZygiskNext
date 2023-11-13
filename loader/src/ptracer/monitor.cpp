@@ -319,7 +319,7 @@ public:
                                 LOGD("stopping %d", pid);
                                 kill(pid, SIGSTOP);
                                 ptrace(PTRACE_CONT, pid, 0, 0);
-                                wait_pid(pid, &status, __WALL);
+                                waitpid(pid, &status, __WALL);
                                 if (STOPPED_WITH(SIGSTOP, 0)) {
                                     LOGD("detaching %d", pid);
                                     ptrace(PTRACE_DETACH, pid, 0, SIGSTOP);

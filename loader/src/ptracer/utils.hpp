@@ -87,7 +87,7 @@ uintptr_t remote_call(int pid, struct user_regs_struct &regs, uintptr_t func_add
 
 int fork_dont_care();
 
-int wait_pid(int pid, int* status, int flags);
+void wait_for_trace(int pid, int* status, int flags);
 
 std::string parse_status(int status);
 
