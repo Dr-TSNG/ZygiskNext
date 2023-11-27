@@ -11,7 +11,7 @@
 # define LP_SELECT(lp32, lp64) lp32
 #endif
 
-constexpr auto kCPSocketPath = "/dev/zygisk/" LP_SELECT("cp32", "cp64") ".sock";
+constexpr auto kCPSocketName = "/" LP_SELECT("cp32", "cp64") ".sock";
 
 class UniqueFd {
     using Fd = int;
@@ -60,6 +60,8 @@ namespace zygiskd {
         GetModuleDir,
         ZygoteRestart,
     };
+
+    void Init(const char *path);
 
     bool PingHeartbeat();
 

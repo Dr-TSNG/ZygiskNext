@@ -7,6 +7,10 @@
 #include "socket_utils.h"
 
 namespace zygiskd {
+    static std::string zygisk_path;
+    void Init(const char *path) {
+        zygisk_path = path;
+    }
 
     int Connect(uint8_t retry) {
         int fd = socket(PF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, 0);
@@ -14,13 +18,14 @@ namespace zygiskd {
                 .sun_family = AF_UNIX,
                 .sun_path={0},
         };
-        strcpy(addr.sun_path, kCPSocketPath);
+        auto socket_path = zygisk_path + kCPSocketName;
+        strcpy(addr.sun_path, socket_path.c_str());
         socklen_t socklen = sizeof(addr);
 
         while (retry--) {
             int r = connect(fd, reinterpret_cast<struct sockaddr*>(&addr), socklen);
             if (r == 0) return fd;
-            LOGW("Retrying to connect to zygiskd, sleep 1s");
+            PLOGE("Retrying to connect to zygiskd, sleep 1s");
             sleep(1);
         }
 

@@ -150,6 +150,10 @@ set_perm_recursive "$MODPATH/bin" 0 0 0755 0755
 set_perm_recursive "$MODPATH/lib" 0 0 0755 0644 u:object_r:system_lib_file:s0
 set_perm_recursive "$MODPATH/lib64" 0 0 0755 0644 u:object_r:system_lib_file:s0
 
+ui_print "- Generating magic"
+MAGIC=$(tr -dc 'a-f0-9' </dev/urandom | head -c 18)
+echo -n "$MAGIC" > "$MODPATH/magic"
+
 # If Huawei's Maple is enabled, system_server is created with a special way which is out of Zygisk's control
 HUAWEI_MAPLE_ENABLED=$(grep_prop ro.maple.enable)
 if [ "$HUAWEI_MAPLE_ENABLED" == "1" ]; then

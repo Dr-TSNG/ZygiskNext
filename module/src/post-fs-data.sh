@@ -7,6 +7,9 @@ fi
 
 cd "$MODDIR"
 
+MAGIC_PATH=/dev/zygisk_$(cat ./magic)
+export MAGIC_PATH
+
 if [ "$(which magisk)" ]; then
   for file in ../*; do
     if [ -d "$file" ] && [ -d "$file/zygisk" ] && ! [ -f "$file/disable" ]; then
@@ -26,18 +29,18 @@ create_sys_perm() {
   chcon u:object_r:system_file:s0 $1
 }
 
-create_sys_perm /dev/zygisk
+create_sys_perm $MAGIC_PATH
 
 if [ -f $MODDIR/lib64/libzygisk.so ];then
-  create_sys_perm /dev/zygisk/lib64
-  cp $MODDIR/lib64/libzygisk.so /dev/zygisk/lib64/libzygisk.so
-  chcon u:object_r:system_file:s0 /dev/zygisk/lib64/libzygisk.so
+  create_sys_perm $MAGIC_PATH/lib64
+  cp $MODDIR/lib64/libzygisk.so $MAGIC_PATH/lib64/libzygisk.so
+  chcon u:object_r:system_file:s0 $MAGIC_PATH/lib64/libzygisk.so
 fi
 
 if [ -f $MODDIR/lib/libzygisk.so ];then
-  create_sys_perm /dev/zygisk/lib
-  cp $MODDIR/lib/libzygisk.so /dev/zygisk/lib/libzygisk.so
-  chcon u:object_r:system_file:s0 /dev/zygisk/lib/libzygisk.so
+  create_sys_perm $MAGIC_PATH/lib
+  cp $MODDIR/lib/libzygisk.so $MAGIC_PATH/lib/libzygisk.so
+  chcon u:object_r:system_file:s0 $MAGIC_PATH/lib/libzygisk.so
 fi
 
 unshare -m sh -c "./bin/zygisk-ptrace64 monitor &"

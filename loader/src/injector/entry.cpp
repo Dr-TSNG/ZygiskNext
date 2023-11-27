@@ -8,10 +8,11 @@ using namespace std;
 void *self_handle = nullptr;
 
 extern "C" [[gnu::visibility("default")]]
-void entry(void* handle) {
-    LOGI("Zygisk library injected");
+void entry(void* handle, const char* path) {
+    LOGI("Zygisk library injected, magic %s", path);
     self_handle = handle;
 
+    zygiskd::Init(path);
     if (!zygiskd::PingHeartbeat()) {
         LOGE("Zygisk daemon is not running");
         return;

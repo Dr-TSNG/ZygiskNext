@@ -132,8 +132,10 @@ fn create_library_fd(so_path: &PathBuf) -> Result<OwnedFd> {
 
 fn create_daemon_socket() -> Result<UnixListener> {
     utils::set_socket_create_context("u:r:zygote:s0")?;
-    log::debug!("Daemon socket: {}", constants::PATH_CP_SOCKET);
-    let listener = utils::unix_listener_from_path(constants::PATH_CP_SOCKET)?;
+    let magic_path = std::env::var("MAGIC_PATH")?;
+    let socket_path = magic_path + constants::PATH_CP_NAME;
+    log::debug!("Daemon socket: {}", socket_path);
+    let listener = utils::unix_listener_from_path(&socket_path)?;
     Ok(listener)
 }
 

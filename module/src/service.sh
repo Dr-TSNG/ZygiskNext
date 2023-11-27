@@ -7,14 +7,10 @@ if [ "$ZYGISK_ENABLED" ]; then
   exit 0
 fi
 
-# temporary fix for AVD 30
-if [ -f /dev/zygisk/wd ]; then
-  log -p i -t "zygisk-sh" "prevent from instance duplicated"
-  exit
-fi
-touch /dev/zygisk/wd
-
 cd "$MODDIR"
+
+MAGIC_PATH=/dev/zygisk_$(cat ./magic)
+export MAGIC_PATH
 
 if [ "$(which magisk)" ]; then
   for file in ../*; do
