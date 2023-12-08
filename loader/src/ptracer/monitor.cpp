@@ -33,6 +33,12 @@ enum TracingState {
 
 constexpr char SOCKET_NAME[] = "init_monitor";
 
+std::string GetControlSocketName() {
+    auto env = getenv(MAGIC_ENV);
+    if (env == nullptr) return SOCKET_NAME;
+    return std::string(SOCKET_NAME) + env;
+}
+
 struct EventLoop;
 
 struct EventHandler {
@@ -115,7 +121,8 @@ struct SocketHandler : public EventHandler {
                 .sun_family = AF_UNIX,
                 .sun_path={0},
         };
-        strcpy(addr.sun_path + 1, SOCKET_NAME);
+        auto socket_name = GetControlSocketName();
+        strcpy(addr.sun_path + 1, socket_name.c_str());
         socklen_t socklen = sizeof(sa_family_t) + strlen(addr.sun_path + 1) + 1;
         if (bind(sock_fd_, (struct sockaddr *) &addr, socklen) == -1) {
             PLOGE("bind socket");
@@ -379,7 +386,8 @@ void send_control_command(Command cmd) {
             .sun_family = AF_UNIX,
             .sun_path={0},
     };
-    strcpy(addr.sun_path + 1, SOCKET_NAME);
+    auto socket_name = GetControlSocketName();
+    strcpy(addr.sun_path + 1, socket_name.c_str());
     socklen_t socklen = sizeof(sa_family_t) + strlen(addr.sun_path + 1) + 1;
     auto nsend = sendto(sockfd, (void *) &cmd, sizeof(cmd), 0, (sockaddr *) &addr, socklen);
     if (nsend == -1) {

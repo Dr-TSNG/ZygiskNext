@@ -99,6 +99,7 @@ ui_print "- Extracting module files"
 extract "$ZIPFILE" 'module.prop'     "$MODPATH"
 extract "$ZIPFILE" 'post-fs-data.sh' "$MODPATH"
 extract "$ZIPFILE" 'service.sh'      "$MODPATH"
+extract "$ZIPFILE" 'zygisk-ctl.sh'   "$MODPATH"
 mv "$TMPDIR/sepolicy.rule" "$MODPATH"
 
 HAS32BIT=false && [ $(getprop ro.product.cpu.abilist32) ] && HAS32BIT=true
@@ -106,6 +107,7 @@ HAS32BIT=false && [ $(getprop ro.product.cpu.abilist32) ] && HAS32BIT=true
 mkdir "$MODPATH/bin"
 mkdir "$MODPATH/lib"
 mkdir "$MODPATH/lib64"
+mv "$MODPATH/zygisk-ctl.sh" "$MODPATH/bin/zygisk-ctl"
 
 if [ "$ARCH" = "x86" ] || [ "$ARCH" = "x64" ]; then
   if [ "$HAS32BIT" = true ]; then
@@ -145,14 +147,14 @@ else
   mv "$MODPATH/bin/libzygisk_ptrace.so" "$MODPATH/bin/zygisk-ptrace64"
 fi
 
+ui_print "- Generating magic"
+MAGIC=$(tr -dc 'a-f0-9' </dev/urandom | head -c 18)
+echo -n "$MAGIC" > "$MODPATH/magic"
+
 ui_print "- Setting permissions"
 set_perm_recursive "$MODPATH/bin" 0 0 0755 0755
 set_perm_recursive "$MODPATH/lib" 0 0 0755 0644 u:object_r:system_lib_file:s0
 set_perm_recursive "$MODPATH/lib64" 0 0 0755 0644 u:object_r:system_lib_file:s0
-
-ui_print "- Generating magic"
-MAGIC=$(tr -dc 'a-f0-9' </dev/urandom | head -c 18)
-echo -n "$MAGIC" > "$MODPATH/magic"
 
 # If Huawei's Maple is enabled, system_server is created with a special way which is out of Zygisk's control
 HUAWEI_MAPLE_ENABLED=$(grep_prop ro.maple.enable)

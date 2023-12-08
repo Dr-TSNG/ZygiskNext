@@ -7,7 +7,9 @@ fi
 
 cd "$MODDIR"
 
-MAGIC_PATH=/dev/zygisk_$(cat ./magic)
+MAGIC=$(cat ./magic)
+MAGIC_PATH=/dev/zygisk_$MAGIC
+export MAGIC
 export MAGIC_PATH
 
 if [ "$(which magisk)" ]; then
