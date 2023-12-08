@@ -24,13 +24,11 @@ rustix = { version = "0.38", features = [ "fs", "process", "mount", "net", "thre
 tokio = { version = "1.28", features = ["full"] }
 
 [profile.dev]
-# strip = true
-# split-debuginfo = "packed"
+strip = false
 panic = "abort"
 
 [profile.release]
-strip = true
-split-debuginfo = "packed"
+strip = false
 panic = "abort"
 opt-level = "z"
 lto = true

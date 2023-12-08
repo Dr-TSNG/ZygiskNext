@@ -34,7 +34,7 @@ androidComponents.onVariants { variant ->
         group = "module"
         dependsOn(
             ":loader:assemble$variantCapped",
-            ":zygiskd:cargoBuild",
+            ":zygiskd:buildAndStrip",
         )
         into(moduleDir)
         from("${rootProject.projectDir}/README.md")
@@ -65,6 +65,7 @@ androidComponents.onVariants { variant ->
         }
         into("bin") {
             from(project(":zygiskd").buildDir.path + "/rustJniLibs/android")
+            include("**/zygiskd")
         }
         into("lib") {
             from("${project(":loader").buildDir}/intermediates/stripped_native_libs/$variantLowered/out/lib")
