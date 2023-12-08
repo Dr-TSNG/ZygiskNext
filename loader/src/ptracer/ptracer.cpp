@@ -180,7 +180,7 @@ bool trace_zygote(int pid) {
     }
     WAIT_OR_DIE
     if (STOPPED_WITH(SIGSTOP, PTRACE_EVENT_STOP)) {
-        std::string magic_path = getenv("MAGIC_PATH");
+        std::string magic_path = getenv(MAGIC_PATH_ENV);
         std::string lib_path = magic_path + "/lib" LP_SELECT("", "64") "/libzygisk.so";
         if (!inject_on_main(pid, lib_path.c_str(), magic_path.c_str())) {
             LOGE("failed to inject");

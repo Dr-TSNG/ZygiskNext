@@ -256,7 +256,7 @@ public:
                     if (STOPPED_WITH(SIGTRAP, PTRACE_EVENT_FORK)) {
                         long child_pid;
                         ptrace(PTRACE_GETEVENTMSG, pid, 0, &child_pid);
-                        LOGI("forked %ld", child_pid);
+                        LOGV("forked %ld", child_pid);
                     } else if (STOPPED_WITH(SIGTRAP, PTRACE_EVENT_STOP) &&
                                tracing_state == STOPPING) {
                         if (ptrace(PTRACE_DETACH, 1, 0, 0) == -1)
@@ -283,7 +283,7 @@ public:
                 }
                 auto state = process.find(pid);
                 if (state == process.end()) {
-                    LOGI("new process %d attached", pid);
+                    LOGV("new process %d attached", pid);
                     process.emplace(pid);
                     ptrace(PTRACE_SETOPTIONS, pid, 0, PTRACE_O_TRACEEXEC);
                     ptrace(PTRACE_CONT, pid, 0, 0);
@@ -291,7 +291,7 @@ public:
                 } else {
                     if (STOPPED_WITH(SIGTRAP, PTRACE_EVENT_EXEC)) {
                         auto program = get_program(pid);
-                        LOGD("%d program %s", pid, program.c_str());
+                        LOGV("%d program %s", pid, program.c_str());
                         const char* tracer = nullptr;
                         do {
                             if (tracing_state != TRACING) {
@@ -327,7 +327,7 @@ public:
                                     auto p = fork_dont_care();
                                     if (p == 0) {
                                         execl(tracer, basename(tracer), "trace",
-                                              std::to_string(pid).c_str(), nullptr);
+                                              std::to_string(pid).c_str(), "--restart", nullptr);
                                         PLOGE("failed to exec, kill");
                                         kill(pid, SIGKILL);
                                         exit(1);
@@ -340,18 +340,17 @@ public:
                         } while (false);
 
                     } else {
-                        LOGD("process %d received unknown status %s", pid,
+                        LOGE("process %d received unknown status %s", pid,
                              parse_status(status).c_str());
                     }
                     process.erase(state);
                     if (WIFSTOPPED(status)) {
-                        LOGI("detach process %d", pid);
+                        LOGV("detach process %d", pid);
                         ptrace(PTRACE_DETACH, pid, 0, 0);
                     }
                 }
             }
         }
-        LOGD("sigchld handle done");
     }
 
     ~PtraceHandler() {

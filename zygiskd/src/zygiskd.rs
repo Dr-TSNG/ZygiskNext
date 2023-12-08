@@ -50,13 +50,27 @@ pub fn main() -> Result<()> {
 
     log::info!("Handle zygote connections");
     for stream in listener.incoming() {
-        let stream = stream?;
+        let mut stream = stream?;
         let context = Arc::clone(&context);
-        thread::spawn(move || {
-            if let Err(e) = handle_daemon_action(stream, &context) {
-                log::warn!("Error handling daemon action: {}\n{}", e, e.backtrace());
+        let action = stream.read_u8()?;
+        let action = DaemonSocketAction::try_from(action)?;
+        log::trace!("New daemon action {:?}", action);
+        match action {
+            DaemonSocketAction::PingHeartbeat => {
+                // Do nothing
             }
-        });
+            DaemonSocketAction::ZygoteRestart => {
+                info!("Zygote restarted, exit");
+                exit(0);
+            }
+            _ => {
+                thread::spawn(move || {
+                    if let Err(e) = handle_daemon_action(action, stream, &context) {
+                        log::warn!("Error handling daemon action: {}\n{}", e, e.backtrace());
+                    }
+                });
+            }
+        }
     }
 
     Ok(())
@@ -152,14 +166,8 @@ fn resolve_module(path: &str) -> Result<Option<ZygiskCompanionEntryFn>> {
     }
 }
 
-fn handle_daemon_action(mut stream: UnixStream, context: &Context) -> Result<()> {
-    let action = stream.read_u8()?;
-    let action = DaemonSocketAction::try_from(action)?;
-    log::trace!("New daemon action {:?}", action);
+fn handle_daemon_action(action: DaemonSocketAction, mut stream: UnixStream, context: &Context) -> Result<()> {
     match action {
-        DaemonSocketAction::PingHeartbeat => {
-            // Do nothing
-        }
         DaemonSocketAction::RequestLogcatFd => {
             loop {
                 let level = match stream.read_u8() {
@@ -227,10 +235,7 @@ fn handle_daemon_action(mut stream: UnixStream, context: &Context) -> Result<()>
             let dir = fs::File::open(dir)?;
             stream.send_fd(dir.as_raw_fd())?;
         }
-        DaemonSocketAction::ZygoteRestarted => {
-            info!("zygote restarted, exit");
-            exit(0);
-        }
+        _ => {}
     }
     Ok(())
 }

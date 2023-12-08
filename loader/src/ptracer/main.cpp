@@ -17,6 +17,17 @@ int main(int argc, char **argv) {
         init_monitor();
         return 0;
     } else if (argc >= 3 && argv[1] == "trace"sv) {
+        if (argc >= 4 && argv[3] == "--restart"sv) {
+            constexpr auto companion = "./bin/zygisk-cp" LP_SELECT("32", "64");
+            zygiskd::Init(getenv(MAGIC_PATH_ENV));
+            zygiskd::ZygoteRestart();
+            if (fork_dont_care() == 0) {
+                LOGI("creating new zygisk companion");
+                execl(companion, basename(companion), nullptr);
+                PLOGE("failed to exec zygisk companion");
+                exit(1);
+            }
+        }
         auto pid = strtol(argv[2], 0, 0);
         if (!trace_zygote(pid)) {
             kill(pid, SIGKILL);

@@ -9,6 +9,7 @@
 namespace zygiskd {
     static std::string zygisk_path;
     void Init(const char *path) {
+        LOGI("zygisk path set to %s", path);
         zygisk_path = path;
     }
 
@@ -25,8 +26,10 @@ namespace zygiskd {
         while (retry--) {
             int r = connect(fd, reinterpret_cast<struct sockaddr*>(&addr), socklen);
             if (r == 0) return fd;
-            PLOGE("Retrying to connect to zygiskd, sleep 1s");
-            sleep(1);
+            if (retry) {
+                PLOGE("Retrying to connect to zygiskd, sleep 1s");
+                sleep(1);
+            }
         }
 
         close(fd);
@@ -111,9 +114,15 @@ namespace zygiskd {
     void ZygoteRestart() {
         UniqueFd fd = Connect(1);
         if (fd == -1) {
-            PLOGE("Could not notify ZygoteRestart");
+            if (errno == ENOENT) {
+                LOGD("Could not notify ZygoteRestart (maybe it hasn't been created)");
+            } else {
+                PLOGE("Could not notify ZygoteRestart");
+            }
             return;
         }
-        socket_utils::write_u8(fd, (uint8_t) SocketAction::ZygoteRestart);
+        if (!socket_utils::write_u8(fd, (uint8_t) SocketAction::ZygoteRestart)) {
+            PLOGE("Failed to request ZygoteRestart");
+        }
     }
 }

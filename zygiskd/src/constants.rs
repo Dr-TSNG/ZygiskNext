@@ -36,7 +36,7 @@ pub enum DaemonSocketAction {
     ReadModules,
     RequestCompanionSocket,
     GetModuleDir,
-    ZygoteRestarted,
+    ZygoteRestart,
 }
 
 // Zygisk process flags
