@@ -1,7 +1,7 @@
 use anyhow::Result;
 use std::{fs, io::{Read, Write}, os::unix::net::UnixStream};
 use std::ffi::{c_char, c_void, CStr, CString};
-use std::os::fd::AsFd;
+use std::os::fd::{AsFd, AsRawFd};
 use std::os::unix::net::UnixListener;
 use std::process::Command;
 use std::sync::OnceLock;
@@ -193,6 +193,22 @@ pub fn unix_listener_from_path(path: &str) -> Result<UnixListener> {
     listen(&socket, 2)?;
     chcon(path, "u:object_r:magisk_file:s0")?;
     Ok(UnixListener::from(socket))
+}
+
+pub fn check_unix_socket(stream: &UnixStream, block: bool) -> bool {
+    unsafe {
+        let mut pfd = libc::pollfd {
+            fd: stream.as_raw_fd(),
+            events: libc::POLLIN,
+            revents: 0,
+        };
+        let timeout = if block { -1 } else { 0 };
+        libc::poll(&mut pfd, 1, timeout);
+        if pfd.revents != 0 && pfd.revents & libc::POLLIN == 0 {
+            return false;
+        }
+    }
+    return true;
 }
 
 extern "C" {

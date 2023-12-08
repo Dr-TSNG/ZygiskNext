@@ -23,7 +23,14 @@ proc-maps = "0.3"
 rustix = { version = "0.38", features = [ "fs", "process", "mount", "net", "thread" ] }
 tokio = { version = "1.28", features = ["full"] }
 
+[profile.dev]
+# strip = true
+# split-debuginfo = "packed"
+panic = "abort"
+
 [profile.release]
 strip = true
+split-debuginfo = "packed"
+panic = "abort"
 opt-level = "z"
 lto = true

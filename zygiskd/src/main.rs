@@ -3,6 +3,7 @@ mod dl;
 mod root_impl;
 mod utils;
 mod zygiskd;
+mod companion;
 
 use std::future::Future;
 use anyhow::Result;
@@ -15,19 +16,17 @@ fn init_android_logger(tag: &str) {
     );
 }
 
-fn async_start<F: Future>(future: F) -> F::Output {
-    let async_runtime = tokio::runtime::Runtime::new().unwrap();
-    async_runtime.block_on(future)
-}
-
-fn start(name: &str) -> Result<()> {
-    utils::switch_mount_namespace(1)?;
-    root_impl::setup();
-    match name.trim_start_matches("zygisk-") {
-        lp_select!("cp32", "cp64") => zygiskd::main()?,
-        _ => println!("Available command: cp[32|64]"),
+fn start() {
+    let args: Vec<String> = std::env::args().collect();
+    if args.len() == 3 && args[1] == "companion" {
+        let fd: i32 = args[2].parse().unwrap();
+        companion::entry(fd);
+        return;
     }
-    Ok(())
+
+    utils::switch_mount_namespace(1).expect("switch mnt ns");
+    root_impl::setup();
+    zygiskd::main().expect("zygiskd main");
 }
 
 fn main() {
@@ -35,7 +34,5 @@ fn main() {
     let nice_name = process.split('/').last().unwrap();
     init_android_logger(nice_name);
 
-    if let Err(e) = start(nice_name) {
-        log::error!("Crashed: {}\n{}", e, e.backtrace());
-    }
+    start();
 }
