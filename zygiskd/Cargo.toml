@@ -29,6 +29,7 @@ panic = "abort"
 
 [profile.release]
 strip = false
+debug = true
 panic = "abort"
 opt-level = "z"
 lto = true
