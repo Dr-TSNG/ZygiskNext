@@ -31,19 +31,23 @@ cargo {
 afterEvaluate {
     task<Task>("buildAndStrip") {
         dependsOn(":zygiskd:cargoBuild")
+        val isDebug = gradle.startParameter.taskNames.any { it.toLowerCase().contains("debug") }
         doLast {
             val dir = File(buildDir, "rustJniLibs/android")
             val prebuilt = File(android.ndkDirectory, "toolchains/llvm/prebuilt").listFiles()!!.first()
             val binDir = File(prebuilt, "bin")
-            println("binDir $binDir")
+            val symbolDir = File(buildDir, "symbols/${if (isDebug) "debug" else "release"}")
+            symbolDir.mkdirs()
             val suffix = if (prebuilt.name.contains("windows")) ".exe" else ""
             val strip = File(binDir, "llvm-strip$suffix")
             val objcopy = File(binDir, "llvm-objcopy$suffix")
             dir.listFiles()!!.forEach {
                 if (!it.isDirectory) return@forEach
+                val symbolPath = File(symbolDir, "${it.name}/zygiskd.debug")
+                symbolPath.parentFile.mkdirs()
                 exec {
                     workingDir = it
-                    commandLine(objcopy, "--only-keep-debug", "zygiskd", "zygiskd.debug")
+                    commandLine(objcopy, "--only-keep-debug", "zygiskd", symbolPath)
                 }
                 exec {
                     workingDir = it
@@ -51,7 +55,7 @@ afterEvaluate {
                 }
                 exec {
                     workingDir = it
-                    commandLine(objcopy, "--add-gnu-debuglink", "zygiskd.debug", "zygiskd")
+                    commandLine(objcopy, "--add-gnu-debuglink", symbolPath, "zygiskd")
                 }
             }
         }

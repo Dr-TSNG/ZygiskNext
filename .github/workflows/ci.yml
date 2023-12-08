@@ -87,3 +87,15 @@ jobs:
         with:
           name: ${{ steps.prepareArtifact.outputs.debugName }}
           path: "./zksu-debug/*"
+
+      - name: Upload release symbols
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ steps.prepareArtifact.outputs.releaseName }}-symbols
+          path: "zygiskd/build/symbols/release"
+
+      - name: Upload debug symbols
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ steps.prepareArtifact.outputs.debugName }}-symbols
+          path: "zygiskd/build/symbols/release"
