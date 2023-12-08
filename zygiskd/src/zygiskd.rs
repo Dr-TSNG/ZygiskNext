@@ -35,19 +35,13 @@ pub fn main() -> Result<()> {
 
     let arch = get_arch()?;
     log::debug!("Daemon architecture: {arch}");
-
-    log::info!("Load modules");
     let modules = load_modules(arch)?;
 
     let context = Context {
         modules,
     };
     let context = Arc::new(context);
-
-    log::info!("Create socket");
     let listener = create_daemon_socket()?;
-
-    log::info!("Handle zygote connections");
     for stream in listener.incoming() {
         let mut stream = stream?;
         let context = Arc::clone(&context);
@@ -259,8 +253,8 @@ fn handle_daemon_action(action: DaemonSocketAction, mut stream: UnixStream, cont
             }
             match companion.as_ref() {
                 Some(Some(sock)) => {
-                    if let Err(_) = sock.send_fd(stream.as_raw_fd()) {
-                        log::error!("Failed to send companion fd socket of module `{}`", module.name);
+                    if let Err(e) = sock.send_fd(stream.as_raw_fd()) {
+                        log::error!("Failed to send companion fd socket of module `{}`: {}", module.name, e);
                         stream.write_u8(0)?;
                     }
                     // Ok: Send by companion
@@ -269,7 +263,6 @@ fn handle_daemon_action(action: DaemonSocketAction, mut stream: UnixStream, cont
                     stream.write_u8(0)?;
                 }
             }
-            log::info!("companion done");
         }
         DaemonSocketAction::GetModuleDir => {
             let index = stream.read_usize()?;

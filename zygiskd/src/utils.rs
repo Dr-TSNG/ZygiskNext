@@ -204,7 +204,7 @@ pub fn check_unix_socket(stream: &UnixStream, block: bool) -> bool {
         };
         let timeout = if block { -1 } else { 0 };
         libc::poll(&mut pfd, 1, timeout);
-        if pfd.revents != 0 && pfd.revents & libc::POLLIN == 0 {
+        if pfd.revents & !libc::POLLIN != 0 {
             return false;
         }
     }
