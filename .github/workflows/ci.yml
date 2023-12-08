@@ -98,4 +98,4 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: ${{ steps.prepareArtifact.outputs.debugName }}-symbols
-          path: "zygiskd/build/symbols/release"
+          path: "zygiskd/build/symbols/debug"
