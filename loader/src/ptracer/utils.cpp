@@ -24,6 +24,45 @@
 
 #include "utils.hpp"
 #include "logging.h"
+#include <sched.h>
+#include <fcntl.h>
+
+bool switch_mnt_ns(int pid, int *fd) {
+    int nsfd, old_nsfd = -1;
+    std::string path;
+    if (pid == 0) {
+        if (fd != nullptr) {
+            nsfd = *fd;
+            *fd = -1;
+        } else return false;
+        path = "/proc/self/fd/";
+        path += std::to_string(nsfd);
+    } else {
+        if (fd != nullptr) {
+            old_nsfd = open("/proc/self/ns/mnt", O_RDONLY | O_CLOEXEC);
+            if (old_nsfd == -1) {
+                PLOGE("get old nsfd");
+                return false;
+            }
+            *fd = old_nsfd;
+        }
+        path = std::string("/proc/") + std::to_string(pid) + "/ns/mnt";
+        nsfd = open(path.c_str(), O_RDONLY | O_CLOEXEC);
+        if (nsfd == -1) {
+            PLOGE("open nsfd %s", path.c_str());
+            close(old_nsfd);
+            return false;
+        }
+    }
+    if (setns(nsfd, CLONE_NEWNS) == -1) {
+        PLOGE("set ns to %s", path.c_str());
+        close(nsfd);
+        close(old_nsfd);
+        return false;
+    }
+    close(nsfd);
+    return true;
+}
 
 std::vector<MapInfo> MapInfo::Scan(const std::string& pid) {
     constexpr static auto kPermLength = 5;

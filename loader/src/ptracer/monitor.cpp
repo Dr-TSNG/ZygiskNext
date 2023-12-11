@@ -12,7 +12,9 @@
 #include <sys/un.h>
 #include <sys/epoll.h>
 #include <sys/wait.h>
+#include <sys/mount.h>
 #include <time.h>
+#include <fcntl.h>
 
 #include "main.hpp"
 #include "utils.hpp"
@@ -24,12 +26,16 @@ using namespace std::string_view_literals;
 
 #define STOPPED_WITH(sig, event) WIFSTOPPED(status) && (status >> 8 == ((sig) | (event << 8)))
 
+static void updateStatus();
 
 enum TracingState {
     TRACING = 1,
     STOPPING,
-    STOPPED
+    STOPPED,
+    EXITING
 };
+
+std::string monitor_stop_reason;
 
 constexpr char SOCKET_NAME[] = "init_monitor";
 
@@ -158,16 +164,22 @@ struct SocketHandler : public EventHandler {
                         LOGI("start tracing init");
                         tracing_state = TRACING;
                     }
+                    updateStatus();
                     break;
                 case STOP:
                     if (tracing_state == TRACING) {
                         LOGI("stop tracing requested");
                         tracing_state = STOPPING;
+                        monitor_stop_reason = "user requested";
                         ptrace(PTRACE_INTERRUPT, 1, 0, 0);
+                        updateStatus();
                     }
                     break;
                 case EXIT:
                     LOGI("prepare for exit ...");
+                    tracing_state = EXITING;
+                    monitor_stop_reason = "user requested";
+                    updateStatus();
                     loop.Stop();
                     break;
             }
@@ -181,35 +193,61 @@ struct SocketHandler : public EventHandler {
 
 constexpr auto MAX_RETRY_COUNT = 5;
 
-struct timespec last_zygote64{.tv_sec = 0, .tv_nsec = 0};
-int count_zygote64 = 0;
-bool should_stop_inject64() {
-    struct timespec now{};
-    clock_gettime(CLOCK_MONOTONIC, &now);
-    if (now.tv_sec - last_zygote64.tv_sec < 30) {
-        count_zygote64++;
-    } else {
-        count_zygote64 = 0;
-    }
-    last_zygote64 = now;
-    return count_zygote64 >= MAX_RETRY_COUNT;
+#define CREATE_ZYGOTE_START_COUNTER(abi) \
+struct timespec last_zygote##abi{.tv_sec = 0, .tv_nsec = 0}; \
+int count_zygote##abi = 0; \
+bool should_stop_inject##abi() { \
+    struct timespec now{}; \
+    clock_gettime(CLOCK_MONOTONIC, &now); \
+    if (now.tv_sec - last_zygote##abi.tv_sec < 30) { \
+        count_zygote##abi++; \
+    } else { \
+        count_zygote##abi = 0; \
+    } \
+    last_zygote##abi = now; \
+    return count_zygote##abi >= MAX_RETRY_COUNT; \
 }
 
-struct timespec last_zygote32{.tv_sec = 0, .tv_nsec = 0};
-int count_zygote32 = 0;
-bool should_stop_inject32() {
-    struct timespec now{};
-    clock_gettime(CLOCK_MONOTONIC, &now);
-    if (now.tv_sec - last_zygote32.tv_sec < 30) {
-        count_zygote32++;
+CREATE_ZYGOTE_START_COUNTER(64)
+CREATE_ZYGOTE_START_COUNTER(32)
+
+struct Status {
+    bool supported = false;
+    bool zygote_injected = false;
+    bool daemon_running = false;
+    pid_t daemon_pid = -1;
+    std::string daemon_crash_reason;
+};
+
+static Status status64;
+static Status status32;
+
+static bool ensure_daemon_created(bool is_64bit) {
+    auto &status = is_64bit ? status64 : status32;
+    if (status.daemon_pid == -1) {
+        auto pid = fork();
+        if (pid < 0) {
+            PLOGE("create daemon (64=%s)", is_64bit ? "true" : "false");
+            return false;
+        } else if (pid == 0) {
+            std::string daemon_name = "./bin/zygisk-cp";
+            daemon_name += is_64bit ? "64" : "32";
+            execl(daemon_name.c_str(), basename(daemon_name.c_str()), nullptr);
+            PLOGE("exec daemon %s failed", daemon_name.c_str());
+            exit(1);
+        } else {
+            status.supported = true;
+            status.daemon_pid = pid;
+            status.daemon_running = true;
+            updateStatus();
+            return true;
+        }
     } else {
-        count_zygote32 = 0;
+        return status.daemon_running;
     }
-    last_zygote32 = now;
-    return count_zygote32 >= MAX_RETRY_COUNT;
 }
 
-struct PtraceHandler : public EventHandler {
+struct SigChldHandler : public EventHandler {
 private:
     int signal_fd_;
     struct signalfd_siginfo fdsi;
@@ -288,6 +326,19 @@ public:
                     }
                     continue;
                 }
+#define CHECK_DAEMON_EXIT(abi) \
+                if (status##abi.supported && pid == status64.daemon_pid) { \
+                    auto status_str = parse_status(status); \
+                    LOGW("daemon" #abi "pid %d exited: %s", pid, status_str.c_str()); \
+                    status##abi.daemon_running = false; \
+                    if (status##abi.daemon_crash_reason.empty()) { \
+                        status##abi.daemon_crash_reason = status_str; \
+                    } \
+                    updateStatus(); \
+                    continue; \
+                }
+                CHECK_DAEMON_EXIT(64)
+                CHECK_DAEMON_EXIT(32)
                 auto state = process.find(pid);
                 if (state == process.end()) {
                     LOGV("new process %d attached", pid);
@@ -305,23 +356,28 @@ public:
                                 LOGW("stop injecting %d because not tracing", pid);
                                 break;
                             }
-                            if (program == "/system/bin/app_process64") {
-                                tracer = "./bin/zygisk-ptrace64";
-                                if (should_stop_inject64()) {
-                                    LOGW("zygote64 restart too much times, stop injecting");
-                                    tracing_state = STOPPING;
-                                    ptrace(PTRACE_INTERRUPT, 1, 0, 0);
-                                    break;
-                                }
-                            } else if (program == "/system/bin/app_process32") {
-                                tracer = "./bin/zygisk-ptrace32";
-                                if (should_stop_inject32()) {
-                                    LOGW("zygote32 restart too much times, stop injecting");
-                                    tracing_state = STOPPING;
-                                    ptrace(PTRACE_INTERRUPT, 1, 0, 0);
-                                    break;
-                                }
+#define PRE_INJECT(abi, is_64) \
+                            if (program == "/system/bin/app_process"#abi) { \
+                                tracer = "./bin/zygisk-ptrace"#abi; \
+                                if (should_stop_inject##abi()) { \
+                                    LOGW("zygote" #abi " restart too much times, stop injecting"); \
+                                    tracing_state = STOPPING; \
+                                    monitor_stop_reason = "zygote crashed"; \
+                                    updateStatus(); \
+                                    ptrace(PTRACE_INTERRUPT, 1, 0, 0); \
+                                    break; \
+                                } \
+                                if (!ensure_daemon_created(is_64)) { \
+                                    LOGW("daemon" #abi " not running, stop injecting"); \
+                                    tracing_state = STOPPING; \
+                                    monitor_stop_reason = "daemon not running"; \
+                                    updateStatus(); \
+                                    ptrace(PTRACE_INTERRUPT, 1, 0, 0); \
+                                    break; \
+                                } \
                             }
+                            PRE_INJECT(64, true)
+                            PRE_INJECT(32, false)
                             if (tracer != nullptr) {
                                 LOGD("stopping %d", pid);
                                 kill(pid, SIGSTOP);
@@ -345,7 +401,6 @@ public:
                                 }
                             }
                         } while (false);
-
                     } else {
                         LOGE("process %d received unknown status %s", pid,
                              parse_status(status).c_str());
@@ -360,17 +415,119 @@ public:
         }
     }
 
-    ~PtraceHandler() {
+    ~SigChldHandler() {
         if (signal_fd_ >= 0) close(signal_fd_);
     }
 };
 
+static std::string prop_path;
+static std::string pre_section;
+static std::string post_section;
+
+static void updateStatus() {
+    auto prop = xopen_file(prop_path.c_str(), "w");
+    std::string status_text = "monitor:";
+    switch (tracing_state) {
+        case TRACING:
+            status_text += "tracing";
+            break;
+        case STOPPING:
+            [[fallthrough]];
+        case STOPPED:
+            status_text += "stopped";
+            break;
+        case EXITING:
+            status_text += "exited";
+            break;
+    }
+    if (tracing_state != TRACING && !monitor_stop_reason.empty()) {
+        status_text += "(";
+        status_text += monitor_stop_reason;
+        status_text += ")";
+    }
+    status_text += ", ";
+#define WRITE_STATUS_ABI(suffix) \
+    if (status##suffix.supported) { \
+        status_text += " zygote" #suffix ":"; \
+        if (status##suffix.zygote_injected) status_text += "injected,"; \
+        else status_text += "not injected,"; \
+        status_text += " daemon" #suffix ":"; \
+        if (status##suffix.daemon_running) status_text += "running"; \
+        else { \
+            status_text += "crashed"; \
+            if (!status##suffix.daemon_crash_reason.empty()) { \
+                status_text += "("; \
+                status_text += status##suffix.daemon_crash_reason; \
+                status_text += ")"; \
+            } \
+        } \
+    }
+    WRITE_STATUS_ABI(64)
+    WRITE_STATUS_ABI(32)
+    fprintf(prop.get(), "%s[%s]%s", pre_section.c_str(), status_text.c_str(), post_section.c_str());
+}
+
+static bool prepare_environment() {
+    auto path = getenv(MAGIC_PATH_ENV);
+    if (path == nullptr) {
+        LOGE("path is null, is MAGIC_PATH_ENV specified?");
+        return false;
+    }
+    prop_path = std::string(path) + "/module.prop";
+    close(open(prop_path.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0644));
+    auto orig_prop = xopen_file("./module.prop", "r");
+    if (orig_prop == nullptr) {
+        PLOGE("failed to open orig prop");
+        return false;
+    }
+    bool post = false;
+    file_readline(false, orig_prop.get(), [&](std::string_view line) -> bool {
+        if (line.starts_with("description=")) {
+            post = true;
+            pre_section += "description=";
+            post_section += line.substr(sizeof("description"));
+        } else {
+            if (post) {
+                post_section += line;
+            } else {
+                pre_section += line;
+            }
+        }
+        return true;
+    });
+    int old_ns;
+    char wd[128];
+    if (getcwd(wd, sizeof(wd)) == nullptr) {
+        PLOGE("get cwd");
+        return false;
+    }
+    if (!switch_mnt_ns(1, &old_ns)) return false;
+    if (chdir(wd) == -1) {
+        PLOGE("chdir %s", wd);
+        return false;
+    }
+    if (mount(prop_path.c_str(), "/data/adb/modules/zygisksu/module.prop", nullptr, MS_BIND, nullptr) == -1) {
+        PLOGE("failed to mount prop");
+        return false;
+    }
+    if (!switch_mnt_ns(0, &old_ns)) return false;
+    if (chdir(wd) == -1) {
+        PLOGE("chdir %s", wd);
+        return false;
+    }
+    updateStatus();
+    return true;
+}
+
 void init_monitor() {
     LOGI("Zygisk Next %s", ZKSU_VERSION);
     LOGI("init monitor started");
+    if (!prepare_environment()) {
+        exit(1);
+    }
     SocketHandler socketHandler{};
     socketHandler.Init();
-    PtraceHandler ptraceHandler{};
+    SigChldHandler ptraceHandler{};
     ptraceHandler.Init();
     EventLoop looper;
     looper.Init();

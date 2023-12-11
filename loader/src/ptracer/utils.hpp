@@ -119,3 +119,6 @@ inline const char* sigabbrev_np(int sig) {
 std::string get_program(int pid);
 void *find_module_return_addr(std::vector<MapInfo> &info, std::string_view suffix);
 
+// pid = 0, fd != nullptr -> set to fd
+// pid != 0, fd != nullptr -> set to pid ns, give orig ns in fd
+bool switch_mnt_ns(int pid, int *fd);
