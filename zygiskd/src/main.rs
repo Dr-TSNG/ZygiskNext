@@ -25,10 +25,15 @@ fn start() {
     } else if args.len() == 2 && args[1] == "version" {
         println!("Zygisk Next daemon {}", ZKSU_VERSION);
         return;
+    } else if args.len() == 2 && args[1] == "root" {
+        root_impl::setup();
+        println!("root impl: {:?}", root_impl::get_impl());
+        return;
     }
 
     utils::switch_mount_namespace(1).expect("switch mnt ns");
     root_impl::setup();
+    log::info!("current root impl: {:?}", root_impl::get_impl());
     zygiskd::main().expect("zygiskd main");
 }
 
