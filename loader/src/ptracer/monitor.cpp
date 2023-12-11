@@ -458,7 +458,8 @@ static void updateStatus() {
 #define WRITE_STATUS_ABI(suffix) \
     if (status##suffix.supported) { \
         status_text += " zygote" #suffix ":"; \
-        if (status##suffix.zygote_injected) status_text += "injected,"; \
+        if (tracing_state != TRACING) status_text += "unknown,"; \
+        else if (status##suffix.zygote_injected) status_text += "injected,"; \
         else status_text += "not injected,"; \
         status_text += " daemon" #suffix ":"; \
         if (status##suffix.daemon_running) status_text += "running"; \
