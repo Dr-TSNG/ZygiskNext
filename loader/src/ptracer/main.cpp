@@ -40,10 +40,15 @@ int main(int argc, char **argv) {
                 return 0;
             }
         }
+        printf("Zygisk Next Tracer %s\n", ZKSU_VERSION);
         printf("Usage: %s ctl start|stop|exit\n", argv[0]);
         return 1;
+    } else if (argc >= 2 && argv[1] == "version"sv) {
+        printf("Zygisk Next Tracer %s\n", ZKSU_VERSION);
+        return 0;
     } else {
-        LOGE("usage: %s monitor | trace <pid> | ctl <command>", argv[0]);
+        printf("Zygisk Next Tracer %s\n", ZKSU_VERSION);
+        printf("usage: %s monitor | trace <pid> | ctl <start|stop|exit> | version\n", argv[0]);
         return 1;
     }
 }

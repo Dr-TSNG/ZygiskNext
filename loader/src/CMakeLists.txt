@@ -3,6 +3,8 @@ project("loader")
 
 find_package(cxx REQUIRED CONFIG)
 
+add_definitions(-DZKSU_VERSION=\"${ZKSU_VERSION}\")
+
 aux_source_directory(common COMMON_SRC_LIST)
 add_library(common STATIC ${COMMON_SRC_LIST})
 target_include_directories(common PRIVATE include)

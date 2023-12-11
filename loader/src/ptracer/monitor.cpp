@@ -366,6 +366,7 @@ public:
 };
 
 void init_monitor() {
+    LOGI("Zygisk Next %s", ZKSU_VERSION);
     LOGI("init monitor started");
     SocketHandler socketHandler{};
     socketHandler.Init();

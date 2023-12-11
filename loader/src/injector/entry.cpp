@@ -9,7 +9,7 @@ void *self_handle = nullptr;
 
 extern "C" [[gnu::visibility("default")]]
 void entry(void* handle, const char* path) {
-    LOGI("Zygisk library injected, magic %s", path);
+    LOGI("Zygisk library injected, version %s", ZKSU_VERSION);
     self_handle = handle;
 
     zygiskd::Init(path);
@@ -22,6 +22,6 @@ void entry(void* handle, const char* path) {
     logging::setfd(zygiskd::RequestLogcatFd());
 #endif
 
-    LOGD("Start hooking");
+    LOGI("Start hooking");
     hook_functions();
 }

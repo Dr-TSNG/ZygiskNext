@@ -6,7 +6,7 @@ mod zygiskd;
 mod companion;
 
 use std::future::Future;
-use anyhow::Result;
+use crate::constants::ZKSU_VERSION;
 
 fn init_android_logger(tag: &str) {
     android_logger::init_once(
@@ -21,6 +21,9 @@ fn start() {
     if args.len() == 3 && args[1] == "companion" {
         let fd: i32 = args[2].parse().unwrap();
         companion::entry(fd);
+        return;
+    } else if args.len() == 2 && args[1] == "version" {
+        println!("Zygisk Next daemon {}", ZKSU_VERSION);
         return;
     }
 

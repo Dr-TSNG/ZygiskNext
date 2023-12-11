@@ -9,6 +9,7 @@ use crate::lp_select;
 pub const MIN_KSU_VERSION: i32 = unwrap_ctx!(parse_i32(env!("MIN_KSU_VERSION")));
 pub const MAX_KSU_VERSION: i32 = unwrap_ctx!(parse_i32(env!("MAX_KSU_VERSION")));
 pub const MIN_MAGISK_VERSION: i32 = unwrap_ctx!(parse_i32(env!("MIN_MAGISK_VERSION")));
+pub const ZKSU_VERSION: &'static str = env!("ZKSU_VERSION");
 
 #[cfg(debug_assertions)]
 pub const MAX_LOG_LEVEL: LevelFilter = LevelFilter::Trace;

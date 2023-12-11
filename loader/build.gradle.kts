@@ -5,6 +5,10 @@ plugins {
     alias(libs.plugins.agp.lib)
 }
 
+val verCode: Int by rootProject.extra
+val verName: String by rootProject.extra
+val commitHash: String by rootProject.extra
+
 fun Project.findInPath(executable: String, property: String): String? {
     val pathEnv = System.getenv("PATH")
     return pathEnv.split(File.pathSeparator).map { folder ->
@@ -60,10 +64,16 @@ android {
     }
 
     buildTypes {
+        debug {
+            externalNativeBuild.cmake {
+                arguments += "-DZKSU_VERSION=$verName-$verCode-$commitHash-debug"
+            }
+        }
         release {
             externalNativeBuild.cmake {
                 cFlags += releaseFlags
                 cppFlags += releaseFlags
+                arguments += "-DZKSU_VERSION=$verName-$verCode-$commitHash-release"
             }
         }
     }

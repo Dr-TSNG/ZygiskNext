@@ -31,7 +31,7 @@ struct Context {
 }
 
 pub fn main() -> Result<()> {
-    log::info!("Start zygisk companion");
+    log::info!("Welcome to Zygisk Next ({}) !", constants::ZKSU_VERSION);
 
     let arch = get_arch()?;
     log::debug!("Daemon architecture: {arch}");
