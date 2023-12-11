@@ -50,7 +50,13 @@ pub fn main() -> Result<()> {
         log::trace!("New daemon action {:?}", action);
         match action {
             DaemonSocketAction::PingHeartbeat => {
-                // Do nothing
+                utils::set_socket_create_context(utils::get_current_attr()?.as_str())?;
+                let magic_path = std::env::var("MAGIC")?;
+                let socket_path = format!("init_monitor{}", magic_path);
+                log::info!("socket path {}", socket_path);
+                let value = constants::ZYGOTE_INJECTED;
+                utils::unix_datagram_sendto_abstract(socket_path.as_str(), &value.to_le_bytes())?;
+                utils::set_socket_create_context("u:r:zygote:s0")?;
             }
             DaemonSocketAction::ZygoteRestart => {
                 info!("Zygote restarted, clean up companions");

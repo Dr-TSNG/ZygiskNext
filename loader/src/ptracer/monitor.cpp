@@ -114,6 +114,18 @@ public:
 
 static TracingState tracing_state = TRACING;
 
+
+struct Status {
+    bool supported = false;
+    bool zygote_injected = false;
+    bool daemon_running = false;
+    pid_t daemon_pid = -1;
+    std::string daemon_crash_reason;
+};
+
+static Status status64;
+static Status status32;
+
 struct SocketHandler : public EventHandler {
     int sock_fd_;
 
@@ -182,6 +194,14 @@ struct SocketHandler : public EventHandler {
                     updateStatus();
                     loop.Stop();
                     break;
+                case ZYGOTE64_INJECTED:
+                    status64.zygote_injected = true;
+                    updateStatus();
+                    break;
+                case ZYGOTE32_INJECTED:
+                    status32.zygote_injected = true;
+                    updateStatus();
+                    break;
             }
         }
     }
@@ -211,19 +231,10 @@ bool should_stop_inject##abi() { \
 CREATE_ZYGOTE_START_COUNTER(64)
 CREATE_ZYGOTE_START_COUNTER(32)
 
-struct Status {
-    bool supported = false;
-    bool zygote_injected = false;
-    bool daemon_running = false;
-    pid_t daemon_pid = -1;
-    std::string daemon_crash_reason;
-};
-
-static Status status64;
-static Status status32;
 
 static bool ensure_daemon_created(bool is_64bit) {
     auto &status = is_64bit ? status64 : status32;
+    status.zygote_injected = false;
     if (status.daemon_pid == -1) {
         auto pid = fork();
         if (pid < 0) {
@@ -239,7 +250,6 @@ static bool ensure_daemon_created(bool is_64bit) {
             status.supported = true;
             status.daemon_pid = pid;
             status.daemon_running = true;
-            updateStatus();
             return true;
         }
     } else {
@@ -363,7 +373,6 @@ public:
                                     LOGW("zygote" #abi " restart too much times, stop injecting"); \
                                     tracing_state = STOPPING; \
                                     monitor_stop_reason = "zygote crashed"; \
-                                    updateStatus(); \
                                     ptrace(PTRACE_INTERRUPT, 1, 0, 0); \
                                     break; \
                                 } \
@@ -371,7 +380,6 @@ public:
                                     LOGW("daemon" #abi " not running, stop injecting"); \
                                     tracing_state = STOPPING; \
                                     monitor_stop_reason = "daemon not running"; \
-                                    updateStatus(); \
                                     ptrace(PTRACE_INTERRUPT, 1, 0, 0); \
                                     break; \
                                 } \
@@ -401,6 +409,7 @@ public:
                                 }
                             }
                         } while (false);
+                        updateStatus();
                     } else {
                         LOGE("process %d received unknown status %s", pid,
                              parse_status(status).c_str());
@@ -445,7 +454,7 @@ static void updateStatus() {
         status_text += monitor_stop_reason;
         status_text += ")";
     }
-    status_text += ", ";
+    status_text += ",";
 #define WRITE_STATUS_ABI(suffix) \
     if (status##suffix.supported) { \
         status_text += " zygote" #suffix ":"; \
@@ -464,7 +473,7 @@ static void updateStatus() {
     }
     WRITE_STATUS_ABI(64)
     WRITE_STATUS_ABI(32)
-    fprintf(prop.get(), "%s[%s]%s", pre_section.c_str(), status_text.c_str(), post_section.c_str());
+    fprintf(prop.get(), "%s[%s] %s", pre_section.c_str(), status_text.c_str(), post_section.c_str());
 }
 
 static bool prepare_environment() {

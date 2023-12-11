@@ -2,10 +2,12 @@ use anyhow::Result;
 use std::{fs, io::{Read, Write}, os::unix::net::UnixStream};
 use std::ffi::{c_char, c_void, CStr, CString};
 use std::os::fd::{AsFd, AsRawFd};
-use std::os::unix::net::UnixListener;
+use std::os::unix::net::{UnixDatagram, UnixListener};
 use std::process::Command;
 use std::sync::OnceLock;
-use rustix::net::{AddressFamily, bind_unix, listen, socket, SocketAddrUnix, SocketType};
+use bitflags::Flags;
+use rustix::net::{AddressFamily, bind_unix, connect_unix, listen, SendFlags, sendto_unix, socket, SocketAddrUnix, SocketType};
+use rustix::path::Arg;
 use rustix::thread::gettid;
 
 #[cfg(target_pointer_width = "64")]
@@ -61,6 +63,11 @@ pub fn set_socket_create_context(context: &str) -> Result<()> {
             Ok(())
         }
     }
+}
+
+pub fn get_current_attr() -> Result<String> {
+    let s = fs::read("/proc/self/attr/current")?;
+    Ok(s.to_string_lossy().to_string())
 }
 
 pub fn chcon(path: &str, context: &str) -> Result<()> {
@@ -193,6 +200,14 @@ pub fn unix_listener_from_path(path: &str) -> Result<UnixListener> {
     listen(&socket, 2)?;
     chcon(path, "u:object_r:magisk_file:s0")?;
     Ok(UnixListener::from(socket))
+}
+
+pub fn unix_datagram_sendto_abstract(path: &str, buf: &[u8]) -> Result<()> {
+    let addr = SocketAddrUnix::new_abstract_name(path.as_bytes())?;
+    let socket = socket(AddressFamily::UNIX, SocketType::DGRAM, None)?;
+    connect_unix(&socket, &addr)?;
+    sendto_unix(socket, buf, SendFlags::empty(), &addr)?;
+    Ok(())
 }
 
 pub fn check_unix_socket(stream: &UnixStream, block: bool) -> bool {
