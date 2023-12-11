@@ -61,9 +61,7 @@ pub fn main() -> Result<()> {
             }
             _ => {
                 thread::spawn(move || {
-                    if let Err(e) = handle_daemon_action(action, stream, &context) {
-                        log::warn!("Error handling daemon action: {}\n{}", e, e.backtrace());
-                    }
+                    handle_daemon_action(action, stream, &context);
                 });
             }
         }
@@ -188,7 +186,7 @@ fn spawn_companion(name: &str, lib_fd: RawFd) -> Result<Option<UnixStream>> {
     exit(0)
 }
 
-fn handle_daemon_action(action: DaemonSocketAction, mut stream: UnixStream, context: &Context) -> Result<()> {
+fn handle_daemon_action(action: DaemonSocketAction, mut stream: UnixStream, context: &Context) {
     match action {
         DaemonSocketAction::RequestLogcatFd => {
             loop {
@@ -196,13 +194,13 @@ fn handle_daemon_action(action: DaemonSocketAction, mut stream: UnixStream, cont
                     Ok(level) => level,
                     Err(_) => break,
                 };
-                let tag = stream.read_string()?;
-                let message = stream.read_string()?;
-                utils::log_raw(level as i32, &tag, &message)?;
+                let tag = stream.read_string().unwrap();
+                let message = stream.read_string().unwrap();
+                utils::log_raw(level as i32, &tag, &message).unwrap();
             }
         }
         DaemonSocketAction::GetProcessFlags => {
-            let uid = stream.read_u32()? as i32;
+            let uid = stream.read_u32().unwrap() as i32;
             let mut flags = ProcessFlags::empty();
             if root_impl::uid_granted_root(uid) {
                 flags |= ProcessFlags::PROCESS_GRANTED_ROOT;
@@ -213,21 +211,21 @@ fn handle_daemon_action(action: DaemonSocketAction, mut stream: UnixStream, cont
             match root_impl::get_impl() {
                 root_impl::RootImpl::KernelSU => flags |= ProcessFlags::PROCESS_ROOT_IS_KSU,
                 root_impl::RootImpl::Magisk => flags |= ProcessFlags::PROCESS_ROOT_IS_MAGISK,
-                _ => unreachable!(),
+                _ => panic!("wrong root impl: {:?}", root_impl::get_impl()),
             }
             log::trace!("Uid {} granted root: {}", uid, flags.contains(ProcessFlags::PROCESS_GRANTED_ROOT));
             log::trace!("Uid {} on denylist: {}", uid, flags.contains(ProcessFlags::PROCESS_ON_DENYLIST));
-            stream.write_u32(flags.bits())?;
+            stream.write_u32(flags.bits()).unwrap();
         }
         DaemonSocketAction::ReadModules => {
-            stream.write_usize(context.modules.len())?;
+            stream.write_usize(context.modules.len()).unwrap();
             for module in context.modules.iter() {
-                stream.write_string(&module.name)?;
-                stream.send_fd(module.lib_fd.as_raw_fd())?;
+                stream.write_string(&module.name).unwrap();
+                stream.send_fd(module.lib_fd.as_raw_fd()).unwrap();
             }
         }
         DaemonSocketAction::RequestCompanionSocket => {
-            let index = stream.read_usize()?;
+            let index = stream.read_usize().unwrap();
             let module = &context.modules[index];
             let mut companion = module.companion.lock().unwrap();
             if let Some(Some(sock)) = companion.as_ref() {
@@ -255,23 +253,22 @@ fn handle_daemon_action(action: DaemonSocketAction, mut stream: UnixStream, cont
                 Some(Some(sock)) => {
                     if let Err(e) = sock.send_fd(stream.as_raw_fd()) {
                         log::error!("Failed to send companion fd socket of module `{}`: {}", module.name, e);
-                        stream.write_u8(0)?;
+                        stream.write_u8(0).unwrap();
                     }
                     // Ok: Send by companion
                 }
                 _ => {
-                    stream.write_u8(0)?;
+                    stream.write_u8(0).unwrap();
                 }
             }
         }
         DaemonSocketAction::GetModuleDir => {
-            let index = stream.read_usize()?;
+            let index = stream.read_usize().unwrap();
             let module = &context.modules[index];
             let dir = format!("{}/{}", constants::PATH_MODULES_DIR, module.name);
-            let dir = fs::File::open(dir)?;
-            stream.send_fd(dir.as_raw_fd())?;
+            let dir = fs::File::open(dir).unwrap();
+            stream.send_fd(dir.as_raw_fd()).unwrap();
         }
         _ => {}
     }
-    Ok(())
 }

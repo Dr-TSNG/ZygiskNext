@@ -1,6 +1,7 @@
 mod kernelsu;
 mod magisk;
 
+#[derive(Debug)]
 pub enum RootImpl {
     None,
     TooOld,
