@@ -47,7 +47,7 @@ pub fn main() -> Result<()> {
             root_impl::RootImpl::KernelSU | root_impl::RootImpl::Magisk => {
                 let module_names: Vec<_> = modules.iter()
                     .map(|m| m.name.as_str()).collect();
-                format!("Root:{:?},module({}):{}", root_impl::get_impl(), modules.len(), module_names.join(","))
+                format!("Root: {:?},module({}): {}", root_impl::get_impl(), modules.len(), module_names.join(","))
             }
             _ => {
                 format!("Invalid root implementation: {:?}", root_impl::get_impl())
