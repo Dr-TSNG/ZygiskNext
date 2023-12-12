@@ -28,7 +28,7 @@ val minKsudVersion by extra(10942)
 val maxKsuVersion by extra(20000)
 val minMagiskVersion by extra(26300)
 
-val androidMinSdkVersion by extra(29)
+val androidMinSdkVersion by extra(26)
 val androidTargetSdkVersion by extra(34)
 val androidCompileSdkVersion by extra(34)
 val androidBuildToolsVersion by extra("34.0.0")

@@ -2,6 +2,11 @@ name: CI
 
 on:
   workflow_dispatch:
+    inputs:
+      post_telegram:
+        description: 'Post to Telegram'
+        required: true
+        type: boolean
   push:
     branches: [ master ]
     tags: [ v* ]
@@ -75,6 +80,12 @@ jobs:
           debugName=`ls module/build/outputs/release/Zygisk-Next-v*-debug.zip | awk -F '(/|.zip)' '{print $5}'` && echo "debugName=$debugName" >> $GITHUB_OUTPUT
           unzip module/build/outputs/release/Zygisk-Next-v*-release.zip -d zksu-release
           unzip module/build/outputs/release/Zygisk-Next-v*-debug.zip -d zksu-debug
+          releaseSymbolName="SYMBOLS-$releaseName.zip"
+          debugSymbolName="SYMBOLS-$debugName.zip"
+          echo "releaseSymbolName=$releaseSymbolName" >> $GITHUB_OUTPUT
+          echo "debugSymbolName=$debugSymbolName" >> $GITHUB_OUTPUT
+          zip -r $releaseSymbolName zygiskd/build/symbols/release
+          zip -r $debugSymbolName zygiskd/build/symbols/debug
 
       - name: Upload release
         uses: actions/upload-artifact@v3
@@ -87,3 +98,34 @@ jobs:
         with:
           name: ${{ steps.prepareArtifact.outputs.debugName }}
           path: "./zksu-debug/*"
+
+      - name: Upload release symbols
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ steps.prepareArtifact.outputs.releaseName }}-symbols
+          path: "zygiskd/build/symbols/release"
+
+      - name: Upload debug symbols
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ steps.prepareArtifact.outputs.debugName }}-symbols
+          path: "zygiskd/build/symbols/debug"
+          
+      - name: Post to channel
+        if: ${{ success() && github.event_name != 'pull_request' && github.ref == 'refs/heads/master' && github.ref_type != 'tag' && inputs.post_telegram != 'false' }}
+        env:
+          CHANNEL_ID: ${{ secrets.CHANNEL_ID }}
+          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+          COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
+          COMMIT_URL: ${{ github.event.head_commit.url }}
+          COMMIT_ID: ${{ github.event.head_commit.id }}
+        run: |
+          if [ ! -z "${{ secrets.BOT_TOKEN }}" ]; then
+            OUTPUT="module/build/outputs/release"
+            export Release=$(find $OUTPUT -name "Zygisk-Next-v*-release.zip")
+            export Debug=$(find $OUTPUT -name "Zygisk-Next-v*-debug.zip")
+            export ReleaseSymbol="${{ steps.prepareArtifact.outputs.releaseSymbolName }}"
+            export DebugSymbol="${{ steps.prepareArtifact.outputs.debugSymbolName }}"
+            URL=$(python3 .github/scripts/telegram_url.py)
+            curl -v "$URL" -F Release="@$Release" -F Debug="@$Debug" -F ReleaseSymbol="@$ReleaseSymbol" -F DebugSymbol="@$DebugSymbol" 
+          fi

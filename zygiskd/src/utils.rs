@@ -1,11 +1,13 @@
 use anyhow::Result;
 use std::{fs, io::{Read, Write}, os::unix::net::UnixStream};
-use std::ffi::{c_char, CStr, CString};
-use std::os::fd::AsFd;
-use std::os::unix::net::UnixListener;
+use std::ffi::{c_char, c_void, CStr, CString};
+use std::os::fd::{AsFd, AsRawFd};
+use std::os::unix::net::{UnixDatagram, UnixListener};
 use std::process::Command;
 use std::sync::OnceLock;
-use rustix::net::{AddressFamily, bind_unix, listen, socket, SocketAddrUnix, SocketType};
+use bitflags::Flags;
+use rustix::net::{AddressFamily, bind_unix, connect_unix, listen, SendFlags, sendto_unix, socket, SocketAddrUnix, SocketType};
+use rustix::path::Arg;
 use rustix::thread::gettid;
 
 #[cfg(target_pointer_width = "64")]
@@ -63,6 +65,11 @@ pub fn set_socket_create_context(context: &str) -> Result<()> {
     }
 }
 
+pub fn get_current_attr() -> Result<String> {
+    let s = fs::read("/proc/self/attr/current")?;
+    Ok(s.to_string_lossy().to_string())
+}
+
 pub fn chcon(path: &str, context: &str) -> Result<()> {
     Command::new("chcon").arg(context).arg(path).status()?;
     Ok(())
@@ -94,6 +101,28 @@ pub fn set_property(name: &str, value: &str) -> Result<()> {
         __system_property_set(name.as_ptr(), value.as_ptr());
     }
     Ok(())
+}
+
+pub fn wait_property(name: &str, serial: u32) -> Result<u32> {
+    let name = CString::new(name)?;
+    let info = unsafe {
+        __system_property_find(name.as_ptr())
+    };
+    let mut serial = serial;
+    unsafe {
+        __system_property_wait(info, serial, &mut serial, std::ptr::null());
+    }
+    Ok(serial)
+}
+
+pub fn get_property_serial(name: &str) -> Result<u32> {
+    let name = CString::new(name)?;
+    let info = unsafe {
+        __system_property_find(name.as_ptr())
+    };
+    Ok(unsafe {
+        __system_property_serial(info)
+    })
 }
 
 pub fn switch_mount_namespace(pid: i32) -> Result<()> {
@@ -173,8 +202,38 @@ pub fn unix_listener_from_path(path: &str) -> Result<UnixListener> {
     Ok(UnixListener::from(socket))
 }
 
+pub fn unix_datagram_sendto_abstract(path: &str, buf: &[u8]) -> Result<()> {
+    // FIXME: shall we set create context every time?
+    set_socket_create_context(get_current_attr()?.as_str())?;
+    let addr = SocketAddrUnix::new_abstract_name(path.as_bytes())?;
+    let socket = socket(AddressFamily::UNIX, SocketType::DGRAM, None)?;
+    connect_unix(&socket, &addr)?;
+    sendto_unix(socket, buf, SendFlags::empty(), &addr)?;
+    set_socket_create_context("u:r:zygote:s0")?;
+    Ok(())
+}
+
+pub fn check_unix_socket(stream: &UnixStream, block: bool) -> bool {
+    unsafe {
+        let mut pfd = libc::pollfd {
+            fd: stream.as_raw_fd(),
+            events: libc::POLLIN,
+            revents: 0,
+        };
+        let timeout = if block { -1 } else { 0 };
+        libc::poll(&mut pfd, 1, timeout);
+        if pfd.revents & !libc::POLLIN != 0 {
+            return false;
+        }
+    }
+    return true;
+}
+
 extern "C" {
     fn __android_log_print(prio: i32, tag: *const c_char, fmt: *const c_char, ...) -> i32;
     fn __system_property_get(name: *const c_char, value: *mut c_char) -> u32;
     fn __system_property_set(name: *const c_char, value: *const c_char) -> u32;
+    fn __system_property_find(name: *const c_char) -> *const c_void;
+    fn __system_property_wait(info: *const c_void, old_serial: u32, new_serial: *mut u32, timeout: *const libc::timespec) -> bool;
+    fn __system_property_serial(info: *const c_void) -> u32;
 }

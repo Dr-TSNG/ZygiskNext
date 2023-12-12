@@ -34,12 +34,12 @@ androidComponents.onVariants { variant ->
         group = "module"
         dependsOn(
             ":loader:assemble$variantCapped",
-            ":zygiskd:cargoBuild",
+            ":zygiskd:buildAndStrip",
         )
         into(moduleDir)
         from("${rootProject.projectDir}/README.md")
         from("$projectDir/src") {
-            exclude("module.prop", "customize.sh", "post-fs-data.sh", "service.sh")
+            exclude("module.prop", "customize.sh", "post-fs-data.sh", "service.sh", "zygisk-ctl.sh")
             filter<FixCrLfFilter>("eol" to FixCrLfFilter.CrLf.newInstance("lf"))
         }
         from("$projectDir/src") {
@@ -52,7 +52,7 @@ androidComponents.onVariants { variant ->
             )
         }
         from("$projectDir/src") {
-            include("customize.sh", "post-fs-data.sh", "service.sh")
+            include("customize.sh", "post-fs-data.sh", "service.sh", "zygisk-ctl.sh")
             val tokens = mapOf(
                 "DEBUG" to if (buildTypeLowered == "debug") "true" else "false",
                 "MIN_KSU_VERSION" to "$minKsuVersion",
@@ -65,6 +65,7 @@ androidComponents.onVariants { variant ->
         }
         into("bin") {
             from(project(":zygiskd").buildDir.path + "/rustJniLibs/android")
+            include("**/zygiskd")
         }
         into("lib") {
             from("${project(":loader").buildDir}/intermediates/stripped_native_libs/$variantLowered/out/lib")

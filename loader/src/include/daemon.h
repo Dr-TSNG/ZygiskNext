@@ -11,7 +11,9 @@
 # define LP_SELECT(lp32, lp64) lp32
 #endif
 
-constexpr auto kCPSocketPath = "/dev/zygisk/" LP_SELECT("cp32", "cp64") ".sock";
+constexpr auto kCPSocketName = "/" LP_SELECT("cp32", "cp64") ".sock";
+constexpr const auto MAGIC_PATH_ENV = "MAGIC_PATH";
+constexpr const auto MAGIC_ENV = "MAGIC";
 
 class UniqueFd {
     using Fd = int;
@@ -58,7 +60,10 @@ namespace zygiskd {
         ReadModules,
         RequestCompanionSocket,
         GetModuleDir,
+        ZygoteRestart,
     };
+
+    void Init(const char *path);
 
     bool PingHeartbeat();
 
@@ -71,4 +76,6 @@ namespace zygiskd {
     int ConnectCompanion(size_t index);
 
     int GetModuleDir(size_t index);
+
+    void ZygoteRestart();
 }

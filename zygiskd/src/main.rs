@@ -1,14 +1,12 @@
 mod constants;
 mod dl;
-mod fuse;
-mod ptrace;
 mod root_impl;
 mod utils;
-mod watchdog;
 mod zygiskd;
+mod companion;
 
 use std::future::Future;
-use anyhow::Result;
+use crate::constants::ZKSU_VERSION;
 
 fn init_android_logger(tag: &str) {
     android_logger::init_once(
@@ -18,22 +16,25 @@ fn init_android_logger(tag: &str) {
     );
 }
 
-fn async_start<F: Future>(future: F) -> F::Output {
-    let async_runtime = tokio::runtime::Runtime::new().unwrap();
-    async_runtime.block_on(future)
-}
-
-fn start(name: &str) -> Result<()> {
-    utils::switch_mount_namespace(1)?;
-    root_impl::setup();
-    match name.trim_start_matches("zygisk-") {
-        "wd" => async_start(watchdog::main())?,
-        "fuse" => fuse::main()?,
-        lp_select!("cp32", "cp64") => zygiskd::main()?,
-        lp_select!("ptrace32", "ptrace64") => ptrace::main()?,
-        _ => println!("Available commands: wd, fuse, cp, ptrace"),
+fn start() {
+    let args: Vec<String> = std::env::args().collect();
+    if args.len() == 3 && args[1] == "companion" {
+        let fd: i32 = args[2].parse().unwrap();
+        companion::entry(fd);
+        return;
+    } else if args.len() == 2 && args[1] == "version" {
+        println!("Zygisk Next daemon {}", ZKSU_VERSION);
+        return;
+    } else if args.len() == 2 && args[1] == "root" {
+        root_impl::setup();
+        println!("root impl: {:?}", root_impl::get_impl());
+        return;
     }
-    Ok(())
+
+    utils::switch_mount_namespace(1).expect("switch mnt ns");
+    root_impl::setup();
+    log::info!("current root impl: {:?}", root_impl::get_impl());
+    zygiskd::main().expect("zygiskd main");
 }
 
 fn main() {
@@ -41,7 +42,5 @@ fn main() {
     let nice_name = process.split('/').last().unwrap();
     init_android_logger(nice_name);
 
-    if let Err(e) = start(nice_name) {
-        log::error!("Crashed: {}\n{}", e, e.backtrace());
-    }
+    start();
 }

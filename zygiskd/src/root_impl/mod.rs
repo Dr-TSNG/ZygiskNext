@@ -1,6 +1,7 @@
 mod kernelsu;
 mod magisk;
 
+#[derive(Debug)]
 pub enum RootImpl {
     None,
     TooOld,
@@ -44,7 +45,7 @@ pub fn uid_granted_root(uid: i32) -> bool {
     match get_impl() {
         RootImpl::KernelSU => kernelsu::uid_granted_root(uid),
         RootImpl::Magisk => magisk::uid_granted_root(uid),
-        _ => unreachable!(),
+        _ => panic!("uid_granted_root: unknown root impl {:?}", get_impl()),
     }
 }
 
@@ -52,6 +53,6 @@ pub fn uid_should_umount(uid: i32) -> bool {
     match get_impl() {
         RootImpl::KernelSU => kernelsu::uid_should_umount(uid),
         RootImpl::Magisk => magisk::uid_should_umount(uid),
-        _ => unreachable!(),
+        _ => panic!("uid_should_umount: unknown root impl {:?}", get_impl()),
     }
 }

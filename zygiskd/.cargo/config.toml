@@ -1,2 +1,3 @@
 [build]
 target-dir = "build/intermediates/rust"
+target = "aarch64-linux-android"

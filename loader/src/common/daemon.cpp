@@ -7,6 +7,11 @@
 #include "socket_utils.h"
 
 namespace zygiskd {
+    static std::string zygisk_path;
+    void Init(const char *path) {
+        LOGI("zygisk path set to %s", path);
+        zygisk_path = path;
+    }
 
     int Connect(uint8_t retry) {
         int fd = socket(PF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, 0);
@@ -14,14 +19,17 @@ namespace zygiskd {
                 .sun_family = AF_UNIX,
                 .sun_path={0},
         };
-        strcpy(addr.sun_path, kCPSocketPath);
+        auto socket_path = zygisk_path + kCPSocketName;
+        strcpy(addr.sun_path, socket_path.c_str());
         socklen_t socklen = sizeof(addr);
 
         while (retry--) {
             int r = connect(fd, reinterpret_cast<struct sockaddr*>(&addr), socklen);
             if (r == 0) return fd;
-            LOGW("Retrying to connect to zygiskd, sleep 1s");
-            sleep(1);
+            if (retry) {
+                PLOGE("Retrying to connect to zygiskd, sleep 1s");
+                sleep(1);
+            }
         }
 
         close(fd);
@@ -93,7 +101,7 @@ namespace zygiskd {
     }
 
     int GetModuleDir(size_t index) {
-        int fd = Connect(1);
+        UniqueFd fd = Connect(1);
         if (fd == -1) {
             PLOGE("GetModuleDir");
             return -1;
@@ -101,5 +109,20 @@ namespace zygiskd {
         socket_utils::write_u8(fd, (uint8_t) SocketAction::GetModuleDir);
         socket_utils::write_usize(fd, index);
         return socket_utils::recv_fd(fd);
+    }
+
+    void ZygoteRestart() {
+        UniqueFd fd = Connect(1);
+        if (fd == -1) {
+            if (errno == ENOENT) {
+                LOGD("Could not notify ZygoteRestart (maybe it hasn't been created)");
+            } else {
+                PLOGE("Could not notify ZygoteRestart");
+            }
+            return;
+        }
+        if (!socket_utils::write_u8(fd, (uint8_t) SocketAction::ZygoteRestart)) {
+            PLOGE("Failed to request ZygoteRestart");
+        }
     }
 }
