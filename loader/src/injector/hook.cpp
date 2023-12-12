@@ -236,12 +236,14 @@ void hookJniNativeMethods(JNIEnv *env, const char *clz, JNINativeMethod *methods
         if (mid == nullptr) {
             env->ExceptionClear();
             nm.fnPtr = nullptr;
+            LOGE("Could not found jni method in class %s: %s(%s)", clz, nm.name, nm.signature);
             continue;
         }
         auto method = lsplant::JNI_ToReflectedMethod(env, clazz, mid, is_static);
         auto modifier = lsplant::JNI_CallIntMethod(env, method, member_getModifiers);
         if ((modifier & MODIFIER_NATIVE) == 0) {
             nm.fnPtr = nullptr;
+            LOGE("Don't hook method because it's not native method: %s: %s(%s)", clz, nm.name, nm.signature);
             continue;
         }
         auto artMethod = lsplant::art::ArtMethod::FromReflectedMethod(env, method);
