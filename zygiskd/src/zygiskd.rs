@@ -32,10 +32,25 @@ struct Context {
 
 pub fn main() -> Result<()> {
     log::info!("Welcome to Zygisk Next ({}) !", constants::ZKSU_VERSION);
+    let magic_path = std::env::var("MAGIC")?;
+    let controller_path = format!("init_monitor{}", magic_path);
+    log::info!("socket path {}", controller_path);
 
     let arch = get_arch()?;
     log::debug!("Daemon architecture: {arch}");
     let modules = load_modules(arch)?;
+
+    {
+        let module_names: Vec<_> = modules.iter()
+            .map(|m| m.name.as_str()).collect();
+        let module_info = format!("loaded {} module(s):{}", modules.len(), module_names.join(","));
+        let mut msg = Vec::<u8>::new();
+        msg.extend_from_slice(&constants::DAEMON_SET_INFO.to_le_bytes());
+        msg.extend_from_slice(&(module_info.len() as u32 + 1).to_le_bytes());
+        msg.extend_from_slice(module_info.as_bytes());
+        msg.extend_from_slice(&[0u8]);
+        utils::unix_datagram_sendto_abstract(controller_path.as_str(), msg.as_slice()).expect("failed to send info");
+    }
 
     let context = Context {
         modules,
@@ -50,13 +65,8 @@ pub fn main() -> Result<()> {
         log::trace!("New daemon action {:?}", action);
         match action {
             DaemonSocketAction::PingHeartbeat => {
-                utils::set_socket_create_context(utils::get_current_attr()?.as_str())?;
-                let magic_path = std::env::var("MAGIC")?;
-                let socket_path = format!("init_monitor{}", magic_path);
-                log::info!("socket path {}", socket_path);
                 let value = constants::ZYGOTE_INJECTED;
-                utils::unix_datagram_sendto_abstract(socket_path.as_str(), &value.to_le_bytes())?;
-                utils::set_socket_create_context("u:r:zygote:s0")?;
+                utils::unix_datagram_sendto_abstract(controller_path.as_str(), &value.to_le_bytes())?;
             }
             DaemonSocketAction::ZygoteRestart => {
                 info!("Zygote restarted, clean up companions");

@@ -203,10 +203,13 @@ pub fn unix_listener_from_path(path: &str) -> Result<UnixListener> {
 }
 
 pub fn unix_datagram_sendto_abstract(path: &str, buf: &[u8]) -> Result<()> {
+    // FIXME: shall we set create context every time?
+    set_socket_create_context(get_current_attr()?.as_str())?;
     let addr = SocketAddrUnix::new_abstract_name(path.as_bytes())?;
     let socket = socket(AddressFamily::UNIX, SocketType::DGRAM, None)?;
     connect_unix(&socket, &addr)?;
     sendto_unix(socket, buf, SendFlags::empty(), &addr)?;
+    set_socket_create_context("u:r:zygote:s0")?;
     Ok(())
 }
 

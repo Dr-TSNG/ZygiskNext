@@ -10,7 +10,9 @@ enum Command {
     EXIT = 3,
     // sent from daemon
     ZYGOTE64_INJECTED = 4,
-    ZYGOTE32_INJECTED = 5
+    ZYGOTE32_INJECTED = 5,
+    DAEMON64_SET_INFO = 6,
+    DAEMON32_SET_INFO = 7,
 };
 
 void send_control_command(Command cmd);

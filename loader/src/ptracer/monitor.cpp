@@ -120,7 +120,7 @@ struct Status {
     bool zygote_injected = false;
     bool daemon_running = false;
     pid_t daemon_pid = -1;
-    std::string daemon_crash_reason;
+    std::string daemon_info;
 };
 
 static Status status64;
@@ -154,20 +154,54 @@ struct SocketHandler : public EventHandler {
     }
 
     void HandleEvent(EventLoop &loop, uint32_t event) override {
-        Command cmd;
+        struct [[gnu::packed]] MsgHead {
+            Command cmd;
+            int length;
+            char data[0];
+        };
         for (;;) {
-            auto nread = read(sock_fd_, &cmd, sizeof(cmd));
+            std::vector<uint8_t> buf;
+            buf.resize(sizeof(MsgHead), 0);
+            MsgHead &msg = *reinterpret_cast<MsgHead*>(buf.data());
+            ssize_t real_size;
+            auto nread = recv(sock_fd_, &msg, sizeof(msg), MSG_PEEK);
             if (nread == -1) {
                 if (errno == EAGAIN) {
                     break;
                 }
                 PLOGE("read socket");
             }
-            if (nread != sizeof(cmd)) {
-                LOGE("read %zu != %zu", nread, sizeof(cmd));
+            if (static_cast<size_t>(nread) < sizeof(Command)) {
+                LOGE("read %zu < %zu", nread, sizeof(Command));
                 continue;
             }
-            switch (cmd) {
+            if (msg.cmd >= Command::DAEMON64_SET_INFO) {
+                if (nread != sizeof(msg)) {
+                    LOGE("cmd %d size %zu != %zu", msg.cmd, nread, sizeof(MsgHead));
+                    continue;
+                }
+                real_size = sizeof(MsgHead) + msg.length;
+            } else {
+                if (nread != sizeof(Command)) {
+                    LOGE("cmd %d size %zu != %zu", msg.cmd, nread, sizeof(Command));
+                    continue;
+                }
+                real_size = sizeof(Command);
+            }
+            buf.resize(real_size);
+            nread = recv(sock_fd_, &msg, real_size, 0);
+            if (nread == -1) {
+                if (errno == EAGAIN) {
+                    break;
+                }
+                PLOGE("recv");
+                continue;
+            }
+            if (nread != real_size) {
+                LOGE("real size %zu != %zu", real_size, nread);
+                continue;
+            }
+            switch (msg.cmd) {
                 case START:
                     if (tracing_state == STOPPING) {
                         tracing_state = TRACING;
@@ -200,6 +234,16 @@ struct SocketHandler : public EventHandler {
                     break;
                 case ZYGOTE32_INJECTED:
                     status32.zygote_injected = true;
+                    updateStatus();
+                    break;
+                case DAEMON64_SET_INFO:
+                    LOGD("received daemon64 info %s", msg.data);
+                    status64.daemon_info = std::string(msg.data);
+                    updateStatus();
+                    break;
+                case DAEMON32_SET_INFO:
+                    LOGD("received daemon32 info %s", msg.data);
+                    status32.daemon_info = std::string(msg.data);
                     updateStatus();
                     break;
             }
@@ -341,8 +385,8 @@ public:
                     auto status_str = parse_status(status); \
                     LOGW("daemon" #abi "pid %d exited: %s", pid, status_str.c_str()); \
                     status##abi.daemon_running = false; \
-                    if (status##abi.daemon_crash_reason.empty()) { \
-                        status##abi.daemon_crash_reason = status_str; \
+                    if (status##abi.daemon_info.empty()) { \
+                        status##abi.daemon_info = status_str; \
                     } \
                     updateStatus(); \
                     continue; \
@@ -465,11 +509,11 @@ static void updateStatus() {
         if (status##suffix.daemon_running) status_text += "😋running"; \
         else { \
             status_text += "❌crashed"; \
-            if (!status##suffix.daemon_crash_reason.empty()) { \
-                status_text += "("; \
-                status_text += status##suffix.daemon_crash_reason; \
-                status_text += ")"; \
-            } \
+        } \
+        if (!status##suffix.daemon_info.empty()) { \
+            status_text += "("; \
+            status_text += status##suffix.daemon_info; \
+            status_text += ")"; \
         } \
     }
     WRITE_STATUS_ABI(64)
