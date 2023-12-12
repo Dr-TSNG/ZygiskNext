@@ -438,15 +438,15 @@ static void updateStatus() {
     std::string status_text = "monitor:";
     switch (tracing_state) {
         case TRACING:
-            status_text += "tracing";
+            status_text += "😋tracing";
             break;
         case STOPPING:
             [[fallthrough]];
         case STOPPED:
-            status_text += "stopped";
+            status_text += "❌stopped";
             break;
         case EXITING:
-            status_text += "exited";
+            status_text += "❌exited";
             break;
     }
     if (tracing_state != TRACING && !monitor_stop_reason.empty()) {
@@ -458,13 +458,13 @@ static void updateStatus() {
 #define WRITE_STATUS_ABI(suffix) \
     if (status##suffix.supported) { \
         status_text += " zygote" #suffix ":"; \
-        if (tracing_state != TRACING) status_text += "unknown,"; \
-        else if (status##suffix.zygote_injected) status_text += "injected,"; \
-        else status_text += "not injected,"; \
+        if (tracing_state != TRACING) status_text += "❓unknown,"; \
+        else if (status##suffix.zygote_injected) status_text += "😋injected,"; \
+        else status_text += "❌not injected,"; \
         status_text += " daemon" #suffix ":"; \
-        if (status##suffix.daemon_running) status_text += "running"; \
+        if (status##suffix.daemon_running) status_text += "😋running"; \
         else { \
-            status_text += "crashed"; \
+            status_text += "❌crashed"; \
             if (!status##suffix.daemon_crash_reason.empty()) { \
                 status_text += "("; \
                 status_text += status##suffix.daemon_crash_reason; \
