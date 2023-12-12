@@ -27,6 +27,7 @@ pub const PATH_PT_BIN32: &str = "bin/zygisk-ptracer32";
 pub const PATH_PT_BIN64: &str = "bin/zygisk-ptracer64";
 pub const ZYGOTE_INJECTED: i32 = lp_select!(5, 4);
 pub const DAEMON_SET_INFO: i32 = lp_select!(7, 6);
+pub const DAEMON_SET_ERROR_INFO: i32 = lp_select!(9, 8);
 
 pub const MAX_RESTART_COUNT: i32 = 5;
 

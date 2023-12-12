@@ -121,6 +121,7 @@ struct Status {
     bool daemon_running = false;
     pid_t daemon_pid = -1;
     std::string daemon_info;
+    std::string daemon_error_info;
 };
 
 static Status status64;
@@ -244,6 +245,18 @@ struct SocketHandler : public EventHandler {
                 case DAEMON32_SET_INFO:
                     LOGD("received daemon32 info %s", msg.data);
                     status32.daemon_info = std::string(msg.data);
+                    updateStatus();
+                    break;
+                case DAEMON64_SET_ERROR_INFO:
+                    LOGD("received daemon64 error info %s", msg.data);
+                    status64.daemon_running = false;
+                    status64.daemon_error_info = std::string(msg.data);
+                    updateStatus();
+                    break;
+                case DAEMON32_SET_ERROR_INFO:
+                    LOGD("received daemon32 error info %s", msg.data);
+                    status32.daemon_running = false;
+                    status32.daemon_error_info = std::string(msg.data);
                     updateStatus();
                     break;
             }
@@ -385,8 +398,8 @@ public:
                     auto status_str = parse_status(status); \
                     LOGW("daemon" #abi "pid %d exited: %s", pid, status_str.c_str()); \
                     status##abi.daemon_running = false; \
-                    if (status##abi.daemon_info.empty()) { \
-                        status##abi.daemon_info = status_str; \
+                    if (status##abi.daemon_error_info.empty()) { \
+                        status##abi.daemon_error_info = status_str; \
                     } \
                     updateStatus(); \
                     continue; \
@@ -506,14 +519,20 @@ static void updateStatus() {
         else if (status##suffix.zygote_injected) status_text += "😋injected,"; \
         else status_text += "❌not injected,"; \
         status_text += " daemon" #suffix ":"; \
-        if (status##suffix.daemon_running) status_text += "😋running"; \
-        else { \
+        if (status##suffix.daemon_running) {  \
+            status_text += "😋running";       \
+            if (!status##suffix.daemon_info.empty()) { \
+                status_text += "("; \
+                status_text += status##suffix.daemon_info; \
+                status_text += ")"; \
+            } \
+        } else { \
             status_text += "❌crashed"; \
-        } \
-        if (!status##suffix.daemon_info.empty()) { \
-            status_text += "("; \
-            status_text += status##suffix.daemon_info; \
-            status_text += ")"; \
+            if (!status##suffix.daemon_error_info.empty()) { \
+                status_text += "("; \
+                status_text += status##suffix.daemon_error_info; \
+                status_text += ")"; \
+            } \
         } \
     }
     WRITE_STATUS_ABI(64)
