@@ -52,7 +52,7 @@ void* DlopenMem(int fd, int flags) {
 
     auto* handle = android_dlopen_ext("/jit-cache", flags, &info);
     if (handle) {
-        LOGD("dlopen fd %d: %p", fd, handle);
+        LOGV("dlopen fd %d: %p", fd, handle);
     } else {
         LOGE("dlopen fd %d: %s", fd, dlerror());
     }

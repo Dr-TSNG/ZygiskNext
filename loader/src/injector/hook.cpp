@@ -180,7 +180,7 @@ DCL_HOOK_FUNC(int, pthread_attr_destroy, void *target) {
     if (gettid() != getpid())
         return res;
 
-    LOGD("pthread_attr_destroy\n");
+    LOGV("pthread_attr_destroy\n");
     if (should_unmap_zygisk) {
         unhook_functions();
         if (should_unmap_zygisk) {
@@ -198,7 +198,7 @@ void initialize_jni_hook();
 
 DCL_HOOK_FUNC(char *, strdup, const char *s) {
     if (s == "com.android.internal.os.ZygoteInit"sv) {
-        LOGD("strdup %s\n", s);
+        LOGV("strdup %s\n", s);
         initialize_jni_hook();
     }
     return old_strdup(s);
@@ -247,7 +247,7 @@ void hookJniNativeMethods(JNIEnv *env, const char *clz, JNINativeMethod *methods
         auto artMethod = lsplant::art::ArtMethod::FromReflectedMethod(env, method);
         hooks.push_back(nm);
         auto orig = artMethod->GetData();
-        LOGD("replaced %s %s orig %p", clz, nm.name, orig);
+        LOGV("replaced %s %s orig %p", clz, nm.name, orig);
         nm.fnPtr = orig;
     }
 
