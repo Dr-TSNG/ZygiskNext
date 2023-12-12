@@ -156,6 +156,7 @@ fn create_daemon_socket() -> Result<UnixListener> {
 fn spawn_companion(name: &str, lib_fd: RawFd) -> Result<Option<UnixStream>> {
     let (mut daemon, companion) = UnixStream::pair()?;
 
+    // FIXME: avoid getting self path from arg0
     let process = std::env::args().next().unwrap();
     let nice_name = process.split('/').last().unwrap();
 
