@@ -41,13 +41,20 @@ pub fn main() -> Result<()> {
     let modules = load_modules(arch)?;
 
     {
-        let module_names: Vec<_> = modules.iter()
-            .map(|m| m.name.as_str()).collect();
-        let module_info = format!("loaded {} module(s):{}", modules.len(), module_names.join(","));
         let mut msg = Vec::<u8>::new();
         msg.extend_from_slice(&constants::DAEMON_SET_INFO.to_le_bytes());
-        msg.extend_from_slice(&(module_info.len() as u32 + 1).to_le_bytes());
-        msg.extend_from_slice(module_info.as_bytes());
+        let info = match root_impl::get_impl() {
+            root_impl::RootImpl::KernelSU | root_impl::RootImpl::Magisk => {
+                let module_names: Vec<_> = modules.iter()
+                    .map(|m| m.name.as_str()).collect();
+                format!("Root:{:?},module({}):{}", root_impl::get_impl(), modules.len(), module_names.join(","))
+            }
+            _ => {
+                format!("Invalid root implementation: {:?}", root_impl::get_impl())
+            }
+        };
+        msg.extend_from_slice(&(info.len() as u32 + 1).to_le_bytes());
+        msg.extend_from_slice(info.as_bytes());
         msg.extend_from_slice(&[0u8]);
         utils::unix_datagram_sendto_abstract(controller_path.as_str(), msg.as_slice()).expect("failed to send info");
     }
