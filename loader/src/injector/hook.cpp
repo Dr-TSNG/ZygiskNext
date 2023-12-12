@@ -48,12 +48,12 @@ void name##_post();
 
 #define MAX_FD_SIZE 1024
 
-struct HookContext;
+struct ZygiskContext;
 
 // Current context
-HookContext *g_ctx;
+ZygiskContext *g_ctx;
 
-struct HookContext {
+struct ZygiskContext {
     JNIEnv *env;
     union {
         void *ptr;
@@ -86,12 +86,12 @@ struct HookContext {
     vector<RegisterInfo> register_info;
     vector<IgnoreInfo> ignore_info;
 
-    HookContext(JNIEnv *env, void *args) :
+    ZygiskContext(JNIEnv *env, void *args) :
     env(env), args{args}, process(nullptr), pid(-1), info_flags(0),
     hook_info_lock(PTHREAD_MUTEX_INITIALIZER) {
         g_ctx = this;
     }
-    ~HookContext();
+    ~ZygiskContext();
 
     /* Zygisksu changed: Load module fds */
     void run_modules_pre();
@@ -355,7 +355,7 @@ bool ZygiskModule::RegisterModuleImpl(ApiTable *api, long *module) {
     return true;
 }
 
-void HookContext::plt_hook_register(const char *regex, const char *symbol, void *fn, void **backup) {
+void ZygiskContext::plt_hook_register(const char *regex, const char *symbol, void *fn, void **backup) {
     if (regex == nullptr || symbol == nullptr || fn == nullptr)
         return;
     regex_t re;
@@ -365,7 +365,7 @@ void HookContext::plt_hook_register(const char *regex, const char *symbol, void 
     register_info.emplace_back(RegisterInfo{re, symbol, fn, backup});
 }
 
-void HookContext::plt_hook_exclude(const char *regex, const char *symbol) {
+void ZygiskContext::plt_hook_exclude(const char *regex, const char *symbol) {
     if (!regex) return;
     regex_t re;
     if (regcomp(&re, regex, REG_NOSUB) != 0)
@@ -374,7 +374,7 @@ void HookContext::plt_hook_exclude(const char *regex, const char *symbol) {
     ignore_info.emplace_back(IgnoreInfo{re, symbol ?: ""});
 }
 
-void HookContext::plt_hook_process_regex() {
+void ZygiskContext::plt_hook_process_regex() {
     if (register_info.empty())
         return;
     for (auto &map : lsplt::MapInfo::Scan()) {
@@ -398,7 +398,7 @@ void HookContext::plt_hook_process_regex() {
     }
 }
 
-bool HookContext::plt_hook_commit() {
+bool ZygiskContext::plt_hook_commit() {
     {
         mutex_guard lock(hook_info_lock);
         plt_hook_process_regex();
@@ -460,7 +460,7 @@ int sigmask(int how, int signum) {
     return sigprocmask(how, &set, nullptr);
 }
 
-void HookContext::fork_pre() {
+void ZygiskContext::fork_pre() {
     // Do our own fork before loading any 3rd party code
     // First block SIGCHLD, unblock after original fork is done
     sigmask(SIG_BLOCK, SIGCHLD);
@@ -482,7 +482,7 @@ void HookContext::fork_pre() {
     allowed_fds[dirfd(dir.get())] = false;
 }
 
-void HookContext::sanitize_fds() {
+void ZygiskContext::sanitize_fds() {
     if (flags[SKIP_FD_SANITIZATION])
         return;
 
@@ -538,14 +538,14 @@ void HookContext::sanitize_fds() {
     }
 }
 
-void HookContext::fork_post() {
+void ZygiskContext::fork_post() {
     // Unblock SIGCHLD in case the original method didn't
     sigmask(SIG_UNBLOCK, SIGCHLD);
     g_ctx = nullptr;
 }
 
 /* Zygisksu changed: Load module fds */
-void HookContext::run_modules_pre() {
+void ZygiskContext::run_modules_pre() {
     auto ms = zygiskd::ReadModules();
     auto size = ms.size();
     for (size_t i = 0; i < size; i++) {
@@ -566,7 +566,7 @@ void HookContext::run_modules_pre() {
     }
 }
 
-void HookContext::run_modules_post() {
+void ZygiskContext::run_modules_post() {
     flags[POST_SPECIALIZE] = true;
     for (const auto &m : modules) {
         if (flags[APP_SPECIALIZE]) {
@@ -579,14 +579,14 @@ void HookContext::run_modules_post() {
 }
 
 /* Zygisksu changed: Load module fds */
-void HookContext::app_specialize_pre() {
+void ZygiskContext::app_specialize_pre() {
     flags[APP_SPECIALIZE] = true;
     info_flags = zygiskd::GetProcessFlags(g_ctx->args.app->uid);
     run_modules_pre();
 }
 
 
-void HookContext::app_specialize_post() {
+void ZygiskContext::app_specialize_post() {
     run_modules_post();
 
     // Cleanups
@@ -595,7 +595,7 @@ void HookContext::app_specialize_post() {
     logging::setfd(-1);
 }
 
-bool HookContext::exempt_fd(int fd) {
+bool ZygiskContext::exempt_fd(int fd) {
     if (flags[POST_SPECIALIZE] || flags[SKIP_FD_SANITIZATION])
         return true;
     if (!flags[APP_FORK_AND_SPECIALIZE])
@@ -606,7 +606,7 @@ bool HookContext::exempt_fd(int fd) {
 
 // -----------------------------------------------------------------
 
-void HookContext::nativeSpecializeAppProcess_pre() {
+void ZygiskContext::nativeSpecializeAppProcess_pre() {
     process = env->GetStringUTFChars(args.app->nice_name, nullptr);
     LOGV("pre  specialize [%s]\n", process);
     // App specialize does not check FD
@@ -614,13 +614,13 @@ void HookContext::nativeSpecializeAppProcess_pre() {
     app_specialize_pre();
 }
 
-void HookContext::nativeSpecializeAppProcess_post() {
+void ZygiskContext::nativeSpecializeAppProcess_post() {
     LOGV("post specialize [%s]\n", process);
     app_specialize_post();
 }
 
 /* Zygisksu changed: No system_server status write back */
-void HookContext::nativeForkSystemServer_pre() {
+void ZygiskContext::nativeForkSystemServer_pre() {
     LOGV("pre  forkSystemServer\n");
     flags[SERVER_FORK_AND_SPECIALIZE] = true;
 
@@ -633,7 +633,7 @@ void HookContext::nativeForkSystemServer_pre() {
     sanitize_fds();
 }
 
-void HookContext::nativeForkSystemServer_post() {
+void ZygiskContext::nativeForkSystemServer_post() {
     if (pid == 0) {
         LOGV("post forkSystemServer\n");
         run_modules_post();
@@ -641,7 +641,7 @@ void HookContext::nativeForkSystemServer_post() {
     fork_post();
 }
 
-void HookContext::nativeForkAndSpecialize_pre() {
+void ZygiskContext::nativeForkAndSpecialize_pre() {
     process = env->GetStringUTFChars(args.app->nice_name, nullptr);
     LOGV("pre  forkAndSpecialize [%s]\n", process);
 
@@ -658,7 +658,7 @@ void HookContext::nativeForkAndSpecialize_pre() {
     sanitize_fds();
 }
 
-void HookContext::nativeForkAndSpecialize_post() {
+void ZygiskContext::nativeForkAndSpecialize_post() {
     if (pid == 0) {
         LOGV("post forkAndSpecialize [%s]\n", process);
         app_specialize_post();
@@ -666,7 +666,7 @@ void HookContext::nativeForkAndSpecialize_post() {
     fork_post();
 }
 
-HookContext::~HookContext() {
+ZygiskContext::~ZygiskContext() {
     // This global pointer points to a variable on the stack.
     // Set this to nullptr to prevent leaking local variable.
     // This also disables most plt hooked functions.
