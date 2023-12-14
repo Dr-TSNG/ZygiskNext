@@ -7,7 +7,6 @@ Standalone implementation of Zygisk, providing Zygisk API support for KernelSU a
 ### General
 
 + No multiple root implementation installed
-+ SELinux enforcing: Zygisk Next rely on SELinux to prevent `vold` from aborting our fuse connection
 
 ### KernelSU
 
