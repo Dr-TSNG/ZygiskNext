@@ -77,7 +77,8 @@ public:
         while (running) {
             int nfds = epoll_wait(epoll_fd_, events, MAX_EVENTS, -1);
             if (nfds == -1) {
-                PLOGE("epoll_wait");
+                if (errno != EINTR)
+                    PLOGE("epoll_wait");
                 continue;
             }
             for (int i = 0; i < nfds; i++) {
