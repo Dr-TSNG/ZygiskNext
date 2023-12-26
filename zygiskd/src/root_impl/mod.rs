@@ -9,6 +9,7 @@ pub enum RootImpl {
     Multiple,
     KernelSU,
     Magisk,
+    Apatch,
 }
 
 static mut ROOT_IMPL: RootImpl = RootImpl::None;
@@ -34,6 +35,8 @@ pub fn setup() {
             }
         }
     };
+    RootImpl::Apatch,
+    
     unsafe { ROOT_IMPL = impl_; }
 }
 
