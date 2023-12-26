@@ -19,7 +19,7 @@ pub fn setup() {
     let magisk_version = magisk::get_magisk();
 
     let impl_ = match (ksu_version, magisk_version) {
-        (None, None) => RootImpl::None,
+        (None, None) => RootImpl::Apatch,
         (Some(_), Some(_)) => RootImpl::Multiple,
         (Some(ksu_version), None) => {
             match ksu_version {
@@ -35,8 +35,6 @@ pub fn setup() {
             }
         }
     };
-    RootImpl::Apatch,
-    
     unsafe { ROOT_IMPL = impl_; }
 }
 
