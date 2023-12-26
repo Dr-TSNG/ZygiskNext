@@ -42,18 +42,8 @@ pub fn main() -> Result<()> {
 
     {
         let mut msg = Vec::<u8>::new();
-        let info = match root_impl::get_impl() {
-            root_impl::RootImpl::KernelSU | root_impl::RootImpl::Magisk => {
-                msg.extend_from_slice(&constants::DAEMON_SET_INFO.to_le_bytes());
-                let module_names: Vec<_> = modules.iter()
-                    .map(|m| m.name.as_str()).collect();
-                format!("Root: {:?},module({}): {}", root_impl::get_impl(), modules.len(), module_names.join(","))
-            }
-            _ => {
-                msg.extend_from_slice(&constants::DAEMON_SET_ERROR_INFO.to_le_bytes());
-                format!("Invalid root implementation: {:?}", root_impl::get_impl())
-            }
-        };
+        msg.extend_from_slice(&constants::DAEMON_SET_INFO.to_le_bytes());
+        let info = "Root: Magisk";
         msg.extend_from_slice(&(info.len() as u32 + 1).to_le_bytes());
         msg.extend_from_slice(info.as_bytes());
         msg.extend_from_slice(&[0u8]);
