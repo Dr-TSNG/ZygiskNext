@@ -14,6 +14,7 @@ val verName: String by rootProject.extra
 val minKsuVersion: Int by rootProject.extra
 val minKsudVersion: Int by rootProject.extra
 val maxKsuVersion: Int by rootProject.extra
+val kpatchVerCode: Int by rootProject.extra
 val minMagiskVersion: Int by rootProject.extra
 val commitHash: String by rootProject.extra
 
@@ -58,6 +59,7 @@ androidComponents.onVariants { variant ->
                 "MIN_KSU_VERSION" to "$minKsuVersion",
                 "MIN_KSUD_VERSION" to "$minKsudVersion",
                 "MAX_KSU_VERSION" to "$maxKsuVersion",
+                "KPTACH_VER_CODE" to "$kpatchVerCode",
                 "MIN_MAGISK_VERSION" to "$minMagiskVersion",
             )
             filter<ReplaceTokens>("tokens" to tokens)

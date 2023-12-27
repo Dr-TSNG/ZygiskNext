@@ -6,7 +6,7 @@ MIN_KSU_VERSION=@MIN_KSU_VERSION@
 MIN_KSUD_VERSION=@MIN_KSUD_VERSION@
 MAX_KSU_VERSION=@MAX_KSU_VERSION@
 MIN_MAGISK_VERSION=@MIN_MAGISK_VERSION@
-APATCH_VER_CODE=@APATCH_VER_CODE@
+KPATCH_VER_CODE=@KPATCH_VER_CODE@
 
 if [ "$BOOTMODE" ] && [ "$KSU" ]; then
   ui_print "- Installing from KernelSU app"
@@ -35,6 +35,8 @@ if [ "$BOOTMODE" ] && [ "$KSU" ]; then
     ui_print "! Please uninstall Magisk before installing Zygisk Next"
     abort    "*********************************************************"
   fi
+elif [ "$BOOTMODE" ] && [ "$APATCH_VER_CODE" ]; then
+  ui_print "- Installing from Apatch app"
 elif [ "$BOOTMODE" ] && [ "$MAGISK_VER_CODE" ]; then
   ui_print "- Installing from Magisk app"
   if [ "$MAGISK_VER_CODE" -lt "$MIN_MAGISK_VERSION" ]; then
@@ -43,8 +45,6 @@ elif [ "$BOOTMODE" ] && [ "$MAGISK_VER_CODE" ]; then
     ui_print "! Please update Magisk to latest version"
     abort    "*********************************************************"
   fi
-elif [ "$BOOTMODE" ] && [ "$APATCH_VER_CODE" ]; then
-  ui_print "- Installing from Apatch app"
 else
   ui_print "*********************************************************"
   ui_print "! Install from recovery is not supported"

@@ -226,7 +226,7 @@ fn handle_daemon_action(action: DaemonSocketAction, mut stream: UnixStream, cont
             match root_impl::get_impl() {
                 root_impl::RootImpl::KernelSU => flags |= ProcessFlags::PROCESS_ROOT_IS_KSU,
                 root_impl::RootImpl::Magisk => flags |= ProcessFlags::PROCESS_ROOT_IS_MAGISK,
-                root_impl::RootImpl::Apatch => flags |= ProcessFlags::PROCESS_ROOT_IS_KSU,
+                root_impl::RootImpl::Kpatch => flags |= ProcessFlags::PROCESS_ROOT_IS_KPATCH,
                 _ => panic!("wrong root impl: {:?}", root_impl::get_impl()),
             }
             log::trace!("Uid {} granted root: {}", uid, flags.contains(ProcessFlags::PROCESS_GRANTED_ROOT));

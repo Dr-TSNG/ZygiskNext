@@ -1,5 +1,6 @@
 mod kernelsu;
 mod magisk;
+mod kpatch;
 
 #[derive(Debug)]
 pub enum RootImpl {
@@ -9,7 +10,7 @@ pub enum RootImpl {
     Multiple,
     KernelSU,
     Magisk,
-    Apatch,
+    Kpatch,
 }
 
 static mut ROOT_IMPL: RootImpl = RootImpl::None;
@@ -17,22 +18,31 @@ static mut ROOT_IMPL: RootImpl = RootImpl::None;
 pub fn setup() {
     let ksu_version = kernelsu::get_kernel_su();
     let magisk_version = magisk::get_magisk();
+    let kpatch_version = kpatch::get_kpatch();
 
-    let impl_ = match (ksu_version, magisk_version) {
-        (None, None) => RootImpl::Apatch,
-        (Some(_), Some(_)) => RootImpl::Multiple,
-        (Some(ksu_version), None) => {
+    let impl_ = match (ksu_version, magisk_version, kpatch_version) {
+        (None, None, None) => RootImpl::None,
+        (Some(_), Some(_), Some(_)) => RootImpl::Multiple,
+        (Some(_), Some(_), None) => RootImpl::Multiple,
+        (Some(ksu_version), None, None) => {
             match ksu_version {
                 kernelsu::Version::Supported => RootImpl::KernelSU,
                 kernelsu::Version::TooOld => RootImpl::TooOld,
                 kernelsu::Version::Abnormal => RootImpl::Abnormal,
             }
         }
-        (None, Some(magisk_version)) => {
+        (None, Some(magisk_version), None) => {
             match magisk_version {
                 magisk::Version::Supported => RootImpl::Magisk,
                 magisk::Version::TooOld => RootImpl::TooOld,
             }
+        }
+        (None, None, Some(kpatch_version)) => {
+            match kpatch_version {
+                kpatch::Version::Supported => RootImpl::Kpatch,
+                kpatch::Version::TooOld => RootImpl::TooOld,
+            }
+
         }
     };
     unsafe { ROOT_IMPL = impl_; }
