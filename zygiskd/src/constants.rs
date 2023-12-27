@@ -9,7 +9,6 @@ use crate::lp_select;
 pub const KPATCH_VER_CODE: i32 = unwrap_ctx!(parse_i32(env!("KPATCH_VER_CODE")));
 pub const MIN_KSU_VERSION: i32 = unwrap_ctx!(parse_i32(env!("MIN_KSU_VERSION")));
 pub const MAX_KSU_VERSION: i32 = unwrap_ctx!(parse_i32(env!("MAX_KSU_VERSION")));
-pub const MIN_MAGISK_VERSION: i32 = unwrap_ctx!(parse_i32(env!("MIN_MAGISK_VERSION")));
 pub const ZKSU_VERSION: &'static str = env!("ZKSU_VERSION");
 
 #[cfg(debug_assertions)]
@@ -50,9 +49,8 @@ bitflags! {
     pub struct ProcessFlags: u32 {
         const PROCESS_GRANTED_ROOT = 1 << 0;
         const PROCESS_ON_DENYLIST = 1 << 1;
-        const PROCESS_ROOT_IS_KPATCH = 1 << 28;
         const PROCESS_ROOT_IS_KSU = 1 << 29;
-        const PROCESS_ROOT_IS_MAGISK = 1 << 30;
+        const PROCESS_ROOT_IS_KPATCH = 1 << 30;
         const PROCESS_IS_SYSUI = 1 << 31;
     }
 }

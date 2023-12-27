@@ -43,7 +43,7 @@ pub fn main() -> Result<()> {
     {
         let mut msg = Vec::<u8>::new();
         let info = match root_impl::get_impl() {
-            root_impl::RootImpl::KernelSU | root_impl::RootImpl::Magisk | root_impl::RootImpl::Kpatch => {
+            root_impl::RootImpl::KernelSU | root_impl::RootImpl::Kpatch => {
                 msg.extend_from_slice(&constants::DAEMON_SET_INFO.to_le_bytes());
                 let module_names: Vec<_> = modules.iter()
                     .map(|m| m.name.as_str()).collect();
@@ -230,12 +230,19 @@ fn handle_daemon_action(action: DaemonSocketAction, mut stream: UnixStream, cont
             if root_impl::uid_granted_root(uid) {
                 flags |= ProcessFlags::PROCESS_GRANTED_ROOT;
             }
-            if root_impl::uid_should_umount(uid) {
-                flags |= ProcessFlags::PROCESS_ON_DENYLIST;
+            match root_impl::get_impl() {
+                root_impl::RootImpl::KernelSU => {
+                    if root_impl::uid_should_umount(uid) {
+                        flags |= ProcessFlags::PROCESS_ON_DENYLIST;
+                    }
+                }
+                root_impl::RootImpl::Kpatch => {
+                    // Skip uid_should_umount() for Kpatch
+                }
+                _ => panic!("wrong root impl: {:?}", root_impl::get_impl()),
             }
             match root_impl::get_impl() {
                 root_impl::RootImpl::KernelSU => flags |= ProcessFlags::PROCESS_ROOT_IS_KSU,
-                root_impl::RootImpl::Magisk => flags |= ProcessFlags::PROCESS_ROOT_IS_MAGISK,
                 root_impl::RootImpl::Kpatch => flags |= ProcessFlags::PROCESS_ROOT_IS_KPATCH,
                 _ => panic!("wrong root impl: {:?}", root_impl::get_impl()),
             }

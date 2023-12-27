@@ -10,7 +10,5 @@ void hook_functions();
 
 void revert_unmount_ksu();
 
-void revert_unmount_magisk();
-
 void revert_unmount_kpatch();
 

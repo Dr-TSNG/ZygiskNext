@@ -145,8 +145,6 @@ DCL_HOOK_FUNC(int, unshare, int flags) {
         if (g_ctx->flags[DO_REVERT_UNMOUNT]) {
             if (g_ctx->info_flags & PROCESS_ROOT_IS_KSU) {
                 revert_unmount_ksu();
-            } else if (g_ctx->info_flags & PROCESS_ROOT_IS_MAGISK) {
-                revert_unmount_magisk();
             } else if (g_ctx->info_flags & PROCESS_ROOT_IS_KPATCH) {
                 revert_unmount_kpatch();
             }
