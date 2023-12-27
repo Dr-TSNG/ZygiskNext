@@ -28,7 +28,7 @@ if [ "$BOOTMODE" ] && [ "$KSU" ]; then
     ui_print "! Please update KernelSU Manager to latest version"
     abort    "*********************************************************"
   fi
-elif [ "$BOOTMODE" ] && [ "$APATCH_VER_CODE" ]; then
+elif [ "$APATCH_VER_CODE" ]; then
   ui_print "- Installing from Apatch app"
 else
   ui_print "*********************************************************"
