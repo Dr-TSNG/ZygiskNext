@@ -50,17 +50,13 @@ pub fn uid_should_umount(uid: i32) -> bool {
         .and_then(|child| child.wait_with_output().ok())
         .and_then(|output| String::from_utf8(output.stdout).ok());
 
-    let lines = match output {
-        Some(lines) => lines.split("\n").collect(),
-        None => return false,
-    };
-
-    for line in lines {
-        let line: String = line;
-        let parts = line.split(':').collect::<Vec<&str>>();
-        if parts.len() == 1 && parts[0] == &uid.to_string() {
-            return false;
+    if let Some(lines) = output {
+        for line in lines.split("\n") {
+            if line.contains(&uid.to_string()) {
+                return false; // UID found, return false
+            }
         }
     }
-    return true;
+
+    true // UID not found in the output, return true
 }
