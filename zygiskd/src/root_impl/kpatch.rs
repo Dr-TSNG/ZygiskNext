@@ -55,7 +55,7 @@ pub fn uid_should_umount(uid: i32) -> bool {
     };
 
     for line in lines {
-        let parts = line.split(':').collect::<Vec<&str>>();
+        let parts = lines.split(':').collect::<Vec<&str>>();
         if parts.len() == 3 && parts[0] == &uid.to_string() {
             return false;
         }
