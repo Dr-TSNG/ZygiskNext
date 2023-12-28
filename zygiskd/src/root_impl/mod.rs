@@ -52,6 +52,7 @@ pub fn uid_granted_root(uid: i32) -> bool {
 pub fn uid_should_umount(uid: i32) -> bool {
     match get_impl() {
         RootImpl::KernelSU => kernelsu::uid_should_umount(uid),
+        RootImpl::Kpatch => kpatch::uid_should_umount(uid),
         _ => panic!("uid_should_umount: unknown root impl {:?}", get_impl()),
     }
 }

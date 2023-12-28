@@ -230,16 +230,8 @@ fn handle_daemon_action(action: DaemonSocketAction, mut stream: UnixStream, cont
             if root_impl::uid_granted_root(uid) {
                 flags |= ProcessFlags::PROCESS_GRANTED_ROOT;
             }
-            match root_impl::get_impl() {
-                root_impl::RootImpl::KernelSU => {
-                    if root_impl::uid_should_umount(uid) {
-                        flags |= ProcessFlags::PROCESS_ON_DENYLIST;
-                    }
-                }
-                root_impl::RootImpl::Kpatch => {
-                    // Skip uid_should_umount() for Kpatch
-                }
-                _ => panic!("wrong root impl: {:?}", root_impl::get_impl()),
+            if root_impl::uid_should_umount(uid) {
+                flags |= ProcessFlags::PROCESS_ON_DENYLIST;
             }
             match root_impl::get_impl() {
                 root_impl::RootImpl::KernelSU => flags |= ProcessFlags::PROCESS_ROOT_IS_KSU,
