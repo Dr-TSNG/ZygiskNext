@@ -42,6 +42,7 @@ pub fn uid_granted_root(uid: i32) -> bool {
 
 pub fn uid_should_umount(uid: i32) -> bool {
     let output = Command::new("kpatch")
+        .arg("$SUPERKEY")
         .arg("sumgr")
         .arg("list")
         .stdout(Stdio::piped())
@@ -55,8 +56,9 @@ pub fn uid_should_umount(uid: i32) -> bool {
     };
 
     for line in lines {
-        let parts = lines.split(':').collect::<Vec<&str>>();
-        if parts.len() == 3 && parts[0] == &uid.to_string() {
+        let line: String = line;
+        let parts = line.split(':').collect::<Vec<&str>>();
+        if parts.len() == 1 && parts[0] == &uid.to_string() {
             return false;
         }
     }
