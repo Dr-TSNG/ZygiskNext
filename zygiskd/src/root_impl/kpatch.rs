@@ -50,12 +50,12 @@ pub fn uid_should_umount(uid: i32) -> bool {
         .and_then(|output| String::from_utf8(output.stdout).ok());
 
     let lines = match output {
-        Some(lines) => lines.split("\n").collect(),
+        Some(output) => output.split("\n").collect(),
         None => return false,
     };
 
     for line in lines {
-        let parts = line.to_string().split(':').collect::<Vec<&str>>();
+        let parts = line.split(':').collect::<Vec<&str>>();
         if parts.len() == 3 && parts[0] == &uid.to_string() {
             return false;
         }
