@@ -51,7 +51,7 @@ pub fn uid_should_umount(uid: i32) -> bool {
         .and_then(|output| String::from_utf8(output.stdout).ok());
 
     let lines = match output {
-        Some(output) => output.split("\n").collect(),
+        Some(lines) => lines.split("\n").collect(),
         None => return false,
     };
 
