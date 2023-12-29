@@ -25,7 +25,9 @@ pub fn get_kpatch() -> Option<crate::root_impl::kpatch::Version> {
 
 pub fn uid_granted_root(uid: i32) -> bool {
     Command::new("kpatch")
-        .arg("$SUPERKEY sumgr list")
+        .arg("$SUPERKEY")
+        .arg("sumgr")
+        .arg("list")
         .stdout(Stdio::piped())
         .spawn().ok()
         .and_then(|child| child.wait_with_output().ok())
@@ -34,7 +36,7 @@ pub fn uid_granted_root(uid: i32) -> bool {
             if let Some(output_string) = output_string {
                 output_string.split(' ').any(|x| x.parse::<i32>().unwrap() == uid).into()
             } else {
-                return None;
+                return Option::from(false);
             }
         })
         .unwrap_or(false)
