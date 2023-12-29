@@ -85,7 +85,9 @@ pub fn main() -> Result<()> {
             }
             _ => {
                 thread::spawn(move || {
-                    handle_daemon_action(action, stream, &context);
+                    if let Err(e) = handle_daemon_action(action, stream, &context) {
+                        log::warn!("Error handling daemon action: {}\n{}", e, e.backtrace());
+                    }
                 });
             }
         }
@@ -211,7 +213,7 @@ fn spawn_companion(name: &str, lib_fd: RawFd) -> Result<Option<UnixStream>> {
     exit(0)
 }
 
-fn handle_daemon_action(action: DaemonSocketAction, mut stream: UnixStream, context: &Context) {
+fn handle_daemon_action(action: DaemonSocketAction, mut stream: UnixStream, context: &Context) -> Result<()> {
     match action {
         DaemonSocketAction::RequestLogcatFd => {
             loop {
@@ -219,13 +221,13 @@ fn handle_daemon_action(action: DaemonSocketAction, mut stream: UnixStream, cont
                     Ok(level) => level,
                     Err(_) => break,
                 };
-                let tag = stream.read_string().unwrap();
-                let message = stream.read_string().unwrap();
-                utils::log_raw(level as i32, &tag, &message).unwrap();
+                let tag = stream.read_string()?;
+                let message = stream.read_string()?;
+                utils::log_raw(level as i32, &tag, &message)?;
             }
         }
         DaemonSocketAction::GetProcessFlags => {
-            let uid = stream.read_u32().unwrap() as i32;
+            let uid = stream.read_u32()? as i32;
             let mut flags = ProcessFlags::empty();
             if root_impl::uid_granted_root(uid) {
                 flags |= ProcessFlags::PROCESS_GRANTED_ROOT;
@@ -240,17 +242,17 @@ fn handle_daemon_action(action: DaemonSocketAction, mut stream: UnixStream, cont
             }
             log::trace!("Uid {} granted root: {}", uid, flags.contains(ProcessFlags::PROCESS_GRANTED_ROOT));
             log::trace!("Uid {} on denylist: {}", uid, flags.contains(ProcessFlags::PROCESS_ON_DENYLIST));
-            stream.write_u32(flags.bits()).unwrap();
+            stream.write_u32(flags.bits())?;
         }
         DaemonSocketAction::ReadModules => {
-            stream.write_usize(context.modules.len()).unwrap();
+            stream.write_usize(context.modules.len())?;
             for module in context.modules.iter() {
-                stream.write_string(&module.name).unwrap();
-                stream.send_fd(module.lib_fd.as_raw_fd()).unwrap();
+                stream.write_string(&module.name)?;
+                stream.send_fd(module.lib_fd.as_raw_fd())?;
             }
         }
         DaemonSocketAction::RequestCompanionSocket => {
-            let index = stream.read_usize().unwrap();
+            let index = stream.read_usize()?;
             let module = &context.modules[index];
             let mut companion = module.companion.lock().unwrap();
             if let Some(Some(sock)) = companion.as_ref() {
@@ -278,22 +280,23 @@ fn handle_daemon_action(action: DaemonSocketAction, mut stream: UnixStream, cont
                 Some(Some(sock)) => {
                     if let Err(e) = sock.send_fd(stream.as_raw_fd()) {
                         log::error!("Failed to send companion fd socket of module `{}`: {}", module.name, e);
-                        stream.write_u8(0).unwrap();
+                        stream.write_u8(0)?;
                     }
                     // Ok: Send by companion
                 }
                 _ => {
-                    stream.write_u8(0).unwrap();
+                    stream.write_u8(0)?;
                 }
             }
         }
         DaemonSocketAction::GetModuleDir => {
-            let index = stream.read_usize().unwrap();
+            let index = stream.read_usize()?;
             let module = &context.modules[index];
             let dir = format!("{}/{}", constants::PATH_MODULES_DIR, module.name);
-            let dir = fs::File::open(dir).unwrap();
-            stream.send_fd(dir.as_raw_fd()).unwrap();
+            let dir = fs::File::open(dir)?;
+            stream.send_fd(dir.as_raw_fd())?;
         }
         _ => {}
     }
+    Ok(())
 }
