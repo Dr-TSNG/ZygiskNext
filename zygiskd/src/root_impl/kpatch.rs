@@ -25,7 +25,7 @@ pub fn get_kpatch() -> Option<crate::root_impl::kpatch::Version> {
 
 pub fn uid_granted_root(uid: i32) -> bool {
     Command::new("kpatch")
-        .arg("$SUPERKEY")
+        .arg(std::env::var("SUPERKEY").unwrap())
         .arg("sumgr")
         .arg("list")
         .stdout(Stdio::piped())
@@ -34,10 +34,17 @@ pub fn uid_granted_root(uid: i32) -> bool {
         .and_then(|output| {
             let output_string = String::from_utf8(output.stdout).ok();
             if let Some(output_string) = output_string {
-                output_string.split(' ').any(|x| x.parse::<i32>().unwrap() == uid).into()
-            } else {
-                return Option::from(false);
+                if !output_string.is_empty() {
+                    for line in output_string.split('\n') {
+                        if let Ok(parsed_uid) = line.trim().parse::<i32>() {
+                            if parsed_uid == uid {
+                                return Option::from(true);
+                            }
+                        }
+                    }
+                }
             }
+            Option::from(false)
         })
         .unwrap_or(false)
 }
