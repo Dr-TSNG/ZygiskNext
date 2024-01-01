@@ -7,7 +7,7 @@ fi
 
 cd "$MODDIR"
 
-MAGIC=$(cat ./magic)
+MAGIC=$(cat /data/adb/zygisksu/magic)
 MAGIC_PATH=/dev/zygisk_$MAGIC
 export MAGIC
 export MAGIC_PATH
