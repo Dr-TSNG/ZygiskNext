@@ -148,7 +148,7 @@ fn create_library_fd(so_path: &PathBuf) -> Result<OwnedFd> {
 #[cfg(not(debug_assertions))]
 fn create_library_fd(so_path: &PathBuf) -> Result<OwnedFd> {
     let opts = memfd::MemfdOptions::default().allow_sealing(true);
-    let memfd = opts.create("jit-cache")?;
+    let memfd = opts.create("jit-cache-zygisk")?;
     let file = fs::File::open(so_path)?;
     let mut reader = std::io::BufReader::new(file);
     let mut writer = memfd.as_file();

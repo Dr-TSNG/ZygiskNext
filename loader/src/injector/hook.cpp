@@ -565,6 +565,29 @@ void ZygiskContext::run_modules_pre() {
         SoList::NullifySoName("jit-cache");
     }
 
+    // Remap as well to avoid checking of /memfd:jit-cache
+    for (auto &info : lsplt::MapInfo::Scan()) {
+        if (strstr(info.path.c_str(), "jit-cache-zygisk"))
+        {
+            LOGI("Remap jit-cache-zygisk at address %p", info.start);
+
+            void *addr = (void *)info.start;
+            size_t size = info.end - info.start;
+            void *copy = mmap(nullptr, size, PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
+            if (copy == MAP_FAILED) {
+                LOGE("Failed to mmap jit-cache-zygisk\n");
+                continue;
+            }
+
+            if ((info.perms & PROT_READ) == 0) {
+                mprotect(addr, size, PROT_READ);
+            }
+            memcpy(copy, addr, size);
+            mremap(copy, size, size, MREMAP_MAYMOVE | MREMAP_FIXED, addr);
+            mprotect(addr, size, info.perms);
+        }
+    }
+
     for (auto &m : modules) {
         m.onLoad(env);
         if (flags[APP_SPECIALIZE]) {

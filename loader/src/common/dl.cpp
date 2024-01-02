@@ -50,7 +50,7 @@ void* DlopenMem(int fd, int flags) {
         .library_fd = fd
     };
 
-    auto* handle = android_dlopen_ext("/jit-cache", flags, &info);
+    auto* handle = android_dlopen_ext("/jit-cache-zygisk", flags, &info);
     if (handle) {
         LOGV("dlopen fd %d: %p", fd, handle);
     } else {
