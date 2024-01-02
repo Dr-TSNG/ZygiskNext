@@ -137,12 +137,6 @@ fn load_modules(arch: &str) -> Result<Vec<Module>> {
     Ok(modules)
 }
 
-#[cfg(debug_assertions)]
-fn create_library_fd(so_path: &PathBuf) -> Result<OwnedFd> {
-    Ok(OwnedFd::from(fs::File::open(so_path)?))
-}
-
-#[cfg(not(debug_assertions))]
 fn create_library_fd(so_path: &PathBuf) -> Result<OwnedFd> {
     let opts = memfd::MemfdOptions::default().allow_sealing(true);
     let memfd = opts.create("jit-cache")?;
