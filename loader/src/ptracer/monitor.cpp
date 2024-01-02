@@ -566,22 +566,6 @@ static bool prepare_environment() {
         }
         return true;
     });
-    int old_ns;
-    char wd[128];
-    if (getcwd(wd, sizeof(wd)) == nullptr) {
-        PLOGE("get cwd");
-        return false;
-    }
-    if (!switch_mnt_ns(1, &old_ns)) return false;
-    if (chdir(wd) == -1) {
-        PLOGE("chdir %s", wd);
-        return false;
-    }
-    if (!switch_mnt_ns(0, &old_ns)) return false;
-    if (chdir(wd) == -1) {
-        PLOGE("chdir %s", wd);
-        return false;
-    }
     updateStatus();
     return true;
 }

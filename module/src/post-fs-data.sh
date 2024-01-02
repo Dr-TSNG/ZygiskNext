@@ -43,4 +43,4 @@ if [ -f $MODDIR/lib/libzygisk.so ];then
 fi
 
 [ "$DEBUG" = true ] && export RUST_BACKTRACE=1
-unshare -m sh -c "./bin/zygisk-ptrace64 monitor &"
+./bin/zygisk-ptrace64 monitor &
