@@ -29,6 +29,14 @@ jobs:
           submodules: "recursive"
           fetch-depth: 0
 
+      - name: Write key
+        if: ${{ ( github.event_name != 'pull_request' && github.ref == 'refs/heads/master' ) || github.ref_type == 'tag' }}
+        run: |
+          if [ ! -z "${{ secrets.PRIVATE_KEY }}" ]; then
+            echo '${{ secrets.PUBLIC_KEY }}' | base64 --decode > module/public_key
+            echo '${{ secrets.PRIVATE_KEY }}' | base64 --decode > module/private_key
+          fi
+
       - name: Setup Java
         uses: actions/setup-java@v3
         with:

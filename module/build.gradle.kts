@@ -84,6 +84,8 @@ androidComponents.onVariants { variant ->
             from("${project(":loader").buildDir}/intermediates/stripped_native_libs/$variantLowered/out/lib")
         }
 
+        val root = moduleDir.get()
+
         doLast {
             if (file("private_key").exists()) {
                 println("=== machikado intergity signing ===")
@@ -114,7 +116,6 @@ androidComponents.onVariants { variant ->
                     println("getSign for $name $abi32 $abi64")
                     val set =
                         TreeSet<Pair<File, File?>> { o1, o2 -> o1.first.path.replace("\\", "/").compareTo(o2.first.path.replace("\\", "/")) }
-                    val root = moduleDir.get()
                     set.add(Pair(root.file("module.prop").asFile, null))
                     set.add(Pair(root.file("sepolicy.rule").asFile, null))
                     set.add(Pair(root.file("post-fs-data.sh").asFile, null))
@@ -171,6 +172,9 @@ androidComponents.onVariants { variant ->
 
                 getSign("machikado.arm", "armeabi-v7a", "arm64-v8a")
                 getSign("machikado.x86", "x86", "x86_64")
+            } else {
+                root.file("machikado.arm").asFile.createNewFile()
+                root.file("machikado.x86").asFile.createNewFile()
             }
 
             fileTree(moduleDir).visit {
