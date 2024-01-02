@@ -9,9 +9,6 @@ fi
 
 cd "$MODDIR"
 
-MAGIC_PATH=/dev/zygisk_$(cat ./magic)
-export MAGIC_PATH
-
 if [ "$(which magisk)" ]; then
   for file in ../*; do
     if [ -d "$file" ] && [ -d "$file/zygisk" ] && ! [ -f "$file/disable" ]; then

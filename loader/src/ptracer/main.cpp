@@ -19,7 +19,7 @@ int main(int argc, char **argv) {
         return 0;
     } else if (argc >= 3 && argv[1] == "trace"sv) {
         if (argc >= 4 && argv[3] == "--restart"sv) {
-            zygiskd::Init(getenv(MAGIC_PATH_ENV));
+            zygiskd::Init();
             zygiskd::ZygoteRestart();
         }
         auto pid = strtol(argv[2], 0, 0);

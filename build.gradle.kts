@@ -24,7 +24,7 @@ val verName by extra("v4-0.8.1")
 val verCode by extra(gitCommitCount)
 val commitHash by extra(gitCommitHash)
 val minKsuVersion by extra(10940)
-val minKsudVersion by extra(10942)
+val minKsudVersion by extra(11412)
 val maxKsuVersion by extra(20000)
 val minMagiskVersion by extra(26300)
 

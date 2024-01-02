@@ -12,8 +12,7 @@
 #endif
 
 constexpr auto kCPSocketName = "/" LP_SELECT("cp32", "cp64") ".sock";
-constexpr const auto MAGIC_PATH_ENV = "MAGIC_PATH";
-constexpr const auto MAGIC_ENV = "MAGIC";
+#define TMP_PATH "/debug_ramdisk/zygisksu"
 
 class UniqueFd {
     using Fd = int;
@@ -63,7 +62,7 @@ namespace zygiskd {
         ZygoteRestart,
     };
 
-    void Init(const char *path);
+    void Init(const char *path = TMP_PATH);
 
     bool PingHeartbeat();
 

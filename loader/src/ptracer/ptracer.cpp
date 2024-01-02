@@ -16,7 +16,7 @@
 #include <string>
 #include "utils.hpp"
 
-bool inject_on_main(int pid, const char *lib_path, const char* magic_path) {
+bool inject_on_main(int pid, const char *lib_path) {
     LOGI("injecting %s to zygote %d", lib_path, pid);
     // parsing KernelArgumentBlock
     // https://cs.android.com/android/platform/superproject/main/+/main:bionic/libc/private/KernelArgumentBlock.h;l=30;drc=6d1ee77ee32220e4202c3066f7e1f69572967ad8
@@ -145,8 +145,6 @@ bool inject_on_main(int pid, const char *lib_path, const char* magic_path) {
         // call injector entry(handle, magic)
         args.clear();
         args.push_back(remote_handle);
-        str = push_string(pid, regs, magic_path);
-        args.push_back((long) str);
         remote_call(pid, regs, injector_entry, (uintptr_t) libc_return_addr, args);
 
         // reset pc to entry
@@ -180,9 +178,9 @@ bool trace_zygote(int pid) {
     }
     WAIT_OR_DIE
     if (STOPPED_WITH(SIGSTOP, PTRACE_EVENT_STOP)) {
-        std::string magic_path = getenv(MAGIC_PATH_ENV);
-        std::string lib_path = magic_path + "/lib" LP_SELECT("", "64") "/libzygisk.so";
-        if (!inject_on_main(pid, lib_path.c_str(), magic_path.c_str())) {
+        std::string lib_path = TMP_PATH;
+        lib_path += "/lib" LP_SELECT("", "64") "/libzygisk.so";
+        if (!inject_on_main(pid, lib_path.c_str())) {
             LOGE("failed to inject");
             return false;
         }
