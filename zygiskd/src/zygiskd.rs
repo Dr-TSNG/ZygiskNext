@@ -80,6 +80,10 @@ pub fn main() -> Result<()> {
                     companion.take();
                 }
             }
+            DaemonSocketAction::SystemServerStarted => {
+                let value = constants::SYSTEM_SERVER_STARTED;
+                utils::unix_datagram_sendto(constants::CONTROLLER_SOCKET, &value.to_le_bytes())?;
+            }
             _ => {
                 thread::spawn(move || {
                     if let Err(e) = handle_daemon_action(action, stream, &context) {

@@ -108,6 +108,7 @@ public:
 };
 
 static TracingState tracing_state = TRACING;
+static std::string prop_path;
 
 
 struct Status {
@@ -170,7 +171,7 @@ struct SocketHandler : public EventHandler {
                 LOGE("read %zu < %zu", nread, sizeof(Command));
                 continue;
             }
-            if (msg.cmd >= Command::DAEMON64_SET_INFO) {
+            if (msg.cmd >= Command::DAEMON64_SET_INFO && msg.cmd != Command::SYSTEM_SERVER_STARTED) {
                 if (nread != sizeof(msg)) {
                     LOGE("cmd %d size %zu != %zu", msg.cmd, nread, sizeof(MsgHead));
                     continue;
@@ -253,6 +254,12 @@ struct SocketHandler : public EventHandler {
                     status32.daemon_error_info = std::string(msg.data);
                     updateStatus();
                     break;
+                case SYSTEM_SERVER_STARTED:
+                    LOGD("system server started, mounting prop");
+                    if (mount(prop_path.c_str(), "/data/adb/modules/zygisksu/module.prop", nullptr, MS_BIND, nullptr) == -1) {
+                        PLOGE("failed to mount prop");
+                    }
+                    break;
             }
         }
     }
@@ -282,9 +289,12 @@ bool should_stop_inject##abi() { \
 CREATE_ZYGOTE_START_COUNTER(64)
 CREATE_ZYGOTE_START_COUNTER(32)
 
-
 static bool ensure_daemon_created(bool is_64bit) {
     auto &status = is_64bit ? status64 : status32;
+    if (is_64bit) {
+        LOGD("new zygote started, unmounting prop ...");
+        umount2(prop_path.c_str(), MNT_DETACH);
+    }
     status.zygote_injected = false;
     if (status.daemon_pid == -1) {
         auto pid = fork();
@@ -480,7 +490,6 @@ public:
     }
 };
 
-static std::string prop_path;
 static std::string pre_section;
 static std::string post_section;
 
@@ -566,10 +575,6 @@ static bool prepare_environment() {
     if (!switch_mnt_ns(1, &old_ns)) return false;
     if (chdir(wd) == -1) {
         PLOGE("chdir %s", wd);
-        return false;
-    }
-    if (mount(prop_path.c_str(), "/data/adb/modules/zygisksu/module.prop", nullptr, MS_BIND, nullptr) == -1) {
-        PLOGE("failed to mount prop");
         return false;
     }
     if (!switch_mnt_ns(0, &old_ns)) return false;

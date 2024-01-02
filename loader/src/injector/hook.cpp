@@ -634,6 +634,7 @@ void ZygiskContext::nativeForkSystemServer_pre() {
         return;
 
     run_modules_pre();
+    zygiskd::SystemServerStarted();
 
     sanitize_fds();
 }

@@ -125,4 +125,15 @@ namespace zygiskd {
             PLOGE("Failed to request ZygoteRestart");
         }
     }
+
+    void SystemServerStarted() {
+        UniqueFd fd = Connect(1);
+        if (fd == -1) {
+            PLOGE("Failed to report system server started");
+        } else {
+            if (!socket_utils::write_u8(fd, (uint8_t) SocketAction::SystemServerStarted)) {
+                PLOGE("Failed to report system server started");
+            }
+        }
+    }
 }
