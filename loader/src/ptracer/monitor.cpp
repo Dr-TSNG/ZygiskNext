@@ -293,7 +293,7 @@ static bool ensure_daemon_created(bool is_64bit) {
     auto &status = is_64bit ? status64 : status32;
     if (is_64bit) {
         LOGD("new zygote started, unmounting prop ...");
-        umount2(prop_path.c_str(), MNT_DETACH);
+        umount2("/data/adb/modules/zygisksu/module.prop", MNT_DETACH);
     }
     status.zygote_injected = false;
     if (status.daemon_pid == -1) {
