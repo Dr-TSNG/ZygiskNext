@@ -223,11 +223,15 @@ fn handle_daemon_action(action: DaemonSocketAction, mut stream: UnixStream, cont
         DaemonSocketAction::GetProcessFlags => {
             let uid = stream.read_u32()? as i32;
             let mut flags = ProcessFlags::empty();
-            if root_impl::uid_granted_root(uid) {
-                flags |= ProcessFlags::PROCESS_GRANTED_ROOT;
-            }
-            if root_impl::uid_should_umount(uid) {
-                flags |= ProcessFlags::PROCESS_ON_DENYLIST;
+            if root_impl::uid_is_manager(uid) {
+                flags |= ProcessFlags::PROCESS_IS_MANAGER;
+            } else {
+                if root_impl::uid_granted_root(uid) {
+                    flags |= ProcessFlags::PROCESS_GRANTED_ROOT;
+                }
+                if root_impl::uid_should_umount(uid) {
+                    flags |= ProcessFlags::PROCESS_ON_DENYLIST;
+                }
             }
             match root_impl::get_impl() {
                 root_impl::RootImpl::KernelSU => flags |= ProcessFlags::PROCESS_ROOT_IS_KSU,

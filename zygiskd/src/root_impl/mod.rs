@@ -56,3 +56,11 @@ pub fn uid_should_umount(uid: i32) -> bool {
         _ => panic!("uid_should_umount: unknown root impl {:?}", get_impl()),
     }
 }
+
+pub fn uid_is_manager(uid: i32) -> bool {
+    match get_impl() {
+        RootImpl::KernelSU => kernelsu::uid_is_manager(uid),
+        RootImpl::Magisk => magisk::uid_is_manager(uid),
+        _ => panic!("uid_is_manager: unknown root impl {:?}", get_impl()),
+    }
+}
