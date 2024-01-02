@@ -21,10 +21,6 @@ pub const PATH_CP_NAME: &str = lp_select!("/cp32.sock", "/cp64.sock");
 
 pub const PATH_MODULES_DIR: &str = "..";
 pub const PATH_MODULE_PROP: &str = "module.prop";
-pub const PATH_CP_BIN32: &str = "bin/zygisk-cp32";
-pub const PATH_CP_BIN64: &str = "bin/zygisk-cp64";
-pub const PATH_PT_BIN32: &str = "bin/zygisk-ptracer32";
-pub const PATH_PT_BIN64: &str = "bin/zygisk-ptracer64";
 pub const ZYGOTE_INJECTED: i32 = lp_select!(5, 4);
 pub const DAEMON_SET_INFO: i32 = lp_select!(7, 6);
 pub const DAEMON_SET_ERROR_INFO: i32 = lp_select!(9, 8);

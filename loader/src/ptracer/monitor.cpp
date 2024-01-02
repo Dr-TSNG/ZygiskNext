@@ -299,7 +299,7 @@ static bool ensure_daemon_created(bool is_64bit) {
             PLOGE("create daemon (64=%s)", is_64bit ? "true" : "false");
             return false;
         } else if (pid == 0) {
-            std::string daemon_name = "./bin/zygisk-cp";
+            std::string daemon_name = "./bin/zygiskd";
             daemon_name += is_64bit ? "64" : "32";
             execl(daemon_name.c_str(), daemon_name.c_str(), nullptr);
             PLOGE("exec daemon %s failed", daemon_name.c_str());

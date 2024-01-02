@@ -102,47 +102,37 @@ extract "$ZIPFILE" 'service.sh'      "$MODPATH"
 extract "$ZIPFILE" 'zygisk-ctl.sh'   "$MODPATH"
 mv "$TMPDIR/sepolicy.rule" "$MODPATH"
 
-HAS32BIT=false && [ $(getprop ro.product.cpu.abilist32) ] && HAS32BIT=true
-
 mkdir "$MODPATH/bin"
 mkdir "$MODPATH/lib"
 mkdir "$MODPATH/lib64"
 mv "$MODPATH/zygisk-ctl.sh" "$MODPATH/bin/zygisk-ctl"
 
 if [ "$ARCH" = "x86" ] || [ "$ARCH" = "x64" ]; then
-  if [ "$HAS32BIT" = true ]; then
-    ui_print "- Extracting x86 libraries"
-    extract "$ZIPFILE" 'bin/x86/zygiskd' "$MODPATH/bin" true
-    mv "$MODPATH/bin/zygiskd" "$MODPATH/bin/zygiskd32"
-    extract "$ZIPFILE" 'lib/x86/libzygisk.so' "$MODPATH/lib" true
-    ln -sf "zygiskd32" "$MODPATH/bin/zygisk-cp32"
-    extract "$ZIPFILE" 'lib/x86/libzygisk_ptrace.so' "$MODPATH/bin" true
-    mv "$MODPATH/bin/libzygisk_ptrace.so" "$MODPATH/bin/zygisk-ptrace32"
-  fi
+  ui_print "- Extracting x86 libraries"
+  extract "$ZIPFILE" 'bin/x86/zygiskd' "$MODPATH/bin" true
+  mv "$MODPATH/bin/zygiskd" "$MODPATH/bin/zygiskd32"
+  extract "$ZIPFILE" 'lib/x86/libzygisk.so' "$MODPATH/lib" true
+  extract "$ZIPFILE" 'lib/x86/libzygisk_ptrace.so' "$MODPATH/bin" true
+  mv "$MODPATH/bin/libzygisk_ptrace.so" "$MODPATH/bin/zygisk-ptrace32"
 
   ui_print "- Extracting x64 libraries"
   extract "$ZIPFILE" 'bin/x86_64/zygiskd' "$MODPATH/bin" true
   mv "$MODPATH/bin/zygiskd" "$MODPATH/bin/zygiskd64"
   extract "$ZIPFILE" 'lib/x86_64/libzygisk.so' "$MODPATH/lib64" true
-  ln -sf "zygiskd64" "$MODPATH/bin/zygisk-cp64"
   extract "$ZIPFILE" 'lib/x86_64/libzygisk_ptrace.so' "$MODPATH/bin" true
   mv "$MODPATH/bin/libzygisk_ptrace.so" "$MODPATH/bin/zygisk-ptrace64"
 else
-  if [ "$HAS32BIT" = true ]; then
-    ui_print "- Extracting arm libraries"
-    extract "$ZIPFILE" 'bin/armeabi-v7a/zygiskd' "$MODPATH/bin" true
-    mv "$MODPATH/bin/zygiskd" "$MODPATH/bin/zygiskd32"
-    extract "$ZIPFILE" 'lib/armeabi-v7a/libzygisk.so' "$MODPATH/lib" true
-    ln -sf "zygiskd32" "$MODPATH/bin/zygisk-cp32"
-    extract "$ZIPFILE" 'lib/armeabi-v7a/libzygisk_ptrace.so' "$MODPATH/bin" true
-    mv "$MODPATH/bin/libzygisk_ptrace.so" "$MODPATH/bin/zygisk-ptrace32"
-  fi
+  ui_print "- Extracting arm libraries"
+  extract "$ZIPFILE" 'bin/armeabi-v7a/zygiskd' "$MODPATH/bin" true
+  mv "$MODPATH/bin/zygiskd" "$MODPATH/bin/zygiskd32"
+  extract "$ZIPFILE" 'lib/armeabi-v7a/libzygisk.so' "$MODPATH/lib" true
+  extract "$ZIPFILE" 'lib/armeabi-v7a/libzygisk_ptrace.so' "$MODPATH/bin" true
+  mv "$MODPATH/bin/libzygisk_ptrace.so" "$MODPATH/bin/zygisk-ptrace32"
 
   ui_print "- Extracting arm64 libraries"
   extract "$ZIPFILE" 'bin/arm64-v8a/zygiskd' "$MODPATH/bin" true
   mv "$MODPATH/bin/zygiskd" "$MODPATH/bin/zygiskd64"
   extract "$ZIPFILE" 'lib/arm64-v8a/libzygisk.so' "$MODPATH/lib64" true
-  ln -sf "zygiskd64" "$MODPATH/bin/zygisk-cp64"
   extract "$ZIPFILE" 'lib/arm64-v8a/libzygisk_ptrace.so' "$MODPATH/bin" true
   mv "$MODPATH/bin/libzygisk_ptrace.so" "$MODPATH/bin/zygisk-ptrace64"
 fi
