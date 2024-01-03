@@ -7,19 +7,13 @@
 #include "socket_utils.h"
 
 namespace zygiskd {
-    static std::string zygisk_path;
-    void Init(const char *path) {
-        LOGI("zygisk path set to %s", path);
-        zygisk_path = path;
-    }
-
     int Connect(uint8_t retry) {
         int fd = socket(PF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, 0);
         struct sockaddr_un addr{
                 .sun_family = AF_UNIX,
                 .sun_path={0},
         };
-        auto socket_path = zygisk_path + kCPSocketName;
+        auto socket_path = std::string(TMP_PATH) + kCPSocketName;
         strcpy(addr.sun_path, socket_path.c_str());
         socklen_t socklen = sizeof(addr);
 

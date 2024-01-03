@@ -12,7 +12,6 @@ void entry(void* handle) {
     LOGI("Zygisk library injected, version %s", ZKSU_VERSION);
     self_handle = handle;
 
-    zygiskd::Init();
     if (!zygiskd::PingHeartbeat()) {
         LOGE("Zygisk daemon is not running");
         return;
