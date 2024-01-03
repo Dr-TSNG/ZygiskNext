@@ -18,4 +18,3 @@ allow zygote system_file dir mounton
 allow zygote labeledfs filesystem mount
 allow zygote fs_type filesystem unmount
 allow zygote zygote process execmem
-allow zygote adb_data_file file mounton
