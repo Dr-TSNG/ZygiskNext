@@ -1,12 +1,31 @@
 use std::process::{Command, Stdio};
 use crate::constants::MIN_MAGISK_VERSION;
 
+const MAGISK_VANILLA: &str = "com.topjohnwu.magisk";
+const MAGISK_ALPHA: &str = "io.github.vvb2060.magisk";
+
 pub enum Version {
     Supported,
     TooOld,
 }
 
+static mut VARIANT: &str = MAGISK_VANILLA;
+
 pub fn get_magisk() -> Option<Version> {
+    Command::new("magisk")
+        .arg("-v")
+        .stdout(Stdio::piped())
+        .spawn().ok()
+        .and_then(|child| child.wait_with_output().ok())
+        .and_then(|output| String::from_utf8(output.stdout).ok())
+        .map(|version| {
+            if (version.contains("alpha")) {
+                MAGISK_ALPHA
+            } else {
+                MAGISK_VANILLA
+            }
+        })
+        .map(|variant| { unsafe { VARIANT = variant }; });
     let version: Option<i32> = Command::new("magisk")
         .arg("-V")
         .stdout(Stdio::piped())
@@ -82,12 +101,8 @@ pub fn uid_is_manager(uid: i32) -> bool {
             }
         }
     }
-    if let Ok(s) = rustix::fs::stat("/data/user_de/0/com.topjohnwu.magisk") {
-        if s.st_uid == uid as u32 {
-            return true;
-        }
-    }
-    if let Ok(s) = rustix::fs::stat("/data/user_de/0/io.github.vvb2060.magisk") {
+    let variant = unsafe { VARIANT };
+    if let Ok(s) = rustix::fs::stat(format!("/data/user_de/0/{variant}")) {
         if s.st_uid == uid as u32 {
             return true;
         }
