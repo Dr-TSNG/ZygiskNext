@@ -102,8 +102,8 @@ std::vector<MapInfo> MapInfo::Scan(const std::string& pid) {
     return info;
 }
 
-ssize_t write_proc(int pid, uintptr_t *remote_addr, const void *buf, size_t len) {
-    LOGD("write to remote addr %p size %zu", remote_addr, len);
+ssize_t write_proc(int pid, uintptr_t remote_addr, const void *buf, size_t len) {
+    LOGV("write to remote addr %" PRIxPTR " size %zu", remote_addr, len);
     struct iovec local{
             .iov_base = (void *) buf,
             .iov_len = len
@@ -115,13 +115,13 @@ ssize_t write_proc(int pid, uintptr_t *remote_addr, const void *buf, size_t len)
     auto l = process_vm_writev(pid, &local, 1, &remote, 1, 0);
     if (l == -1) {
         PLOGE("process_vm_writev");
-    } else if (l != len) {
+    } else if (static_cast<size_t>(l) != len) {
         LOGW("not fully written: %zu, excepted %zu", l, len);
     }
     return l;
 }
 
-ssize_t read_proc(int pid, uintptr_t *remote_addr, void *buf, size_t len) {
+ssize_t read_proc(int pid, uintptr_t remote_addr, void *buf, size_t len) {
     struct iovec local{
             .iov_base = (void *) buf,
             .iov_len = len
@@ -133,7 +133,7 @@ ssize_t read_proc(int pid, uintptr_t *remote_addr, void *buf, size_t len) {
     auto l = process_vm_readv(pid, &local, 1, &remote, 1, 0);
     if (l == -1) {
         PLOGE("process_vm_readv");
-    } else if (l != len) {
+    } else if (static_cast<size_t>(l) != len) {
         LOGW("not fully read: %zu, excepted %zu", l, len);
     }
     return l;
@@ -177,9 +177,9 @@ bool set_regs(int pid, struct user_regs_struct &regs) {
     return true;
 }
 
-std::string get_addr_mem_region(std::vector<MapInfo> &info, void *addr) {
+std::string get_addr_mem_region(std::vector<MapInfo> &info, uintptr_t addr) {
     for (auto &map: info) {
-        if (map.start <= (uintptr_t) addr && map.end > (uintptr_t) addr) {
+        if (map.start <= addr && map.end > addr) {
             auto s = std::string(map.path);
             s += ' ';
             s += map.perms & PROT_READ ? 'r' : '-';
@@ -248,24 +248,24 @@ void align_stack(struct user_regs_struct &regs, long preserve) {
     regs.REG_SP = (regs.REG_SP - preserve) & ~0xf;
 }
 
-void *push_string(int pid, struct user_regs_struct &regs, const char *str) {
+uintptr_t push_string(int pid, struct user_regs_struct &regs, const char *str) {
     auto len = strlen(str) + 1;
     regs.REG_SP -= len;
     align_stack(regs);
-    auto addr = reinterpret_cast<uintptr_t *>(regs.REG_SP);
+    auto addr = static_cast<uintptr_t>(regs.REG_SP);
     if (!write_proc(pid, addr, str, len)) {
         LOGE("failed to write string %s", str);
     }
-    LOGD("pushed string %p", addr);
+    LOGD("pushed string %" PRIxPTR, addr);
     return addr;
 }
 
 uintptr_t remote_call(int pid, struct user_regs_struct &regs, uintptr_t func_addr, uintptr_t return_addr,
                  std::vector<long> &args) {
     align_stack(regs);
-    LOGD("call %d args", args.size());
+    LOGV("calling remote function %" PRIxPTR " args %zu", func_addr, args.size());
     for (auto &a: args) {
-        LOGD("arg %p", (void *) a);
+        LOGV("arg %p", (void *) a);
     }
 #if defined(__x86_64__)
     if (args.size() >= 1) {
@@ -289,12 +289,12 @@ uintptr_t remote_call(int pid, struct user_regs_struct &regs, uintptr_t func_add
     if (args.size() > 6) {
         auto remain = (args.size() - 6) * sizeof(long);
         align_stack(regs, remain);
-        if (!write_proc(pid, (uintptr_t *) regs.REG_SP, args.data(), remain)) {
+        if (!write_proc(pid, (uintptr_t) regs.REG_SP, args.data(), remain)) {
             LOGE("failed to push arguments");
         }
     }
     regs.REG_SP -= sizeof(long);
-    if (!write_proc(pid, (uintptr_t *) regs.REG_SP, &return_addr, sizeof(return_addr))) {
+    if (!write_proc(pid, (uintptr_t) regs.REG_SP, &return_addr, sizeof(return_addr))) {
         LOGE("failed to write return addr");
     }
     regs.REG_IP = func_addr;
@@ -302,34 +302,34 @@ uintptr_t remote_call(int pid, struct user_regs_struct &regs, uintptr_t func_add
     if (args.size() > 0) {
         auto remain = (args.size()) * sizeof(long);
         align_stack(regs, remain);
-        if (!write_proc(pid, (uintptr_t *)regs.REG_SP, args.data(), remain)) {
+        if (!write_proc(pid, (uintptr_t) regs.REG_SP, args.data(), remain)) {
             LOGE("failed to push arguments");
         }
     }
     regs.REG_SP -= sizeof(long);
-    if (!write_proc(pid, (uintptr_t*) regs.REG_SP, &return_addr, sizeof(return_addr))) {
+    if (!write_proc(pid, (uintptr_t) regs.REG_SP, &return_addr, sizeof(return_addr))) {
         LOGE("failed to write return addr");
     }
     regs.REG_IP = func_addr;
 #elif defined(__aarch64__)
-    for (int i = 0; i < args.size() && i < 8; i++) {
+    for (size_t i = 0; i < args.size() && i < 8; i++) {
         regs.regs[i] = args[i];
     }
     if (args.size() > 8) {
         auto remain = (args.size() - 8) * sizeof(long);
         align_stack(regs, remain);
-        write_proc(pid, (uintptr_t *)regs.REG_SP, args.data(), remain);
+        write_proc(pid, (uintptr_t)regs.REG_SP, args.data(), remain);
     }
     regs.regs[30] = return_addr;
     regs.REG_IP = func_addr;
 #elif defined(__arm__)
-    for (int i = 0; i < args.size() && i < 4; i++) {
+    for (size_t i = 0; i < args.size() && i < 4; i++) {
         regs.uregs[i] = args[i];
     }
     if (args.size() > 4) {
         auto remain = (args.size() - 4) * sizeof(long);
         align_stack(regs, remain);
-        write_proc(pid, (uintptr_t *)regs.REG_SP, args.data(), remain);
+        write_proc(pid, (uintptr_t)regs.REG_SP, args.data(), remain);
     }
     regs.uregs[14] = return_addr;
     regs.REG_IP = func_addr;
@@ -353,7 +353,7 @@ uintptr_t remote_call(int pid, struct user_regs_struct &regs, uintptr_t func_add
         return 0;
     }
     if (WSTOPSIG(status) == SIGSEGV) {
-        if (regs.REG_IP != return_addr) {
+        if (static_cast<uintptr_t>(regs.REG_IP) != return_addr) {
             LOGE("wrong return addr %p", (void *) regs.REG_IP);
             return 0;
         }

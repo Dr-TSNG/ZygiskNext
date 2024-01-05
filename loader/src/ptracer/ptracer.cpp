@@ -14,6 +14,8 @@
 #include <signal.h>
 #include <sys/system_properties.h>
 #include <string>
+#include <cinttypes>
+
 #include "utils.hpp"
 
 bool inject_on_main(int pid, const char *lib_path) {
@@ -23,42 +25,42 @@ bool inject_on_main(int pid, const char *lib_path) {
     struct user_regs_struct regs{}, backup{};
     auto map = MapInfo::Scan(std::to_string(pid));
     if (!get_regs(pid, regs)) return false;
-    auto arg = reinterpret_cast<uintptr_t *>(regs.REG_SP);
-    LOGD("kernel argument %p %s", arg, get_addr_mem_region(map, arg).c_str());
+    auto arg = static_cast<uintptr_t>(regs.REG_SP);
+    LOGV("kernel argument %" PRIxPTR " %s", arg, get_addr_mem_region(map, arg).c_str());
     int argc;
     auto argv = reinterpret_cast<char **>(reinterpret_cast<uintptr_t *>(arg) + 1);
-    LOGD("argv %p", argv);
+    LOGV("argv %p", argv);
     read_proc(pid, arg, &argc, sizeof(argc));
-    LOGD("argc %d", argc);
+    LOGV("argc %d", argc);
     auto envp = argv + argc + 1;
-    LOGD("envp %p", envp);
+    LOGV("envp %p", envp);
     auto p = envp;
     while (true) {
         uintptr_t *buf;
-        read_proc(pid, (uintptr_t *) p, &buf, sizeof(buf));
+        read_proc(pid, (uintptr_t) p, &buf, sizeof(buf));
         if (buf != nullptr) ++p;
         else break;
     }
     ++p;
     auto auxv = reinterpret_cast<ElfW(auxv_t) *>(p);
-    LOGD("auxv %p %s", auxv, get_addr_mem_region(map, auxv).c_str());
+    LOGV("auxv %p %s", auxv, get_addr_mem_region(map, (uintptr_t) auxv).c_str());
     auto v = auxv;
-    void *entry_addr = nullptr;
-    void *addr_of_entry_addr = nullptr;
+    uintptr_t entry_addr = 0;
+    uintptr_t addr_of_entry_addr = 0;
     while (true) {
         ElfW(auxv_t) buf;
-        read_proc(pid, (uintptr_t *) v, &buf, sizeof(buf));
+        read_proc(pid, (uintptr_t) v, &buf, sizeof(buf));
         if (buf.a_type == AT_ENTRY) {
-            entry_addr = reinterpret_cast<void *>(buf.a_un.a_val);
-            addr_of_entry_addr = reinterpret_cast<char *>(v) + offsetof(ElfW(auxv_t), a_un);
-            LOGD("entry address %p %s (v=%p, entry_addr=%p)", entry_addr,
-                 get_addr_mem_region(map, entry_addr).c_str(), v, addr_of_entry_addr);
+            entry_addr = (uintptr_t) buf.a_un.a_val;
+            addr_of_entry_addr = (uintptr_t) v + offsetof(ElfW(auxv_t), a_un);
+            LOGV("entry address %" PRIxPTR " %s (entry=%" PRIxPTR ", entry_addr=%" PRIxPTR ")", entry_addr,
+                 get_addr_mem_region(map, entry_addr).c_str(), (uintptr_t) v, addr_of_entry_addr);
             break;
         }
         if (buf.a_type == AT_NULL) break;
         v++;
     }
-    if (entry_addr == nullptr) {
+    if (entry_addr == 0) {
         LOGE("failed to get entry");
         return false;
     }
@@ -66,13 +68,13 @@ bool inject_on_main(int pid, const char *lib_path) {
     // Replace the program entry with an invalid address
     // For arm32 compatibility, we set the last bit to the same as the entry address
     uintptr_t break_addr = (-0x05ec1cff & ~1) | ((uintptr_t) entry_addr & 1);
-    if (!write_proc(pid, (uintptr_t *) addr_of_entry_addr, &break_addr, sizeof(break_addr))) return false;
+    if (!write_proc(pid, (uintptr_t) addr_of_entry_addr, &break_addr, sizeof(break_addr))) return false;
     ptrace(PTRACE_CONT, pid, 0, 0);
     int status;
     wait_for_trace(pid, &status, __WALL);
     if (WIFSTOPPED(status) && WSTOPSIG(status) == SIGSEGV) {
         if (!get_regs(pid, regs)) return false;
-        if ((regs.REG_IP & ~1) != (break_addr & ~1)) {
+        if (static_cast<uintptr_t>(regs.REG_IP & ~1) != (break_addr & ~1)) {
             LOGE("stopped at unknown addr %p", (void *) regs.REG_IP);
             return false;
         }
@@ -80,7 +82,7 @@ bool inject_on_main(int pid, const char *lib_path) {
         LOGD("stopped at entry");
 
         // restore entry address
-        if (!write_proc(pid, (uintptr_t *) addr_of_entry_addr, &entry_addr, sizeof(entry_addr))) return false;
+        if (!write_proc(pid, (uintptr_t) addr_of_entry_addr, &entry_addr, sizeof(entry_addr))) return false;
 
         // backup registers
         memcpy(&backup, &regs, sizeof(regs));
@@ -119,11 +121,13 @@ bool inject_on_main(int pid, const char *lib_path) {
             args.clear();
             args.push_back(dlerror_str_addr);
             auto dlerror_len = remote_call(pid, regs, (uintptr_t) strlen_addr, (uintptr_t) libc_return_addr, args);
-            LOGD("dlerror len %ld", dlerror_len);
-            if (dlerror_len <= 0) return false;
+            if (dlerror_len <= 0) {
+                LOGE("dlerror len <= 0");
+                return false;
+            }
             std::string err;
             err.resize(dlerror_len + 1, 0);
-            read_proc(pid, (uintptr_t*) dlerror_str_addr, err.data(), dlerror_len);
+            read_proc(pid, (uintptr_t) dlerror_str_addr, err.data(), dlerror_len);
             LOGE("dlerror info %s", err.c_str());
             return false;
         }

@@ -60,15 +60,15 @@ struct MapInfo {
 #define user_regs_struct user_regs
 #endif
 
-ssize_t write_proc(int pid, uintptr_t *remote_addr, const void *buf, size_t len);
+ssize_t write_proc(int pid, uintptr_t remote_addr, const void *buf, size_t len);
 
-ssize_t read_proc(int pid, uintptr_t *remote_addr, void *buf, size_t len);
+ssize_t read_proc(int pid, uintptr_t remote_addr, void *buf, size_t len);
 
 bool get_regs(int pid, struct user_regs_struct &regs);
 
 bool set_regs(int pid, struct user_regs_struct &regs);
 
-std::string get_addr_mem_region(std::vector<MapInfo> &info, void *addr);
+std::string get_addr_mem_region(std::vector<MapInfo> &info, uintptr_t addr);
 
 void *find_module_base(std::vector<MapInfo> &info, std::string_view suffix);
 
@@ -80,7 +80,7 @@ void *find_func_addr(
 
 void align_stack(struct user_regs_struct &regs, long preserve = 0);
 
-void *push_string(int pid, struct user_regs_struct &regs, const char *str);
+uintptr_t push_string(int pid, struct user_regs_struct &regs, const char *str);
 
 uintptr_t remote_call(int pid, struct user_regs_struct &regs, uintptr_t func_addr, uintptr_t return_addr,
                  std::vector<long> &args);
