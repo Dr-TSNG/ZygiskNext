@@ -20,11 +20,11 @@ val gitCommitHash = "git rev-parse --verify --short HEAD".execute()
 
 val moduleId by extra("zygisksu")
 val moduleName by extra("Zygisk Next")
-val verName by extra("v4-0.9.1")
+val verName by extra("v4-0.9.1.1")
 val verCode by extra(gitCommitCount)
 val commitHash by extra(gitCommitHash)
 val minKsuVersion by extra(10940)
-val minKsudVersion by extra(11424)
+val minKsudVersion by extra(11425)
 val maxKsuVersion by extra(20000)
 val minMagiskVersion by extra(26402)
 
