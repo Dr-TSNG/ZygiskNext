@@ -1,3 +1,4 @@
+import android.databinding.tool.ext.capitalizeUS
 import java.security.MessageDigest
 import org.apache.tools.ant.filters.ReplaceTokens
 
@@ -35,9 +36,9 @@ android.buildFeatures {
 }
 
 androidComponents.onVariants { variant ->
-    val variantLowered = variant.name.toLowerCase()
-    val variantCapped = variant.name.capitalize()
-    val buildTypeLowered = variant.buildType?.toLowerCase()
+    val variantLowered = variant.name.lowercase()
+    val variantCapped = variant.name.capitalizeUS()
+    val buildTypeLowered = variant.buildType?.lowercase()
 
     val moduleDir = layout.buildDirectory.dir("outputs/module/$variantLowered")
     val zipFileName = "$moduleName-$verName-$verCode-$commitHash-$buildTypeLowered.zip".replace(' ', '-')
@@ -77,11 +78,11 @@ androidComponents.onVariants { variant ->
             filter<FixCrLfFilter>("eol" to FixCrLfFilter.CrLf.newInstance("lf"))
         }
         into("bin") {
-            from(project(":zygiskd").buildDir.path + "/rustJniLibs/android")
+            from(project(":zygiskd").layout.buildDirectory.file("rustJniLibs/android"))
             include("**/zygiskd")
         }
         into("lib") {
-            from("${project(":loader").buildDir}/intermediates/stripped_native_libs/$variantLowered/out/lib")
+            from(project(":loader").layout.buildDirectory.file("intermediates/stripped_native_libs/$variantLowered/out/lib"))
         }
 
         val root = moduleDir.get()
@@ -113,9 +114,10 @@ androidComponents.onVariants { variant ->
                 }
 
                 fun getSign(name: String, abi32: String, abi64: String) {
-                    println("getSign for $name $abi32 $abi64")
-                    val set =
-                        TreeSet<Pair<File, File?>> { o1, o2 -> o1.first.path.replace("\\", "/").compareTo(o2.first.path.replace("\\", "/")) }
+                    val set = TreeSet<Pair<File, File?>> { o1, o2 ->
+                        o1.first.path.replace("\\", "/")
+                            .compareTo(o2.first.path.replace("\\", "/"))
+                    }
                     set.add(Pair(root.file("module.prop").asFile, null))
                     set.add(Pair(root.file("sepolicy.rule").asFile, null))
                     set.add(Pair(root.file("post-fs-data.sh").asFile, null))
@@ -173,6 +175,7 @@ androidComponents.onVariants { variant ->
                 getSign("machikado.arm", "armeabi-v7a", "arm64-v8a")
                 getSign("machikado.x86", "x86", "x86_64")
             } else {
+                println("no private_key found, this build will not be signed")
                 root.file("machikado.arm").asFile.createNewFile()
                 root.file("machikado.x86").asFile.createNewFile()
             }
@@ -192,7 +195,7 @@ androidComponents.onVariants { variant ->
         group = "module"
         dependsOn(prepareModuleFilesTask)
         archiveFileName.set(zipFileName)
-        destinationDirectory.set(file("$buildDir/outputs/release"))
+        destinationDirectory.set(layout.buildDirectory.file("outputs/release").get().asFile)
         from(moduleDir)
     }
 
