@@ -1,13 +1,12 @@
+use crate::dl;
+use crate::utils::{check_unix_socket, UnixStreamExt};
+use anyhow::Result;
+use passfd::FdPassingExt;
+use rustix::fs::fstat;
 use std::ffi::c_void;
 use std::os::fd::{AsRawFd, FromRawFd, RawFd};
 use std::os::unix::net::UnixStream;
 use std::thread;
-use anyhow::Result;
-use passfd::FdPassingExt;
-use rustix::fs::fstat;
-use tokio::io::AsyncWriteExt;
-use crate::utils::{check_unix_socket, UnixStreamExt};
-use crate::dl;
 
 type ZygiskCompanionEntryFn = unsafe extern "C" fn(i32);
 
@@ -28,7 +27,7 @@ pub fn entry(fd: i32) {
         None => {
             log::debug!("No companion entry for `{name}`");
             stream.write_u8(0).expect("reply 0");
-            return ();
+            std::process::exit(0);
         }
     };
 
@@ -43,7 +42,9 @@ pub fn entry(fd: i32) {
         stream.write_u8(1).expect("reply success");
         thread::spawn(move || {
             let st0 = fstat(&stream).expect("failed to stat stream");
-            unsafe { entry(stream.as_raw_fd()); }
+            unsafe {
+                entry(stream.as_raw_fd());
+            }
             // Only close client if it is the same file so we don't
             // accidentally close a re-used file descriptor.
             // This check is required because the module companion

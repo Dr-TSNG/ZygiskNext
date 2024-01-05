@@ -71,7 +71,7 @@ pub fn uid_should_umount(uid: i32) -> bool {
 // TODO: signature
 pub fn uid_is_manager(uid: i32) -> bool {
     if let Ok(s) = rustix::fs::stat("/data/user_de/0/me.weishu.kernelsu") {
-        return s.st_uid == uid as u32
+        return s.st_uid == uid as u32;
     }
     false
 }

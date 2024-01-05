@@ -1,35 +1,49 @@
 use anyhow::Result;
-use std::{fs, io::{Read, Write}, os::unix::net::UnixStream};
-use std::ffi::{c_char, c_void, CStr, CString};
-use std::os::fd::{AsFd, AsRawFd};
-use std::os::unix::net::{UnixDatagram, UnixListener};
-use std::process::Command;
-use std::sync::OnceLock;
-use bitflags::Flags;
-use rustix::net::{AddressFamily, bind_unix, connect_unix, listen, SendFlags, sendto_unix, socket, SocketAddrUnix, SocketType};
+use rustix::net::{
+    bind_unix, connect_unix, listen, sendto_unix, socket, AddressFamily, SendFlags, SocketAddrUnix,
+    SocketType,
+};
 use rustix::path::Arg;
 use rustix::thread::gettid;
+use std::ffi::{c_char, c_void, CStr, CString};
+use std::os::fd::{AsFd, AsRawFd};
+use std::os::unix::net::{UnixListener};
+use std::process::Command;
+use std::sync::OnceLock;
+use std::{
+    fs,
+    io::{Read, Write},
+    os::unix::net::UnixStream,
+};
 
 #[cfg(target_pointer_width = "64")]
 #[macro_export]
 macro_rules! lp_select {
-    ($lp32:expr, $lp64:expr) => { $lp64 };
+    ($lp32:expr, $lp64:expr) => {
+        $lp64
+    };
 }
 #[cfg(target_pointer_width = "32")]
 #[macro_export]
 macro_rules! lp_select {
-    ($lp32:expr, $lp64:expr) => { $lp32 };
+    ($lp32:expr, $lp64:expr) => {
+        $lp32
+    };
 }
 
 #[cfg(debug_assertions)]
 #[macro_export]
 macro_rules! debug_select {
-    ($debug:expr, $release:expr) => { $debug };
+    ($debug:expr, $release:expr) => {
+        $debug
+    };
 }
 #[cfg(not(debug_assertions))]
 #[macro_export]
 macro_rules! debug_select {
-    ($debug:expr, $release:expr) => { $release };
+    ($debug:expr, $release:expr) => {
+        $release
+    };
 }
 
 pub struct LateInit<T> {
@@ -38,7 +52,9 @@ pub struct LateInit<T> {
 
 impl<T> LateInit<T> {
     pub const fn new() -> Self {
-        LateInit { cell: OnceLock::new() }
+        LateInit {
+            cell: OnceLock::new(),
+        }
     }
 
     pub fn init(&self, value: T) {
@@ -58,7 +74,10 @@ pub fn set_socket_create_context(context: &str) -> Result<()> {
     match fs::write(path, context) {
         Ok(_) => Ok(()),
         Err(_) => {
-            let path = format!("/proc/self/task/{}/attr/sockcreate", gettid().as_raw_nonzero());
+            let path = format!(
+                "/proc/self/task/{}/attr/sockcreate",
+                gettid().as_raw_nonzero()
+            );
             fs::write(path, context)?;
             Ok(())
         }
@@ -94,6 +113,7 @@ pub fn get_property(name: &str) -> Result<String> {
     Ok(prop.to_string_lossy().to_string())
 }
 
+#[allow(dead_code)]
 pub fn set_property(name: &str, value: &str) -> Result<()> {
     let name = CString::new(name)?;
     let value = CString::new(value)?;
@@ -103,11 +123,10 @@ pub fn set_property(name: &str, value: &str) -> Result<()> {
     Ok(())
 }
 
+#[allow(dead_code)]
 pub fn wait_property(name: &str, serial: u32) -> Result<u32> {
     let name = CString::new(name)?;
-    let info = unsafe {
-        __system_property_find(name.as_ptr())
-    };
+    let info = unsafe { __system_property_find(name.as_ptr()) };
     let mut serial = serial;
     unsafe {
         __system_property_wait(info, serial, &mut serial, std::ptr::null());
@@ -115,14 +134,11 @@ pub fn wait_property(name: &str, serial: u32) -> Result<u32> {
     Ok(serial)
 }
 
+#[allow(dead_code)]
 pub fn get_property_serial(name: &str) -> Result<u32> {
     let name = CString::new(name)?;
-    let info = unsafe {
-        __system_property_find(name.as_ptr())
-    };
-    Ok(unsafe {
-        __system_property_serial(info)
-    })
+    let info = unsafe { __system_property_find(name.as_ptr()) };
+    Ok(unsafe { __system_property_serial(info) })
 }
 
 pub fn switch_mount_namespace(pid: i32) -> Result<()> {
@@ -234,6 +250,11 @@ extern "C" {
     fn __system_property_get(name: *const c_char, value: *mut c_char) -> u32;
     fn __system_property_set(name: *const c_char, value: *const c_char) -> u32;
     fn __system_property_find(name: *const c_char) -> *const c_void;
-    fn __system_property_wait(info: *const c_void, old_serial: u32, new_serial: *mut u32, timeout: *const libc::timespec) -> bool;
+    fn __system_property_wait(
+        info: *const c_void,
+        old_serial: u32,
+        new_serial: *mut u32,
+        timeout: *const libc::timespec,
+    ) -> bool;
     fn __system_property_serial(info: *const c_void) -> u32;
 }

@@ -1,31 +1,25 @@
+use crate::lp_select;
 use bitflags::bitflags;
-use const_format::concatcp;
 use konst::primitive::parse_i32;
 use konst::unwrap_ctx;
 use log::LevelFilter;
 use num_enum::TryFromPrimitive;
-use crate::lp_select;
 
 pub const MIN_KSU_VERSION: i32 = unwrap_ctx!(parse_i32(env!("MIN_KSU_VERSION")));
 pub const MAX_KSU_VERSION: i32 = unwrap_ctx!(parse_i32(env!("MAX_KSU_VERSION")));
 pub const MIN_MAGISK_VERSION: i32 = unwrap_ctx!(parse_i32(env!("MIN_MAGISK_VERSION")));
-pub const ZKSU_VERSION: &'static str = env!("ZKSU_VERSION");
+pub const ZKSU_VERSION: &str = env!("ZKSU_VERSION");
 
 #[cfg(debug_assertions)]
 pub const MAX_LOG_LEVEL: LevelFilter = LevelFilter::Trace;
 #[cfg(not(debug_assertions))]
 pub const MAX_LOG_LEVEL: LevelFilter = LevelFilter::Info;
 
-
-
 pub const PATH_MODULES_DIR: &str = "..";
-pub const PATH_MODULE_PROP: &str = "module.prop";
 pub const ZYGOTE_INJECTED: i32 = lp_select!(5, 4);
 pub const DAEMON_SET_INFO: i32 = lp_select!(7, 6);
 pub const DAEMON_SET_ERROR_INFO: i32 = lp_select!(9, 8);
 pub const SYSTEM_SERVER_STARTED: i32 = 10;
-
-pub const MAX_RESTART_COUNT: i32 = 5;
 
 #[derive(Debug, Eq, PartialEq, TryFromPrimitive)]
 #[repr(u8)]

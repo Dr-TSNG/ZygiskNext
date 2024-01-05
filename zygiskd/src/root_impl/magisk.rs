@@ -1,5 +1,5 @@
-use std::process::{Command, Stdio};
 use crate::constants::MIN_MAGISK_VERSION;
+use std::process::{Command, Stdio};
 
 const MAGISK_VANILLA: &str = "com.topjohnwu.magisk";
 const MAGISK_ALPHA: &str = "io.github.vvb2060.magisk";
@@ -15,21 +15,25 @@ pub fn get_magisk() -> Option<Version> {
     Command::new("magisk")
         .arg("-v")
         .stdout(Stdio::piped())
-        .spawn().ok()
+        .spawn()
+        .ok()
         .and_then(|child| child.wait_with_output().ok())
         .and_then(|output| String::from_utf8(output.stdout).ok())
         .map(|version| {
-            if (version.contains("alpha")) {
+            if version.contains("alpha") {
                 MAGISK_ALPHA
             } else {
                 MAGISK_VANILLA
             }
         })
-        .map(|variant| { unsafe { VARIANT = variant }; });
+        .map(|variant| {
+            unsafe { VARIANT = variant };
+        });
     let version: Option<i32> = Command::new("magisk")
         .arg("-V")
         .stdout(Stdio::piped())
-        .spawn().ok()
+        .spawn()
+        .ok()
         .and_then(|child| child.wait_with_output().ok())
         .and_then(|output| String::from_utf8(output.stdout).ok())
         .and_then(|output| output.trim().parse().ok());
@@ -45,19 +49,24 @@ pub fn get_magisk() -> Option<Version> {
 pub fn uid_granted_root(uid: i32) -> bool {
     Command::new("magisk")
         .arg("--sqlite")
-        .arg(format!("select 1 from policies where uid={uid} and policy=2 limit 1"))
+        .arg(format!(
+            "select 1 from policies where uid={uid} and policy=2 limit 1"
+        ))
         .stdout(Stdio::piped())
-        .spawn().ok()
+        .spawn()
+        .ok()
         .and_then(|child| child.wait_with_output().ok())
         .and_then(|output| String::from_utf8(output.stdout).ok())
-        .map(|output| output.is_empty()) == Some(false)
+        .map(|output| output.is_empty())
+        == Some(false)
 }
 
 pub fn uid_should_umount(uid: i32) -> bool {
     let output = Command::new("pm")
         .args(["list", "packages", "--uid", &uid.to_string()])
         .stdout(Stdio::piped())
-        .spawn().ok()
+        .spawn()
+        .ok()
         .and_then(|child| child.wait_with_output().ok())
         .and_then(|output| String::from_utf8(output.stdout).ok());
     let line = match output {
@@ -73,12 +82,16 @@ pub fn uid_should_umount(uid: i32) -> bool {
     };
     Command::new("magisk")
         .arg("--sqlite")
-        .arg(format!("select 1 from denylist where package_name=\"{pkg}\" limit 1"))
+        .arg(format!(
+            "select 1 from denylist where package_name=\"{pkg}\" limit 1"
+        ))
         .stdout(Stdio::piped())
-        .spawn().ok()
+        .spawn()
+        .ok()
         .and_then(|child| child.wait_with_output().ok())
         .and_then(|output| String::from_utf8(output.stdout).ok())
-        .map(|output| output.is_empty()) == Some(false)
+        .map(|output| output.is_empty())
+        == Some(false)
 }
 
 // TODO: signature
@@ -86,9 +99,12 @@ pub fn uid_should_umount(uid: i32) -> bool {
 pub fn uid_is_manager(uid: i32) -> bool {
     let output = Command::new("magisk")
         .arg("--sqlite")
-        .arg(format!("select value from strings where key=\"requester\" limit 1"))
+        .arg(format!(
+            "select value from strings where key=\"requester\" limit 1"
+        ))
         .stdout(Stdio::piped())
-        .spawn().ok()
+        .spawn()
+        .ok()
         .and_then(|child| child.wait_with_output().ok())
         .and_then(|output| String::from_utf8(output.stdout).ok())
         .map(|output| output.trim().to_string());

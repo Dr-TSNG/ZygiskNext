@@ -30,13 +30,13 @@ extern "C" {
 }
 
 type AndroidCreateNamespaceFn = unsafe extern "C" fn(
-    *const c_char,          // name
-    *const c_char,          // ld_library_path
-    *const c_char,          // default_library_path
-    u64,                    // type
-    *const c_char,          // permitted_when_isolated_path
-    *mut AndroidNamespace,  // parent
-    *const c_void,          // caller_addr
+    *const c_char,         // name
+    *const c_char,         // ld_library_path
+    *const c_char,         // default_library_path
+    u64,                   // type
+    *const c_char,         // permitted_when_isolated_path
+    *mut AndroidNamespace, // parent
+    *const c_void,         // caller_addr
 ) -> *mut AndroidNamespace;
 
 pub unsafe fn dlopen(path: &str, flags: i32) -> Result<*mut c_void> {
@@ -57,11 +57,15 @@ pub unsafe fn dlopen(path: &str, flags: i32) -> Result<*mut c_void> {
         libc::RTLD_DEFAULT,
         std::ffi::CString::new("__loader_android_create_namespace")?.as_ptr(),
     );
-    let android_create_namespace_fn: AndroidCreateNamespaceFn = std::mem::transmute(android_create_namespace_fn);
+    let android_create_namespace_fn: AndroidCreateNamespaceFn =
+        std::mem::transmute(android_create_namespace_fn);
     let ns = android_create_namespace_fn(
-        filename, dir, std::ptr::null(),
+        filename,
+        dir,
+        std::ptr::null(),
         ANDROID_NAMESPACE_TYPE_SHARED,
-        std::ptr::null(), std::ptr::null_mut(),
+        std::ptr::null(),
+        std::ptr::null_mut(),
         &dlopen as *const _ as *const c_void,
     );
     if ns != std::ptr::null_mut() {

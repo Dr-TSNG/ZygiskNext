@@ -1,11 +1,10 @@
+mod companion;
 mod constants;
 mod dl;
 mod root_impl;
 mod utils;
 mod zygiskd;
-mod companion;
 
-use std::future::Future;
 use crate::constants::ZKSU_VERSION;
 
 fn init_android_logger(tag: &str) {
