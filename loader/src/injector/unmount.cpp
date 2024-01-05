@@ -46,7 +46,7 @@ void revert_unmount_ksu() {
             && std::find(KSU_PARTITIONS.begin(), KSU_PARTITIONS.end(), info.target) != KSU_PARTITIONS.end()) {
             targets.emplace_back(info.target);
         }
-        // Unmount /debug_ramdisk
+        // Unmount temp dir
         if (info.type == "tmpfs" && info.source == KSU_OVERLAY_SOURCE) {
             targets.emplace_back(info.target);
         }

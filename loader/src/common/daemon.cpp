@@ -8,7 +8,6 @@
 
 namespace zygiskd {
     static std::string TMP_PATH;
-    // TODO: use /sbin or /debug_ramdisk directly
     void Init(const char *path) {
         TMP_PATH = path;
     }

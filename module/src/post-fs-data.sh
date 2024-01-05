@@ -29,7 +29,7 @@ create_sys_perm() {
 if [ "$(which magisk)" ]; then
   export TMP_PATH="$(magisk --path)/zygisksu"
 else
-  export TMP_PATH="/debug_ramdisk/zygisksu"
+  export TMP_PATH="$(ksud path)/zygisksu"
 fi
 
 create_sys_perm $TMP_PATH
