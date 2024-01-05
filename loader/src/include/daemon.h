@@ -12,7 +12,6 @@
 #endif
 
 constexpr auto kCPSocketName = "/" LP_SELECT("cp32", "cp64") ".sock";
-inline static const char* TMP_PATH = getenv("TMP_PATH");
 
 class UniqueFd {
     using Fd = int;
@@ -62,6 +61,10 @@ namespace zygiskd {
         ZygoteRestart,
         SystemServerStarted,
     };
+
+    void Init(const char *path);
+
+    std::string GetTmpPath();
 
     bool PingHeartbeat();
 

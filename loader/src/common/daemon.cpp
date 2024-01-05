@@ -7,13 +7,23 @@
 #include "socket_utils.h"
 
 namespace zygiskd {
+    static std::string TMP_PATH;
+    // TODO: use /sbin or /debug_ramdisk directly
+    void Init(const char *path) {
+        TMP_PATH = path;
+    }
+
+    std::string GetTmpPath() {
+        return TMP_PATH;
+    }
+
     int Connect(uint8_t retry) {
         int fd = socket(PF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, 0);
         struct sockaddr_un addr{
                 .sun_family = AF_UNIX,
                 .sun_path={0},
         };
-        auto socket_path = std::string(TMP_PATH) + kCPSocketName;
+        auto socket_path = TMP_PATH + kCPSocketName;
         strcpy(addr.sun_path, socket_path.c_str());
         socklen_t socklen = sizeof(addr);
 

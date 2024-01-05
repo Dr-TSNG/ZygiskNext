@@ -14,6 +14,7 @@
 using namespace std::string_view_literals;
 
 int main(int argc, char **argv) {
+    zygiskd::Init(getenv("TMP_PATH"));
     if (argc >= 2 && argv[1] == "monitor"sv) {
         init_monitor();
         return 0;
