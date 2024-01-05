@@ -60,6 +60,10 @@ impl<T> LateInit<T> {
     pub fn init(&self, value: T) {
         assert!(self.cell.set(value).is_ok())
     }
+
+    pub fn initiated(&self) -> bool {
+        self.cell.get().is_some()
+    }
 }
 
 impl<T> std::ops::Deref for LateInit<T> {

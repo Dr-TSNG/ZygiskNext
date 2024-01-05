@@ -472,7 +472,7 @@ public:
                         } while (false);
                         updateStatus();
                     } else {
-                        LOGE("process %d received unknown status %s", pid,
+                        LOGW("process %d received unknown status %s", pid,
                              parse_status(status).c_str());
                     }
                     process.erase(state);
@@ -595,7 +595,6 @@ void send_control_command(Command cmd) {
             .sun_family = AF_UNIX,
             .sun_path={0},
     };
-    zygiskd::Init(getenv("TMP_PATH"));
     sprintf(addr.sun_path, "%s/%s", zygiskd::GetTmpPath().c_str(), SOCKET_NAME);
     socklen_t socklen = sizeof(sa_family_t) + strlen(addr.sun_path);
     auto nsend = sendto(sockfd, (void *) &cmd, sizeof(cmd), 0, (sockaddr *) &addr, socklen);

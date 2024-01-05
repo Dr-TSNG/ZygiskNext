@@ -1,49 +1,55 @@
+use std::fs;
+use std::os::android::fs::MetadataExt;
 use crate::constants::MIN_MAGISK_VERSION;
 use std::process::{Command, Stdio};
+use log::info;
+use crate::utils::LateInit;
 
-const MAGISK_VANILLA: &str = "com.topjohnwu.magisk";
-const MAGISK_ALPHA: &str = "io.github.vvb2060.magisk";
+const MAGISK_OFFICIAL: &str = "com.topjohnwu.magisk";
+const MAGISK_THIRD_PARTIES: &[(&str, &str)] = &[
+    ("alpha", "io.github.vvb2060.magisk"),
+    ("kitsune", "io.github.huskydg.magisk"),
+];
 
 pub enum Version {
     Supported,
     TooOld,
 }
 
-static mut VARIANT: &str = MAGISK_VANILLA;
+static VARIANT: LateInit<&str> = LateInit::new();
 
 pub fn get_magisk() -> Option<Version> {
+    if !VARIANT.initiated() {
+        Command::new("magisk")
+            .arg("-v")
+            .stdout(Stdio::piped())
+            .spawn()
+            .ok()
+            .and_then(|child| child.wait_with_output().ok())
+            .and_then(|output| String::from_utf8(output.stdout).ok())
+            .map(|version| {
+                let third_party = MAGISK_THIRD_PARTIES.iter().find_map(|v| {
+                    version.contains(v.0).then_some(v.1)
+                });
+                VARIANT.init(third_party.unwrap_or(MAGISK_OFFICIAL));
+                info!("Magisk variant: {}", *VARIANT);
+            });
+    }
     Command::new("magisk")
-        .arg("-v")
-        .stdout(Stdio::piped())
-        .spawn()
-        .ok()
-        .and_then(|child| child.wait_with_output().ok())
-        .and_then(|output| String::from_utf8(output.stdout).ok())
-        .map(|version| {
-            if version.contains("alpha") {
-                MAGISK_ALPHA
-            } else {
-                MAGISK_VANILLA
-            }
-        })
-        .map(|variant| {
-            unsafe { VARIANT = variant };
-        });
-    let version: Option<i32> = Command::new("magisk")
         .arg("-V")
         .stdout(Stdio::piped())
         .spawn()
         .ok()
         .and_then(|child| child.wait_with_output().ok())
         .and_then(|output| String::from_utf8(output.stdout).ok())
-        .and_then(|output| output.trim().parse().ok());
-    version.map(|version| {
-        if version >= MIN_MAGISK_VERSION {
-            Version::Supported
-        } else {
-            Version::TooOld
-        }
-    })
+        .and_then(|output| output.trim().parse::<i32>().ok())
+        .map(|version| {
+            if version >= MIN_MAGISK_VERSION {
+                Version::Supported
+            } else {
+                Version::TooOld
+            }
+        })
 }
 
 pub fn uid_granted_root(uid: i32) -> bool {
@@ -95,13 +101,10 @@ pub fn uid_should_umount(uid: i32) -> bool {
 }
 
 // TODO: signature
-// TODO: magisk random package name
 pub fn uid_is_manager(uid: i32) -> bool {
     let output = Command::new("magisk")
         .arg("--sqlite")
-        .arg(format!(
-            "select value from strings where key=\"requester\" limit 1"
-        ))
+        .arg(format!("select value from strings where key=\"requester\" limit 1"))
         .stdout(Stdio::piped())
         .spawn()
         .ok()
@@ -110,18 +113,12 @@ pub fn uid_is_manager(uid: i32) -> bool {
         .map(|output| output.trim().to_string());
     if let Some(output) = output {
         if let Some(manager) = output.strip_prefix("value=") {
-            if let Ok(s) = rustix::fs::stat(format!("/data/user_de/0/{}", manager)) {
-                return s.st_uid == uid as u32;
-            } else {
-                return false;
-            }
+            return fs::metadata(format!("/data/user_de/0/{}", manager))
+                .map(|s| s.st_uid() == uid as u32)
+                .unwrap_or(false);
         }
     }
-    let variant = unsafe { VARIANT };
-    if let Ok(s) = rustix::fs::stat(format!("/data/user_de/0/{variant}")) {
-        if s.st_uid == uid as u32 {
-            return true;
-        }
-    }
-    false
+    fs::metadata(format!("/data/user_de/0/{}", *VARIANT))
+        .map(|s| s.st_uid() == uid as u32)
+        .unwrap_or(false)
 }
