@@ -26,11 +26,8 @@ create_sys_perm() {
   chcon u:object_r:system_file:s0 $1
 }
 
-if [ "$(which magisk)" ]; then
-  export TMP_PATH="$(magisk --path)/zygisksu"
-else
-  export TMP_PATH="$(ksud path)/zygisksu"
-fi
+TMP_PATH=/sbin
+[ -f /sbin ] || TMP_PATH=/debug_ramdisk
 
 create_sys_perm $TMP_PATH
 
