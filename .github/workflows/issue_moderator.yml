@@ -8,7 +8,7 @@ jobs:
   autoclose:
     runs-on: ubuntu-latest
     steps:
-      - name: Check issue
+      - name: Check no title issue
         uses: tachiyomiorg/issue-moderator-action@v1
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
@@ -21,3 +21,17 @@ jobs:
               }
             ]
           auto-close-ignore-label: do-not-autoclose
+      - name: Check version issue
+        uses: tachiyomiorg/issue-moderator-action@v1
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          auto-close-rules: |
+            [
+              {
+                "type": "body",
+                "regex": ".*(version is too old|version too old|太旧|过旧).*",
+                "message": "Upgrade your KernelSU / 升级 KernelSU"
+              }
+            ]
+          auto-close-ignore-label: do-not-autoclose
+
