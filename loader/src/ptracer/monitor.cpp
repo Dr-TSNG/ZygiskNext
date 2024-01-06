@@ -387,11 +387,11 @@ public:
                                 LOGW("inject signal sent to init: %s %d",
                                      sigabbrev_np(WSTOPSIG(status)), WSTOPSIG(status));
                                 ptrace(PTRACE_CONT, pid, 0, WSTOPSIG(status));
+                                continue;
                             } else {
                                 LOGW("suppress stopping signal sent to init: %s %d",
                                      sigabbrev_np(WSTOPSIG(status)), WSTOPSIG(status));
                             }
-                            continue;
                         }
                         ptrace(PTRACE_CONT, pid, 0, 0);
                     }
