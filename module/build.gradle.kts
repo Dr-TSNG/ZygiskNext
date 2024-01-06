@@ -89,7 +89,7 @@ androidComponents.onVariants { variant ->
 
         doLast {
             if (file("private_key").exists()) {
-                println("=== machikado intergity signing ===")
+                println("=== Guards the peace of Machikado ===")
                 val privateKey = file("private_key").readBytes()
                 val publicKey = file("public_key").readBytes()
                 val namedSpec = NamedParameterSpec("ed25519")
