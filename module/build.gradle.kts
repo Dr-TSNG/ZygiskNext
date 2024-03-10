@@ -28,6 +28,7 @@ val minKsuVersion: Int by rootProject.extra
 val minKsudVersion: Int by rootProject.extra
 val maxKsuVersion: Int by rootProject.extra
 val minMagiskVersion: Int by rootProject.extra
+val minApatchVersion: Int by rootProject.extra
 val commitHash: String by rootProject.extra
 
 android.buildFeatures {
@@ -73,6 +74,7 @@ androidComponents.onVariants { variant ->
                 "MIN_KSUD_VERSION" to "$minKsudVersion",
                 "MAX_KSU_VERSION" to "$maxKsuVersion",
                 "MIN_MAGISK_VERSION" to "$minMagiskVersion",
+                "MIN_APATCH_VERSION" to "$minApatchVersion",
             )
             filter<ReplaceTokens>("tokens" to tokens)
             filter<FixCrLfFilter>("eol" to FixCrLfFilter.CrLf.newInstance("lf"))
@@ -219,7 +221,16 @@ androidComponents.onVariants { variant ->
             exec { commandLine("adb", "shell", "su", "-c", "/data/local/tmp/install.sh") }
         }
     }
-
+    val installApatchTask = task<Exec>("installApatch$variantCapped") {
+        group = "module"
+        dependsOn(pushTask)
+        commandLine("adb", "shell", "su", "-c", "/data/adb/apd module install /data/local/tmp/$zipFileName")
+    }
+    task<Exec>("installKpatchAndReboot$variantCapped") {
+        group = "module"
+        dependsOn(installApatchTask)
+        commandLine("adb", "reboot")
+    }
     val installMagiskTask = task<Exec>("installMagisk$variantCapped") {
         group = "module"
         dependsOn(pushTask)

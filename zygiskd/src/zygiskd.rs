@@ -51,7 +51,7 @@ pub fn main() -> Result<()> {
     {
         let mut msg = Vec::<u8>::new();
         let info = match root_impl::get_impl() {
-            root_impl::RootImpl::KernelSU | root_impl::RootImpl::Magisk => {
+            root_impl::RootImpl::KernelSU | root_impl::RootImpl::Magisk | root_impl::RootImpl::Apatch => {
                 msg.extend_from_slice(&constants::DAEMON_SET_INFO.to_le_bytes());
                 let module_names: Vec<_> = modules.iter().map(|m| m.name.as_str()).collect();
                 format!(
@@ -254,6 +254,7 @@ fn handle_daemon_action(
             match root_impl::get_impl() {
                 root_impl::RootImpl::KernelSU => flags |= ProcessFlags::PROCESS_ROOT_IS_KSU,
                 root_impl::RootImpl::Magisk => flags |= ProcessFlags::PROCESS_ROOT_IS_MAGISK,
+                root_impl::RootImpl::Apatch => flags |= ProcessFlags::PROCESS_ROOT_IS_APATCH,
                 _ => panic!("wrong root impl: {:?}", root_impl::get_impl()),
             }
             trace!(
