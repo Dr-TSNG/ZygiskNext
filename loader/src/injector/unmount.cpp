@@ -11,7 +11,6 @@ using namespace std::string_view_literals;
 namespace {
     constexpr auto MODULE_DIR = "/data/adb/modules";
     constexpr auto KSU_OVERLAY_SOURCE = "KSU";
-    const std::vector<std::string> KSU_PARTITIONS{"/system", "/vendor", "/product", "/system_ext", "/odm", "/oem"};
 
     void lazy_unmount(const char* mountpoint) {
         if (umount2(mountpoint, MNT_DETACH) != -1) {
@@ -40,14 +39,9 @@ void revert_unmount_ksu() {
         if (info.target.starts_with("/data/adb")) {
             targets.emplace_back(info.target);
         }
-        // Unmount ksu overlays
-        if (info.type == "overlay"
-            && info.source == KSU_OVERLAY_SOURCE
-            && std::find(KSU_PARTITIONS.begin(), KSU_PARTITIONS.end(), info.target) != KSU_PARTITIONS.end()) {
-            targets.emplace_back(info.target);
-        }
-        // Unmount temp dir
-        if (info.type == "tmpfs" && info.source == KSU_OVERLAY_SOURCE) {
+        // Unmount all KSU overlayfs and tmpfs
+        if ((info.type == "overlay" || info.type == "tmpfs")
+            && info.source == KSU_OVERLAY_SOURCE) {
             targets.emplace_back(info.target);
         }
     }
