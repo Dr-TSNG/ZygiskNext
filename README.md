@@ -27,8 +27,7 @@ The following conditions now apply:
 ### KernelSU
 
 + Minimal KernelSU version: 10940
-+ Minimal KernelSU Manager (ksud) version: 11424
-+ Kernel has full SELinux patch support
++ Minimal KernelSU Manager (ksud) version: 11575
 
 ### Magisk
 
@@ -36,7 +35,5 @@ The following conditions now apply:
 + Built-in Zygisk turned off
 
 ## Compatibility
-
-`PROCESS_ON_DENYLIST` cannot be flagged correctly for isolated processes on Magisk DenyList currently.
 
 Zygisk Next only guarantees the same behavior of Zygisk API, but will NOT ensure Magisk's internal features.
