@@ -1,5 +1,4 @@
 # Zygisk Next
-
 Standalone implementation of Zygisk, providing Zygisk API support for KernelSU and a replacement of Magisk's built-in Zygisk.
 
 ## Copyright Notice
