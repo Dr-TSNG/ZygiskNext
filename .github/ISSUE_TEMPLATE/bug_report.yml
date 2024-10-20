@@ -54,7 +54,7 @@ body:
       required: true
   - type: input
     attributes:
-      label: KernelSU version/KernelSU 版本
+      label: Magisk/KernelSU/APatch version / Magisk/KernelSU/APatch 版本
     validations:
       required: true
   - type: checkboxes
@@ -62,7 +62,7 @@ body:
     attributes:
       label: Version requirement/版本要求
       options:
-        - label: I am using latest debug CI version of Zygisk Next and enable verbose log/我正在使用最新 CI 调试版本 Zygisk Next 且启用详细日志
+        - label: I am using latest version of Zygisk Next/我正在使用最新版本 Zygisk Next
           required: true
   - type: textarea
     attributes:
