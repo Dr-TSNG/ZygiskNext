@@ -67,7 +67,7 @@ body:
   - type: textarea
     attributes:
       label: Logs/日志
-      description: For usage issues, please provide the log zip saved from KernelSU manager; for activation issues, please provide [bugreport](https://developer.android.com/studio/debug/bug-report). Without logs zip, the issue will be closed. /使用问题请提供从 KernelSU 管理器保存的日志压缩包；激活问题请提供 [bugreport](https://developer.android.google.cn/studio/debug/bug-report?hl=zh-cn) 日志。没有日志附件的问题会被关闭。
+      description: For usage issues, please provide the log zip saved from KernelSU / APatch manager (For magisk user, please **DO NOT** provide magisk logs), or catch logs with [log catcher module](https://t.me/hwrtools/10) or [tool](https://t.me/hwrtools/12). Without logs zip, the issue will be closed. /使用问题请提供从 KernelSU / APatch 管理器保存的日志压缩包（Magisk 用户请**不要**提供 Magisk 日志），或者使用[日志抓取模块](https://t.me/hwrtools/10)或[工具](https://t.me/hwrtools/12)获取日志。没有日志附件的问题会被关闭。
       placeholder: Upload logs zip by clicking the bar on the bottom. Upload logs to other websites or using external links is prohibited. /点击文本框底栏上传日志压缩包，禁止上传到其它网站或使用外链提供日志。
     validations:
       required: true
