@@ -1,7 +1,7 @@
-name: Bug report/反馈 Bug
-description: Report errors or unexpected behavior./反馈错误或异常行为。
+name: Bug report / 反馈 Bug
+description: Report errors or unexpected behavior. / 反馈错误或异常行为。
 labels: [bug]
-title: "[Bug] Short description/简单描述"
+title: "[Bug] Short description / 简单描述"
 body:
   - type: markdown
     attributes:
@@ -31,25 +31,25 @@ body:
       required: true
   - type: textarea
     attributes:
-      label: Actual behaviour/实际行为
-      placeholder: Tell us what happens instead/实际上发生了什么
+      label: Actual behaviour / 实际行为
+      placeholder: Tell us what happens instead / 实际上发生了什么
     validations:
       required: true
   - type: textarea
     attributes:
-      label: KernelSU Module List/KernelSU 模块列表
+      label: Module List / 模块列表
       render: Shell
     validations:
       required: true
   - type: input
     attributes:
-      label: Zygisk Next version/Zygisk Next 版本
+      label: Zygisk Next version / Zygisk Next 版本
       description: Don't use 'latest'. Specify actual version, otherwise your issue will be closed./不要填用“最新版”。给出具体版本号，不然 issue 会被关闭。
     validations:
       required: true
   - type: input
     attributes:
-      label: Android version/Android 版本
+      label: Android version / Android 版本
     validations:
       required: true
   - type: input
@@ -60,7 +60,7 @@ body:
   - type: checkboxes
     id: latest
     attributes:
-      label: Version requirement/版本要求
+      label: Version requirement / 版本要求
       options:
         - label: I am using latest version of Zygisk Next/我正在使用最新版本 Zygisk Next
           required: true
