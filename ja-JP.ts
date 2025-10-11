@@ -21,7 +21,7 @@ export default {
     settings: {
         log_to_kernel: 'dmesg にログを記録する (開発者のみ)',
         nonroot_as_denylist: '非 Root アプリをブラックリストとして扱う',
-        enforce_denylist: 'Denylist のポリシー',
+        enforce_denylist: 'Denylist ポリシー',
         enforce_denylist_desc: '強制: Denylist 内のアプリに対する変更をすべて元に戻します。<br/>アンマウントのみ: Denylist 内のアプリのマウント変更のみを元に戻します。',
         denylist_disabled: '無効',
         denylist_enforced: '強制',
