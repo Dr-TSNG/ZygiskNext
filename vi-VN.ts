@@ -20,7 +20,7 @@ export default {
     },
     settings: {
         log_to_kernel: 'Ghi log vào dmesg (Chỉ dành cho nhà phát triển)',
-        nonroot_as_denylist: 'Xem ứng dụng không có root như Denylist',
+        nonroot_as_denylist: 'Xử lý ứng dụng non-root như Denylist',
         enforce_denylist: 'Chính sách cho Denylist',
         enforce_denylist_desc: 'Enforced: Mọi thay đổi đối với các ứng dụng trong Denylist sẽ bị hoàn tác.<br/>Unmount: Chỉ các thay đổi liên quan đến Mount mới bị hoàn tác.',
         denylist_disabled: 'Tắt',
@@ -29,7 +29,7 @@ export default {
         anonymous_memory: 'Sử dụng bộ nhớ ẩn danh',
         anonymous_memory_desc: 'Load các module vào bộ nhớ ẩn danh. Điều này làm giảm khả năng đọc log nhưng giúp tránh một số cơ chế phát hiện cũ.',
         zn_linker: 'Sử dụng Zygisk Next Linker (Thử nghiệm)',
-        zn_linker_desc: 'Dùng linker tích hợp sẵn thay cho linker của hệ thống để tải module. Cách này giúp tăng tính tàng hình nhưng có thể gây ra lỗi tương thích.'
+        zn_linker_desc: 'Dùng linker tích hợp sẵn thay cho linker của hệ thống để load các module. Cách này giúp tăng tính tàng hình nhưng có thể gây ra lỗi tương thích.'
     },
     zygote_inject_state: {
         running: 'Đang chạy',
@@ -44,7 +44,7 @@ export default {
         injected: 'Đã tiêm ({pid})',
         inject_failed: 'Tiêm thất bại ({pid})',
         skipped: 'Bỏ qua ({pid})',
-        unknown_desc: 'Trạng thái của Zygote này chưa được xác định; có thể tồn tại nhưng chưa được khởi chạy, hoặc trình giám sát Zygote chưa phát hiện việc khởi động của nó.',
+        unknown_desc: 'Trạng thái của Zygote này chưa được xác định và có thể tồn tại nhưng chưa được khởi chạy, hoặc trình giám sát Zygote chưa phát hiện việc khởi động của nó.',
         injected_desc: 'Zygisk đã được tiêm vào Zygote. ID tiến trình là {pid}.',
         inject_failed_desc: 'Đã cố gắng tiêm Zygisk vào Zygote này nhưng thất bại. ID tiến trình là {pid}.',
         skipped_desc: 'Zygote đã được phát hiện khởi động. ID tiến trình là {pid}. Tuy nhiên, việc tiêm Zygisk đã bị dừng do hệ thống gặp nhiều lần Soft Reboot trước đó.'
