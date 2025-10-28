@@ -1,6 +1,6 @@
 export default {
     language: { 
-        name: 'Indonesia (ID)'
+        name: 'Bahasa Indonesia (ID)'
     },
     main_fragment: {
         dashboard: 'Dasbor',
@@ -8,49 +8,49 @@ export default {
         settings: 'Pengaturan'
     },
     dashboard: {
-        root_impl: 'Implementasi Root',
+        root_impl: 'Implementasi root',
         zygote_monitor: 'Monitor Zygote',
-        modules: 'Tidak ada Modul | Modul (1) | Modul ({0})',
+        modules: 'Tidak ada modul | Modul (1) | Modul ({0})',
         root_impl_normal: 'Root saat ini {impl}, denylist akan berfungsi dengan normal.',
-        root_impl_abnormal: 'Tidak dapat menentukan Implementasi Root, sehingga denylist tidak akan berfungsi.',
-        root_impl_multiple: 'Ditemukan lebih dari satu Implementasi Root, denylist tidak akan berfungsi.',
-        kernelsu_denylist: 'Denylist di KernelSU mengacu pada aplikasi yang ditandai sebagai \'Unmount modul\' di profil aplikasi.',
-        magisk_denylist: 'Denylist di Magisk mengacu pada denylist bawaan Magisk\’s.',
-        apatch_denylist: 'Denylist di APatch mengacu pada aplikasi SuperUser yang \'Kecualikan\' diaktifkan dan menonaktifkan root.',
+        root_impl_abnormal: 'Tidak dapat menentukan implementasi root, sehingga denylist tidak akan berfungsi.',
+        root_impl_multiple: 'Ditemukan lebih dari satu implementasi root, denylist tidak akan berfungsi.',
+        kernelsu_denylist: 'Denylist pada KernelSU mengacu pada aplikasi yang ditandai \'Umount modul\' pada profil aplikasi.',
+        magisk_denylist: 'Denylist pada Magisk mengacu pada denylist bawaan Magisk.',
+        apatch_denylist: 'Denylist pada APatch mengacu pada aplikasi tanpa akses root yang \'Kecualikan\'-nya aktif pada tab SuperUser.'
     },
     settings: {
-        log_to_kernel: 'Log ke dmesg (Hanya untuk Pengembang)',
-        nonroot_as_denylist: 'Anggap aplikasi non-root sebagai denylist',
-        enforce_denylist: 'Kebijakan Denylist',
-        enforce_denylist_desc: 'Dipaksakan: semua perubahan pada app di denylist bakal dibalikin.<br/>Hanya Umount: hanya perubahan mount di app denylist yang bakal dibalikin.',
+        log_to_kernel: 'Log ke dmesg (Hanya untuk pengembang)',
+        nonroot_as_denylist: 'Perlakukan aplikasi tanpa akses root sebagai denylist',
+        enforce_denylist: 'Penerapan denylist',
+        enforce_denylist_desc: 'Terapkan: segala perubahan yang diterapkan pada aplikasi dalam denylist akan dipulihkan<br/>Hanya umount: hanya perubahan terkait mount pada aplikasi dalam denylist yang akan dipulihkan.',
         denylist_disabled: 'Nonaktif',
-        denylist_enforced: 'Dipaksakan',
-        denylist_just_umount: 'Hanya Unmount',
-        anonymous_memory: 'Gunakan anonim memori',
-        anonymous_memory_desc: 'Muat modul ke memori anonim. Ini bikin log jadi susah dibaca tapi bisa ngelewatin beberapa sistem deteksi lama.',
+        denylist_enforced: 'Terapkan',
+        denylist_just_umount: 'Hanya unmount',
+        anonymous_memory: 'Gunakan memori anonim',
+        anonymous_memory_desc: 'Muat module ke dalam memori anonim. Akan berdampak terhadap keterbacaan log, namun berbagai mekanisme deteksi lama dapat diatasi.',
         zn_linker: 'Gunakan linker Zygisk Next (Eksperimental)',
-        zn_linker_desc: 'Gunakan linker bawaan daripada linker sistem untuk memuat modul. Meningkatkan penyamaran, tapi bisa menyebabkan masalah kompatibilitas.',
+        zn_linker_desc: 'Gunakan linker bawaan sebagai pengganti linker sistem untuk memuat modul. Penyamaran akan diperkuat tetapi dapat menyebabkan masalah kompatibilitas.'
     },
     zygote_inject_state: {
         running: 'Berjalan',
         stop_by_user: 'Dihentikan oleh pengguna',
-        stop_by_crash: 'Dihentikan karena zygote crash',
-        running_desc: 'Monitor Zygote Berjalan Normal.',
+        stop_by_crash: 'Terhenti karena Zygote crash',
+        running_desc: 'Monitor Zygote berjalan normal.',
         stop_by_user_desc: 'Monitor Zygote dihentikan oleh pengguna.',
-        stop_by_crash_desc: 'Terdeteksi Zygote terus-menerus memulai ulang, Monitor Zygote otomatis dihentikan.',
+        stop_by_crash_desc: 'Zygote terdeteksi memulai ulang berulang kali, Monitor Zygote dinonaktifkan secara otomatis.'
     },
     zygote_state: {
         unknown: 'Tidak diketahui',
         injected: 'Diinjeksi ({pid})',
         inject_failed: 'Gagal diinjeksi ({pid})',
-        skipped: 'Dilewati ({pid})',
-        unknown_desc: 'Status Zygote ini tidak diketahui, Mungkin ada tapi belum dijalankan, Atau Monitor Zygote tidak bisa mendeteksi saat dijalankan.',
-        injected_desc: 'Zygisk sudah diinjeksi ke Zygote. ID prosesnya {pid}',
-        inject_failed_desc: 'Zygisk dicoba diinjeksi ke Zygote ini tapi gagal. ID prosesnya {pid}',
-        skipped_desc: 'Zygote dipantau untuk dijalankan. ID prosesnya {pid}. Tapi injeksi Zygisk dihentikan karena sistem sebelumnya beberapa kali soft reboot.'
+        skipped: 'Dilewatkan ({pid})',
+        unknown_desc: 'Status Zygote ini tidak diketahui, Mungkin ada namun belum dimulai, atau monitor Zygote tidak mendeteksi permulaannya.',
+        injected_desc: 'Zygote ini telah diinjeksikan Zygisk. ID prosesnya adalah {pid}',
+        inject_failed_desc: 'Zygote ini telah dicoba untuk diinjeksikan Zygisk tetapi gagal. ID prosesnya adalah {pid}',
+        skipped_desc: 'Zygote ini terpantau telah dimulai. ID prosesnya adalah {pid}. Namun injeksi Zygisk dihentikan karena sistem mengalami beberapa soft reboot sebelumnya.'
     },
     corrupted: {
-        title: 'File modul korup',
-        desc: 'Silakan kembalikan perubahan di Zygisk Next dan coba lagi.'
+        title: 'File modul rusak',
+        desc: 'Harap urungkan perubahan pada file Zygisk Next dan coba lagi.'
     }
 }
