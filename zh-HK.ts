@@ -8,15 +8,15 @@ export default {
         settings: '設定'
     },
     dashboard: {
-        root_impl: 'Root 實作方式',
+        root_impl: 'Root 方案',
         zygote_monitor: 'Zygote 監測器',
         modules: '模組 ({0})',
-        root_impl_normal: '目前 Root 實作方式為 {impl}，排除清單運作正常。',
-        root_impl_abnormal: '無法確定 Root 實作方式，排除清單將無法運作。',
-        root_impl_multiple: '偵測到多個 Root 實作方式，排除清單將無法運作。',
-        kernelsu_denylist: 'KernelSU 排除清單是指喺 App Profile 中被標記為「卸載模組」嘅應用程式。',
-        magisk_denylist: 'Magisk 排除清單是指 Magisk 內置嘅排除清單。',
-        apatch_denylist: 'APatch 排除清單是指喺超級用戶中標記為「排除模組」，且未獲授權 Root 權限嘅應用程式。',
+        root_impl_normal: '目前 Root 方案為 {impl}，排除清單運作正常。',
+        root_impl_abnormal: '無法確定 Root 方案，排除清單將無法運作。',
+        root_impl_multiple: '偵測到多個 Root 方案，排除清單將無法運作。',
+        kernelsu_denylist: 'KernelSU 排除清單係喺 App Profile 中被標記為「卸載模組」嘅應用程式。',
+        magisk_denylist: 'Magisk 排除清單係 Magisk 內置嘅排除清單。',
+        apatch_denylist: 'APatch 排除清單係喺超級用戶中標記為「排除模組」，且未獲授權 Root 權限嘅應用程式。',
     },
     settings: {
         log_to_kernel: '將紀錄檔寫入 dmesg（僅供開發者使用）',
