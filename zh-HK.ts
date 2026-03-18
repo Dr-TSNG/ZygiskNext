@@ -12,11 +12,11 @@ export default {
         zygote_monitor: 'Zygote 監測器',
         modules: '模組 ({0})',
         root_impl_normal: '目前 Root 方案為 {impl}，排除清單運作正常。',
-        root_impl_abnormal: '無法確定 Root 方案，排除清單將無法運作。',
-        root_impl_multiple: '偵測到多個 Root 方案，排除清單將無法運作。',
-        kernelsu_denylist: 'KernelSU 排除清單係喺 App Profile 中被標記為「卸載模組」嘅應用程式。',
+        root_impl_abnormal: '無法確定 Root 方案，排除清單無法運作。',
+        root_impl_multiple: '偵測到多個 Root 方案，排除清單無法運作。',
+        kernelsu_denylist: 'KernelSU 排除清單係 App Profile 標記為「卸載模組」嘅程式。',
         magisk_denylist: 'Magisk 排除清單係 Magisk 內置嘅排除清單。',
-        apatch_denylist: 'APatch 排除清單係喺超級用戶中標記為「排除模組」，且未獲授權 Root 權限嘅應用程式。',
+        apatch_denylist: 'APatch 排除清單係標記為「排除模組」且未獲 Root 權限嘅程式。',
     },
     settings: {
         log_to_kernel: '將紀錄檔寫入 dmesg（僅供開發者使用）',
@@ -30,7 +30,7 @@ export default {
         anonymous_memory: '使用匿名記憶體',
         anonymous_memory_desc: '將模組載入至匿名記憶體。雖然會令紀錄檔難以閱讀，但可以避開部分過時嘅偵測手段。',
         zn_linker: '使用 Zygisk Next 連結器（實驗性）',
-        zn_linker_desc: '使用內置連結器取代系統連結器載入模組，增強隱蔽性，但可能導致兼容性問題。',
+        zn_linker_desc: '使用內置連結器取代系統連結器載入模組，增強隱蔽性但可能導致兼容性問題。',
     },
     zygote_inject_state: {
         running: '運作中',
@@ -52,6 +52,6 @@ export default {
     },
     corrupted: {
         title: '模組檔案損毀',
-        desc: '請還原對 Zygisk Next 嘅修改後重試'
+        desc: '請還原對 Zygisk Next 嘅修改後再試'
     }
 }
