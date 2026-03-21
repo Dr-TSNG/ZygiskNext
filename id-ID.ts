@@ -28,8 +28,8 @@ export default {
         denylist_just_umount: 'Hanya unmount',
         anonymous_memory: 'Gunakan memori anonim',
         anonymous_memory_desc: 'Muat module ke dalam memori anonim. Akan berdampak terhadap keterbacaan log, namun berbagai mekanisme deteksi lama dapat diatasi.',
-        zn_linker: 'Gunakan linker Zygisk Next (Eksperimental)',
-        zn_linker_desc: 'Gunakan linker bawaan sebagai pengganti linker sistem untuk memuat modul. Penyamaran akan diperkuat tetapi dapat menyebabkan masalah kompatibilitas.'
+        zn_linker: 'Nonaktifkan linker Zygisk Next',
+        zn_linker_desc: 'Nonaktifkan linker bawaan dan gunakan linker sistem untuk memuat modul. Ini dapat mengurangi penyamaran tetapi meningkatkan kompatibilitas.'
     },
     zygote_inject_state: {
         running: 'Berjalan',

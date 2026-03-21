@@ -29,8 +29,8 @@ export default {
         denylist_just_umount: 'Chỉ bỏ gắn kết',
         anonymous_memory: 'Sử dụng bộ nhớ ẩn danh',
         anonymous_memory_desc: 'Nạp mô-đun vào bộ nhớ ẩn danh. Điều này làm giảm khả năng đọc nhật ký nhưng lại giúp tránh được một số cơ chế phát hiện lỗi thời.',
-        zn_linker: 'Sử dụng trình liên kết Zygisk Next (Thử nghiệm)',
-        zn_linker_desc: 'Hãy sử dụng trình liên kết được tích hợp sẵn thay vì trình liên kết hệ thống để nạp mô-đun. Điều này sẽ tăng cường khả năng tàng hình nhưng có thể gây ra các vấn đề về khả năng tương thích.',
+        zn_linker: 'Vô hiệu hóa trình liên kết Zygisk Next',
+        zn_linker_desc: 'Tắt trình liên kết tích hợp và dùng trình liên kết hệ thống để nạp mô-đun. Việc này có thể giảm khả năng tàng hình nhưng cải thiện khả năng tương thích.',
     },
     zygote_inject_state: {
         running: 'Đang chạy',

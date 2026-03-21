@@ -29,8 +29,8 @@ export default {
         denylist_just_umount: '仅还原挂载',
         anonymous_memory: '使用匿名内存',
         anonymous_memory_desc: '将模块加载到匿名内存。这会破坏日志可读性，但能避免一些过时的检测。',
-        zn_linker: '使用 Zygisk Next 链接器（实验性）',
-        zn_linker_desc: '使用内置链接器替代系统链接器加载模块，增强隐蔽性但可能导致兼容性问题。',
+        zn_linker: '禁用 Zygisk Next 链接器',
+        zn_linker_desc: '关闭内置链接器，改用系统链接器加载模块。可能降低隐蔽性，但提升兼容性。',
     },
     zygote_inject_state: {
         running: '运行中',

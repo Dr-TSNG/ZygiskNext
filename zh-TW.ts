@@ -28,8 +28,8 @@ export default {
         denylist_just_umount: '僅還原掛載',
         anonymous_memory: '使用匿名記憶體',
         anonymous_memory_desc: '將模組載入到匿名記憶體。這會破壞日誌可讀性，但能避免一些過時的偵測。',
-        zn_linker: '使用 Zygisk Next 連結器（實驗性）',
-        zn_linker_desc: '使用內建連結器替代系統連結器載入模組，增強隱蔽性但可能導致相容性問題。',
+        zn_linker: '禁用 Zygisk Next 連結器',
+        zn_linker_desc: '關閉內建連結器，改用系統連結器載入模組。可能降低隱蔽性，但提升相容性。',
     },
     zygote_inject_state: {
         running: '執行中',

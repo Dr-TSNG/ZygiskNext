@@ -28,8 +28,8 @@ export default {
         denylist_just_umount: 'アンマウントのみ',
         anonymous_memory: '匿名メモリを使用する',
         anonymous_memory_desc: 'モジュールを匿名メモリ上に読み込みます。これによってログの可読性は低下しますが、一部の古い検出メカニズムを回避できます。',
-        zn_linker: 'Zygisk Next linker を使用する (実験的)',
-        zn_linker_desc: 'モジュールの読み込みにシステムリンカーではなく、内蔵のリンカーを使用します。これによってステルス性が向上しますが、互換性の問題が発生する可能性があります。',
+        zn_linker: 'Zygisk Next linker を無効にする',
+        zn_linker_desc: '内蔵リンカーを無効にして、モジュールの読み込みにシステムリンカーを使用します。ステルス性は低下する可能性がありますが、互換性が向上します。',
     },
     zygote_inject_state: {
         running: '実行中',
