@@ -8,15 +8,15 @@ export default {
         settings: 'Cài đặt'
     },
     dashboard: {
-        root_impl: 'Triển khai Root',
+        root_impl: 'Trình thực thi Root',
         zygote_monitor: 'Trình giám sát Zygote',
         modules: 'Không có module | Module (1) | Modules ({0})',
-        root_impl_normal: 'Triển khai Root hiện tại là {impl}, Denylist sẽ hoạt động bình thường.',
-        root_impl_abnormal: 'Không thể xác định Triển khai Root, Denylist sẽ không hoạt động.',
-        root_impl_multiple: 'Nhiều Triển khai Root được tìm thấy, Denylist sẽ không hoạt động.',
+        root_impl_normal: 'Trình thực thi Root hiện tại là {impl}, Denylist sẽ hoạt động bình thường.',
+        root_impl_abnormal: 'Không thể xác định Trình thực thi Root, Denylist sẽ không hoạt động.',
+        root_impl_multiple: 'Phát hiện nhiều Trình thực thi Root, Denylist sẽ không hoạt động.',
         kernelsu_denylist: 'Denylist của KernelSU đề cập đến các ứng dụng được đánh dấu là \'Unmount modules\' trong Hồ sơ ứng dụng (App Profile).',
         magisk_denylist: 'Denylist của Magisk đề cập đến Denylist được tích hợp sẵn của Magisk.',
-        apatch_denylist: 'Denylist của APatch đề cập đến ứng dụng SuperUser khi tùy chọn \'Exclude\' được bật để vô hiệu hoá quyền root.'
+        apatch_denylist: 'Denylist của APatch đề cập đến ứng dụng SuperUser khi tùy chọn \'Exclude (Loại trừ)\' được bật để vô hiệu hoá quyền root.'
     },
     settings: {
         log_to_kernel: 'Ghi nhật ký vào dmesg (Chỉ dành cho nhà phát triển)',
@@ -29,8 +29,8 @@ export default {
         denylist_just_umount: 'Unmount',
         anonymous_memory: 'Sử dụng bộ nhớ ẩn danh',
         anonymous_memory_desc: 'Load các module vào bộ nhớ ẩn danh. Điều này làm giảm khả năng đọc nhật ký nhưng lại giúp tránh được một số cơ chế phát hiện lỗi thời.',
-        zn_linker: 'Vô hiệu hoá trình liên kết Zygisk Next',
-        zn_linker_desc: 'Tắt trình liên kết tích hợp sẵn và sử dụng trình liên kết hệ thống để load các module. Việc này có thể giảm khả năng tàng hình nhưng cải thiện khả năng tương thích.'
+        zn_linker: 'Vô hiệu hoá Zygisk Next linker',
+        zn_linker_desc: 'Tắt linker tích hợp sẵn và sử dụng linker hệ thống để load các module. Việc này có thể giảm khả năng tàng hình nhưng cải thiện khả năng tương thích.'
     },
     zygote_inject_state: {
         running: 'Đang chạy',
