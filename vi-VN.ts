@@ -22,7 +22,7 @@ export default {
         log_to_kernel: 'Ghi nhật ký vào dmesg (Chỉ dành cho nhà phát triển)',
         nonroot_as_denylist: 'Xử lý các ứng dụng non-root như trong Denylist',
         enforce_denylist: 'Chính sách Denylist',
-        enforce_denylist_desc: 'Enforced: Chặn chèn mã và hoàn tác các thay đổi mount cho các ứng dụng trong Denylist.<br/>Unmount: Hoàn tác các thay đổi mount nhưng cho phép chèn mã cho các ứng dụng trong Denylist.',
+        enforce_denylist_desc: 'Enforced: Chặn tiêm mã và hoàn tác các thay đổi mount cho các ứng dụng trong Denylist.<br/>Unmount: Hoàn tác các thay đổi mount nhưng cho phép tiêm mã cho các ứng dụng trong Denylist.',
         enforce_denylist_alert: 'Đối với người dùng thông thường, chúng tôi đặc biệt khuyến nghị nên tắt tính năng Kernel Umount thủ công trong Trình quản lý KernelSU để tránh việc các điểm mount bị umount nhiều lần do cấu hình sai.',
         denylist_disabled: 'Tắt',
         denylist_enforced: 'Enforced',
