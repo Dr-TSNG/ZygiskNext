@@ -3,14 +3,15 @@ export default {
         name: '中文（香港）' 
     },
     main_fragment: {
-        dashboard: '儀表板',
+        dashboard: '狀態',
         basic: '基本資訊',
         settings: '設定'
     },
     dashboard: {
         root_impl: 'Root 方案',
         zygote_monitor: 'Zygote 監測器',
-        modules: '模組 ({0})',
+        zygisk_module_title: 'Zygisk 模組 ({0})',
+        zn_module_title: 'ZN 模組 ({0})',
         root_impl_normal: '目前 Root 方案為 {impl}，排除清單運作正常。',
         root_impl_abnormal: '無法確定 Root 方案，排除清單無法運作。',
         root_impl_multiple: '偵測到多個 Root 方案，排除清單無法運作。',
@@ -29,7 +30,7 @@ export default {
         denylist_just_umount: '僅還原掛載',
         anonymous_memory: '使用匿名記憶體',
         anonymous_memory_desc: '將模組載入至匿名記憶體。雖然會令紀錄檔難以閱讀，但可以避開部分過時嘅偵測手段。',
-        zn_linker: '使用 Zygisk Next 連結器（實驗性）',
+        zn_linker: '使用 Zygisk Next 連結器',
         zn_linker_desc: '使用內置連結器取代系統連結器載入模組，增強隱蔽性但可能導致兼容性問題。',
     },
     zygote_inject_state: {
@@ -53,5 +54,17 @@ export default {
     corrupted: {
         title: '模組檔案損毀',
         desc: '請還原對 Zygisk Next 嘅修改後再試'
+    },
+    module: {
+        issue: {
+            title: '模組存在問題',
+            companion_api_issue: '此模組 {name} 存在 Companion API 使用不當嘅問題，可能導致行程崩潰同記憶體洩漏，請聯絡此模組嘅開發者解決。',
+            learn_more: '訪問呢度了解更多信息：{link}',
+            check_banner: '檢測到 {0} 個有問題嘅模組，請檢查模組列表。',
+            badge: '有問題',
+        },
+        zn: {
+            process_count: '{0} 個進程',
+        },
     }
 }

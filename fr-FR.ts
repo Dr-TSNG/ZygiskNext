@@ -5,14 +5,15 @@ export default {
         name: 'Français (FR)'
     },
     main_fragment: {
-        dashboard: 'Tableau de bord',
+        dashboard: 'État',
         basic: 'Informations de base',
         settings: 'Paramètres'
     },
     dashboard: {
         root_impl: 'Implementation root',
         zygote_monitor: 'Moniteur Zygote',
-        modules: 'Aucun module | Module (1) | Modules ({0})',
+        zygisk_module_title: 'Aucun module Zygisk | Module Zygisk ({0}) | Modules Zygisk ({0})',
+        zn_module_title: 'Aucun module ZN | Module ZN ({0}) | Modules ZN ({0})',
         root_impl_normal: 'L\'implémentation root actuelle est {impl}, la liste d\'exclusions fonctionnera correctement.',
         root_impl_abnormal: 'Impossible de déterminer l\'implémentation root, la liste d\'exclusions ne fonctionnera pas.',
         root_impl_multiple: 'Multiples implantations root trouvées, la liste d\'exclusions ne fonctionnera pas.',
@@ -24,13 +25,12 @@ export default {
         log_to_kernel: 'Traces via dmesg (seulement pour les développeurs)',
         nonroot_as_denylist: 'Traiter les apps non-root comme dans liste d\'exclusions',
         enforce_denylist: 'Stratégie liste d\'exclusions',
-        enforce_denylist_desc: 'Forcée: toute modification d\'une app dans la liste d\'exclusions sera rétablie.<br/>Seulement « unmount »: seules les modifications pour « mount » des apps dans la liste d\'exclusions seront rétablies.',
-        denylist_disabled: 'Inhibée',
+        enforce_denylist_desc: 'Forcée: toute modification d\'une app dans la liste d\'exclusions sera rétablie.<br/>Seulement « unmount »: seules les modifications pour « mount » des apps dans la liste d\'exclusions seront rétablies.',        enforce_denylist_alert: 'Pour les utilisateurs normaux, il est fortement recommandé de désactiver manuellement la fonctionnalité d\'umount du noyau dans le gestionnaire KernelSU pour éviter que les points de montage ne soient démontés plusieurs fois en raison d\'une mauvaise configuration.',        denylist_disabled: 'Inhibée',
         denylist_enforced: 'Forcée',
         denylist_just_umount: 'Seulement « unmount »',
         anonymous_memory: 'Utiliser une mémoire anonyme',
         anonymous_memory_desc: 'Charge les modules dans une mémoire anonyme. Cela compromet la lecture des traces mais contourne certains anciens mécanismes de détection.',
-        zn_linker: 'Utiliser le linker Zygisk Next (expérimental)',
+        zn_linker: 'Utiliser le linker Zygisk Next',
         zn_linker_desc: 'Utiliser le linker interne plutôt que celui du système pour charger des modules. Cela améliore la furtivité mais peut causer des problèmes d\'incompatibilité.',
     },
     zygote_inject_state: {
@@ -54,5 +54,17 @@ export default {
     corrupted: {
         title: 'Fichiers de module corrompus',
         desc: 'Veuillez annuler les changements de Zygisk Next et réessayez.'
+    },
+    module: {
+        issue: {
+            title: 'Ce module a un problème',
+            companion_api_issue: 'Ce module {name} a un problème d\'utilisation incorrecte de l\'API Companion, ce qui peut causer des plantages de processus et des fuites mémoire. Veuillez contacter le développeur de ce module pour résoudre le problème.',
+            learn_more: 'Visitez ici pour plus d\'informations：{link}',
+            check_banner: 'Aucun module problématique détecté. | {0} module présente un problème. Veuillez vérifier la liste des modules. | {0} modules présentent des problèmes. Veuillez vérifier la liste des modules.',
+            badge: 'Problème',
+        },
+        zn: {
+            process_count: 'Aucun processus | {0} processus | {0} processus',
+        },
     }
 }

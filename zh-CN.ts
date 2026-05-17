@@ -3,14 +3,15 @@ export default {
         name: '中文（简体）' 
     },
     main_fragment: {
-        dashboard: '仪表板',
+        dashboard: '状态',
         basic: '基本信息',
         settings: '设置'
     },
     dashboard: {
         root_impl: 'Root 实现',
         zygote_monitor: 'Zygote 监视器',
-        modules: '模块 ({0})',
+        zygisk_module_title: 'Zygisk 模块 ({0})',
+        zn_module_title: 'ZN 模块 ({0})',
         root_impl_normal: '当前 Root 实现为 {impl}，排除列表将正常工作。',
         root_impl_abnormal: '无法确定 Root 实现，排除列表将不会工作。',
         root_impl_multiple: '当前存在多个 Root 实现，排除列表将不会工作。',
@@ -29,7 +30,7 @@ export default {
         denylist_just_umount: '仅还原挂载',
         anonymous_memory: '使用匿名内存',
         anonymous_memory_desc: '将模块加载到匿名内存。这会破坏日志可读性，但能避免一些过时的检测。',
-        zn_linker: '使用 Zygisk Next 链接器（实验性）',
+        zn_linker: '使用 Zygisk Next 链接器',
         zn_linker_desc: '使用内置链接器替代系统链接器加载模块，增强隐蔽性但可能导致兼容性问题。',
     },
     zygote_inject_state: {
@@ -53,5 +54,17 @@ export default {
     corrupted: {
         title: '模块文件损坏',
         desc: '请还原对 Zygisk Next 的修改后重试'
+    },
+    module: {
+        issue: {
+            title: '模块存在问题',
+            companion_api_issue: '此模块 {name} 存在 Companion API 使用不当的问题，可能导致进程崩溃和内存泄露，请联系此模块的开发者解决。',
+            learn_more: '访问这里了解更多信息：{link}',
+            check_banner: '检测到 {0} 个存在问题的模块，请检查模块列表。',
+            badge: '存在问题',
+        },
+        zn: {
+            process_count: '{0} 个进程',
+        },
     }
 }

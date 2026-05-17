@@ -3,14 +3,15 @@ export default {
         name: 'Türkçe (TR)'
     },
     main_fragment: {
-        dashboard: 'Gösterge Paneli',
+        dashboard: 'Durum',
         basic: 'Temel Bilgiler',
         settings: 'Ayarlar'
     },
     dashboard: {
         root_impl: 'Root uygulaması',
         zygote_monitor: 'Zygote Monitörü',
-        modules: 'Modül yok | (1) Modül | ({0}) Modüll',
+        zygisk_module_title: 'Zygisk modülü yok | Zygisk modülü ({0}) | Zygisk modülleri ({0})',
+        zn_module_title: 'ZN modülü yok | ZN modülü ({0}) | ZN modülleri ({0})',
         root_impl_normal: 'Mevcut Root Uygulaması {impl}, engelleme listesi düzgün çalışacaktır.',
         root_impl_abnormal: 'Root Uygulaması belirlenemedi, engelleme listesi çalışmayacak.',
         root_impl_multiple: 'Birden fazla Root uygulaması bulundu, engelleme listesi çalışmayacaktır.',
@@ -28,7 +29,7 @@ export default {
         denylist_just_umount: 'Yalnızca Unmount',
         anonymous_memory: 'Anonim bellek kullan',
         anonymous_memory_desc: 'Modülleri anonim belleğe yükleyin. Bu, log okunabilirliğini tehlikeye atar, ancak bazı eski algılama mekanizmalarını atlatır.',
-        zn_linker: 'Zygisk Next bağlayıcıyı kullanın (Deneysel)',
+        zn_linker: 'Zygisk Next bağlayıcıyı kullanın',
         zn_linker_desc: 'Modülleri yüklemek için sistem bağlayıcı yerine yerleşik bağlayıcıyı kullanın. Bu, gizliliği artıracak ancak uyumluluk sorunlarına neden olabilir.',
     },
     zygote_inject_state: {
@@ -52,5 +53,17 @@ export default {
     corrupted: {
         title: 'Modül dosyaları bozulmuş',
         desc: 'Lütfen Zygisk Next`teki değişiklikleri geri alın ve tekrar deneyin.'
+    },
+    module: {
+        issue: {
+            title: 'Bu modülün bir sorunu var',
+            companion_api_issue: 'Bu modül {name}, Companion API\'nin yanlış kullanılması ile ilgili bir soruna sahiptir ve işlem çökmelerine ve bellek sızıntılarına neden olabilir. Lütfen bu modülün geliştiricisine başvurun.',
+            learn_more: 'Daha fazla bilgi için buraya ziyaret edin：{link}',
+            check_banner: 'Sorunlu modül tespit edilmedi. | {0} sorunlu modül tespit edildi. Lütfen modül listesini kontrol edin. | {0} sorunlu modül tespit edildi. Lütfen modül listesini kontrol edin.',
+            badge: 'Sorunlu',
+        },
+        zn: {
+            process_count: 'Süreç yok | {0} süreç | {0} süreç',
+        },
     }
 }
