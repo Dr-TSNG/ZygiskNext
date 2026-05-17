@@ -3,14 +3,15 @@ export default {
         name: 'Tiếng Việt (VN)'
     },
     main_fragment: {
-        dashboard: 'Bảng điều khiển',
+        dashboard: 'Trạng thái',
         basic: 'Thông tin Cơ bản',
         settings: 'Cài đặt'
     },
     dashboard: {
         root_impl: 'Triển khai Root',
         zygote_monitor: 'Trình giám sát Zygote',
-        modules: 'Không có mô-đun nào | Mô-đun (1) | Mô-đun ({0})',
+        zygisk_module_title: 'Không có mô-đun Zygisk | Mô-đun Zygisk ({0})',
+        zn_module_title: 'Không có mô-đun ZN | Mô-đun ZN ({0})',
         root_impl_normal: 'Triẻn khai Root hiện tại là {impl}, Denylist sẽ hoạt động bình thường.',
         root_impl_abnormal: 'Không thể xác định Triển khai Root, Denylist sẽ không hoạt động.',
         root_impl_multiple: 'Nhiều Triển khai Root được tìm thấy, Denylist sẽ không hoạt động.',
@@ -22,15 +23,15 @@ export default {
         log_to_kernel: 'Ghi nhật ký vào dmesg (Chỉ dành cho nhà phát triển)',
         nonroot_as_denylist: 'Coi các ứng dụng không có root như trong Denylist.',
         enforce_denylist: 'Chính sách Denylist',
-        enforce_denylist_desc: 'Thực thi: Chặn tiêm mã và hoàn tác các thay đổi gắn kết cho ứng dụng trong Denylist.<br/>Chỉ bỏ gắn kết: Hoàn tác các thay đổi gắn kết nhưng cho phép tiêm mã cho ứng dụng trong Denylist.',
+        enforce_denylist_desc: 'Thực thi: Chặn tiêm mã và hoàn tác các thay đổi gắn kết cho ứng dụng trong Denylist.<br/>Chỉ Bỏ gắn kết: Hoàn tác các thay đổi gắn kết nhưng cho phép tiêm mã cho ứng dụng trong Denylist.',
         enforce_denylist_alert: 'Đối với người dùng thông thường, đặc biệt khuyến nghị nên tắt tính năng bỏ gắn kết kernel thủ công trong trình quản lý KernelSU để tránh việc các điểm gắn kết bị bỏ gắn kết nhiều lần do cấu hình sai.',
         denylist_disabled: 'Tắt',
         denylist_enforced: 'Thực thi',
-        denylist_just_umount: 'Chỉ bỏ gắn kết',
+        denylist_just_umount: 'Chỉ Bỏ gắn kết',
         anonymous_memory: 'Sử dụng bộ nhớ ẩn danh',
-        anonymous_memory_desc: 'Tải mô-đun vào bộ nhớ ẩn danh. Điều này làm giảm khả năng đọc nhật ký nhưng lại giúp tránh được một số cơ chế phát hiện lỗi thời.',
-        zn_linker: 'Sử dụng trình liên kết Zygisk Next (Thử nghiệm)',
-        zn_linker_desc: 'Sử dụng trình liên kết được tích hợp sẵn thay vì trình liên kết hệ thống để nạp mô-đun. Điều này sẽ tăng cường khả năng tàng hình nhưng có thể gây ra các vấn đề về khả năng tương thích.',
+        anonymous_memory_desc: 'Tải mô-đun vào bộ nhớ ẩn danh. Cách này làm giảm khả năng đọc nhật ký nhưng lại giúp tránh được một số cơ chế phát hiện lỗi thời.',
+        zn_linker: 'Sử dụng trình liên kết Zygisk Next',
+        zn_linker_desc: 'Sử dụng trình liên kết được tích hợp sẵn thay vì trình liên kết hệ thống để nạp mô-đun. Cách này sẽ tăng cường khả năng tàng hình nhưng có thể gây ra các vấn đề về khả năng tương thích.',
     },
     zygote_inject_state: {
         running: 'Đang chạy',
@@ -53,5 +54,18 @@ export default {
     corrupted: {
         title: 'Tệp mô-đun bị hỏng',
         desc: 'Vui lòng hoàn tác các thay đổi lên Zygisk Next và thử lại.'
+    },
+    module: {
+        issue: {
+            title: 'Mô-đun này có một vấn đề',
+            companion_api_issue: 'Mô-đun {name} này có vấn đề liên quan đến việc sử dụng không đúng cách của Companion API, có thể gây ra lỗi crash tiến trình và rò rỉ bộ nhớ. Vui lòng liên hệ với nhà phát triển của mô-đun này để giải quyết vấn đề.',
+            learn_more: 'Ghé vào đây để biết thêm thông tin: {link}',
+            check_banner: 'Không có mô-đun nào có vấn đề được phát hiện. | {0} mô-đun có vấn đề. Vui lòng xem lại danh sách mô-đun.',
+            badge: 'Vấn đề',
+        }
+        },
+        zn: {
+            process_count: 'Không có tiến trình | {0} tiến trình',
+        },
     }
 }
