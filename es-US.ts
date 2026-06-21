@@ -59,7 +59,7 @@ export default {
         issue: {
             title: 'Este módulo presenta un problema',
             companion_api_issue: 'El módulo {name} utiliza de forma incorrecta la Companion API, lo que podría causar crashes de procesos y fugas de memoria. Por favor, contacta con el desarrollador de este módulo para resolverlo.',
-            linker_issue: 'Zygisk Next no pudo cargar el módulo {name} con el linker integrado. Informa el problema a Zygisk Next solo si el módulo se carga correctamente con el linker del sistema.',
+            linker_issue: 'El m?dulo {name} no se pudo cargar. Informa el problema al desarrollador del m?dulo.',
             learn_more: 'Visita este enlace para más información: {link}',
             check_banner: 'No se detectaron módulos con problemas. | Se detectó {0} módulo con problemas. | Se detectaron {0} módulos con problemas.',
             badge: 'Problema',

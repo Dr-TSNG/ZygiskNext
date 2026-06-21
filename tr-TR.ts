@@ -58,7 +58,7 @@ export default {
         issue: {
             title: 'Bu modülün bir sorunu var',
             companion_api_issue: 'Bu modül {name}, Companion API\'nin yanlış kullanılması ile ilgili bir soruna sahiptir ve işlem çökmelerine ve bellek sızıntılarına neden olabilir. Lütfen bu modülün geliştiricisine başvurun.',
-            linker_issue: 'Zygisk Next, {name} modülünü yerleşik bağlayıcıyla yükleyemedi. Modül sistem bağlayıcısıyla başarıyla yüklenebiliyorsa sorunu yalnızca Zygisk Next’e bildirin.',
+            linker_issue: '{name} modülü yüklenemedi. Lütfen sorunu modül geliştiricisine bildirin.',
             learn_more: 'Daha fazla bilgi için buraya ziyaret edin：{link}',
             check_banner: 'Sorunlu modül tespit edilmedi. | {0} sorunlu modül tespit edildi. Lütfen modül listesini kontrol edin. | {0} sorunlu modül tespit edildi. Lütfen modül listesini kontrol edin.',
             badge: 'Sorunlu',

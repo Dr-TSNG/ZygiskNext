@@ -59,7 +59,7 @@ export default {
         issue: {
             title: '模組存在問題',
             companion_api_issue: '此模組 {name} 存在 Companion API 使用不當的問題，可能導致進程崩潰和記憶體洩漏，請聯繫此模組的開發者解決。',
-            linker_issue: 'Zygisk Next 使用內建連結器載入模組 {name} 失敗。只有在該模組可以使用系統連結器正常載入時，才應向 Zygisk Next 回報此問題。',
+            linker_issue: '該模組 {name} 無法載入，請向模組開發者回報問題。',
             learn_more: '訪問這裡了解更多信息：{link}',
             check_banner: '檢測到 {0} 個存在問題的模組，請檢查模組列表。',
             badge: '存在問題',
