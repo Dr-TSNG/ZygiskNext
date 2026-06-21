@@ -59,6 +59,7 @@ export default {
         issue: {
             title: 'モジュールに問題があります',
             companion_api_issue: 'このモジュール {name} には Companion API の不適切な使用に関する問題があり、プロセスのクラッシュとメモリ リークが発生する可能性があります。このモジュールの開発者に連絡して解決してください。',
+            linker_issue: 'Zygisk Next は内蔵リンカーでモジュール {name} を読み込めませんでした。システムリンカーで正常に読み込める場合のみ、Zygisk Next に問題を報告してください。',
             learn_more: 'ここにアクセスして詳細を確認してください：{link}',
             check_banner: '問題のあるモジュールが {0} 件見つかりました。モジュール一覧を確認してください。',
             badge: '問題あり',

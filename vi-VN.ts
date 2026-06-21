@@ -59,6 +59,7 @@ export default {
         issue: {
             title: 'Module này có vấn đề',
             companion_api_issue: 'Module {name} này có vấn đề với việc sử dụng Companion API không đúng cách, có thể gây ra sự cố tiến trình và rò rỉ bộ nhớ. Vui lòng liên hệ nhà phát triển của module này để giải quyết vấn đề.',
+            linker_issue: 'Zygisk Next không thể tải module {name} bằng linker tích hợp. Chỉ báo cáo vấn đề cho Zygisk Next nếu module có thể tải thành công bằng linker hệ thống.',
             learn_more: 'Truy cập tại đây để biết thêm thông tin: {link}',
             check_banner: 'Đã phát hiện {0} module có vấn đề. Vui lòng kiểm tra danh sách module.',
             badge: 'Có vấn đề',

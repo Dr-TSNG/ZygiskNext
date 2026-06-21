@@ -59,6 +59,7 @@ export default {
         issue: {
             title: 'Modul ini memiliki masalah',
             companion_api_issue: 'Modul {name} ini memiliki masalah dengan penggunaan Companion API yang tidak tepat, yang dapat menyebabkan kerusakan proses dan kebocoran memori. Harap hubungi pengembang modul ini untuk menyelesaikan masalah.',
+            linker_issue: 'Zygisk Next gagal memuat modul {name} dengan linker bawaan. Laporkan masalah ke Zygisk Next hanya jika modul dapat dimuat dengan benar menggunakan linker sistem.',
             learn_more: 'Kunjungi di sini untuk informasi lebih lanjut：{link}',
             check_banner: 'Tidak ada modul bermasalah yang terdeteksi. | Terdeteksi {0} modul bermasalah. Silakan periksa daftar modul. | Terdeteksi {0} modul bermasalah. Silakan periksa daftar modul.',
             badge: 'Bermasalah',
