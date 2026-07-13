@@ -7,6 +7,13 @@ export default {
         basic: '基本信息',
         settings: '设置'
     },
+    bugreport: {
+        export: '导出 Bugreport',
+        export_success_title: 'Bugreport 已导出',
+        export_success: 'Bugreport 已保存到：',
+        export_failed_title: '导出失败',
+        export_failed: '无法导出 Bugreport。',
+    },
     dashboard: {
         root_impl: 'Root 实现',
         zygote_monitor: 'Zygote 监视器',
@@ -60,9 +67,12 @@ export default {
             title: '模块存在问题',
             companion_api_issue: '此模块 {name} 存在 Companion API 使用不当的问题，可能导致进程崩溃和内存泄漏，请联系此模块的开发者解决。',
             linker_issue: '该模块 {name} 无法加载，请向模块的开发者汇报问题。',
+            crash_issue: '模块 {name} 出现在以下进程的崩溃线程回溯中：{processes}。',
+            unknown_process: '未知进程',
             learn_more: '访问这里了解更多信息：{link}',
             check_banner: '检测到 {0} 个存在问题的模块，请检查模块列表。',
             badge: '存在问题',
+            crash_badge: '导致崩溃',
         },
         zn: {
             process_count: '{0} 个进程',

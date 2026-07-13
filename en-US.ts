@@ -7,6 +7,13 @@ export default {
         basic: 'Basic Information',
         settings: 'Settings'
     },
+    bugreport: {
+        export: 'Export bugreport',
+        export_success_title: 'Bugreport exported',
+        export_success: 'The bugreport was saved to:',
+        export_failed_title: 'Export failed',
+        export_failed: 'Failed to export the bugreport.',
+    },
     dashboard: {
         root_impl: 'Root implementation',
         zygote_monitor: 'Zygote Monitor',
@@ -60,9 +67,12 @@ export default {
             title: 'This module has an issue',
             companion_api_issue: 'This module {name} has an issue with improper use of the Companion API, which may cause process crashes and memory leaks. Please contact the developer of this module to resolve the issue.',
             linker_issue: 'This module {name} failed to load. Please report the issue to the module developer.',
+            crash_issue: 'This module {name} appeared in the crashing-thread backtrace of: {processes}.',
+            unknown_process: 'unknown process',
             learn_more: 'Visit here for more information: {link}',
             check_banner: 'No problematic modules detected. | {0} module has an issue. Please review the module list. | {0} modules have issues. Please review the module list.',
             badge: 'Issue',
+            crash_badge: 'Crash',
         },
         zn: {
             process_count: 'No process | {0} process | {0} processes',
