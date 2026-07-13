@@ -9,6 +9,7 @@ export default {
     },
     bugreport: {
         export: '导出 Bugreport',
+        exporting: '正在导出…',
         export_success_title: 'Bugreport 已导出',
         export_success: 'Bugreport 已保存到：',
         export_failed_title: '导出失败',

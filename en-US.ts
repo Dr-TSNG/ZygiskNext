@@ -9,6 +9,7 @@ export default {
     },
     bugreport: {
         export: 'Export bugreport',
+        exporting: 'Exporting…',
         export_success_title: 'Bugreport exported',
         export_success: 'The bugreport was saved to:',
         export_failed_title: 'Export failed',
