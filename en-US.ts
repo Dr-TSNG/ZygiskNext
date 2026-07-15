@@ -15,7 +15,9 @@ export default {
         export_failed_title: 'Export failed',
         export_failed: 'Failed to export the bugreport.',
         copy_path: 'Copy path',
-        copy_path_failed: 'Copy failed, try again',
+        copy_path_failed: 'Copy failed',
+        send_log: 'Send log',
+        send_failed: 'Send failed',
     },
     dashboard: {
         root_impl: 'Root implementation',
