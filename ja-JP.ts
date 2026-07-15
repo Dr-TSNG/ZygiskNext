@@ -7,6 +7,18 @@ export default {
         basic: '基本情報',
         settings: '設定'
     },
+    bugreport: {
+        export: 'Bugreport をエクスポート',
+        exporting: 'エクスポート中…',
+        export_success_title: 'Bugreport をエクスポートしました',
+        export_success: 'Bugreport は次の場所に保存されました:',
+        export_failed_title: 'エクスポートに失敗しました',
+        export_failed: 'Bugreport をエクスポートできませんでした。',
+        copy_path: 'パスをコピー',
+        copy_path_failed: 'コピーに失敗しました',
+        send_log: 'ログを送信',
+        send_failed: '送信に失敗しました',
+    },
     dashboard: {
         root_impl: 'Root の実装',
         zygote_monitor: 'Zygote の監視',
@@ -60,9 +72,12 @@ export default {
             title: 'モジュールに問題があります',
             companion_api_issue: 'このモジュール {name} には Companion API の不適切な使用に関する問題があり、プロセスのクラッシュとメモリ リークが発生する可能性があります。このモジュールの開発者に連絡して解決してください。',
             linker_issue: 'このモジュール {name} を読み込めませんでした。モジュールの開発者に問題を報告してください。',
+            crash_issue: 'モジュール {name} は次のプロセスのクラッシュしたスレッドのバックトレースに現れました: {processes}。',
+            unknown_process: '不明なプロセス',
             learn_more: 'ここにアクセスして詳細を確認してください：{link}',
             check_banner: '問題のあるモジュールが {0} 件見つかりました。モジュール一覧を確認してください。',
             badge: '問題あり',
+            crash_badge: 'クラッシュ',
         },
         zn: {
             process_count: '{0} プロセス',

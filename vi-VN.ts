@@ -7,6 +7,18 @@ export default {
         basic: 'Thông tin Cơ bản',
         settings: 'Cài đặt'
     },
+    bugreport: {
+        export: 'Xuất Bugreport',
+        exporting: 'Đang xuất…',
+        export_success_title: 'Đã xuất Bugreport',
+        export_success: 'Bugreport đã được lưu tại:',
+        export_failed_title: 'Xuất thất bại',
+        export_failed: 'Không thể xuất Bugreport.',
+        copy_path: 'Sao chép đường dẫn',
+        copy_path_failed: 'Sao chép thất bại',
+        send_log: 'Gửi nhật ký',
+        send_failed: 'Gửi thất bại',
+    },
     dashboard: {
         root_impl: 'Trình thực thi Root',
         zygote_monitor: 'Trình giám sát Zygote',
@@ -60,9 +72,12 @@ export default {
             title: 'Module này có vấn đề',
             companion_api_issue: 'Module {name} này có vấn đề với việc sử dụng Companion API không đúng cách, có thể gây ra sự cố tiến trình và rò rỉ bộ nhớ. Vui lòng liên hệ nhà phát triển của module này để giải quyết vấn đề.',
             linker_issue: 'Module {name} không thể load. Vui lòng báo cáo vấn đề cho nhà phát triển module.',
+            crash_issue: 'Module {name} xuất hiện trong backtrace của luồng bị crash của: {processes}.',
+            unknown_process: 'tiến trình không xác định',
             learn_more: 'Truy cập tại đây để biết thêm thông tin: {link}',
             check_banner: 'Đã phát hiện {0} module có vấn đề. Vui lòng kiểm tra danh sách module.',
             badge: 'Có vấn đề',
+            crash_badge: 'Crash',
         },
         zn: {
             process_count: '{0} tiến trình',

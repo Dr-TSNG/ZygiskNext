@@ -9,6 +9,18 @@ export default {
         basic: 'Informations de base',
         settings: 'Paramètres'
     },
+    bugreport: {
+        export: 'Exporter le Bugreport',
+        exporting: 'Exportation…',
+        export_success_title: 'Bugreport exporté',
+        export_success: 'Le Bugreport a été enregistré dans :',
+        export_failed_title: 'Échec de l\'exportation',
+        export_failed: 'Impossible d\'exporter le Bugreport.',
+        copy_path: 'Copier le chemin',
+        copy_path_failed: 'Échec de la copie',
+        send_log: 'Envoyer le journal',
+        send_failed: 'Échec de l\'envoi',
+    },
     dashboard: {
         root_impl: 'Implementation root',
         zygote_monitor: 'Moniteur Zygote',
@@ -60,9 +72,12 @@ export default {
             title: 'Ce module a un problème',
             companion_api_issue: 'Ce module {name} a un problème d\'utilisation incorrecte de l\'API Companion, ce qui peut causer des plantages de processus et des fuites mémoire. Veuillez contacter le développeur de ce module pour résoudre le problème.',
             linker_issue: 'Le module {name} n?a pas pu ?tre charg?. Veuillez signaler le probl?me au d?veloppeur du module.',
+            crash_issue: 'Le module {name} apparaît dans la trace d\'appel du thread en échec de : {processes}.',
+            unknown_process: 'processus inconnu',
             learn_more: 'Visitez ici pour plus d\'informations：{link}',
             check_banner: 'Aucun module problématique détecté. | {0} module présente un problème. Veuillez vérifier la liste des modules. | {0} modules présentent des problèmes. Veuillez vérifier la liste des modules.',
             badge: 'Problème',
+            crash_badge: 'Crash',
         },
         zn: {
             process_count: 'Aucun processus | {0} processus | {0} processus',

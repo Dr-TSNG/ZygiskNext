@@ -7,6 +7,18 @@ export default {
         basic: 'معلومات أساسية',
         settings: 'الإعدادات'
     },
+    bugreport: {
+        export: 'تصدير Bugreport',
+        exporting: 'جارٍ التصدير…',
+        export_success_title: 'تم تصدير Bugreport',
+        export_success: 'تم حفظ Bugreport في:',
+        export_failed_title: 'فشل التصدير',
+        export_failed: 'فشل تصدير Bugreport.',
+        copy_path: 'نسخ المسار',
+        copy_path_failed: 'فشل النسخ',
+        send_log: 'إرسال السجل',
+        send_failed: 'فشل الإرسال',
+    },
     dashboard: {
         root_impl: 'تنفيذ الروت',
         zygote_monitor: 'مراقب Zygote',
@@ -60,9 +72,12 @@ export default {
             title: 'هذه الوحدة بها مشكلة',
             companion_api_issue: 'هذه الوحدة {name} بها مشكلة في الاستخدام غير الصحيح لـ API الرفيق، مما قد يسبب أعطال العملية وتسريب الذاكرة. يرجى الاتصال بمطور هذه الوحدة لحل المشكلة.',
             linker_issue: 'تعذّر تحميل الوحدة {name}، يرجى إبلاغ مطوّر الوحدة بالمشكلة.',
+            crash_issue: 'ظهرت الوحدة {name} في تتبع المكدس لخيط الانهيار في: {processes}.',
+            unknown_process: 'عملية غير معروفة',
             learn_more: 'زيارة هنا للحصول على مزيد من المعلومات：{link}',
             check_banner: 'لم يتم اكتشاف وحدات بها مشكلات. | تم اكتشاف وحدة بها مشكلات ({0}). يرجى مراجعة قائمة الوحدات. | تم اكتشاف {0} وحدات بها مشكلات. يرجى مراجعة قائمة الوحدات.',
             badge: 'مشكلة',
+            crash_badge: 'انهيار',
         },
         zn: {
             process_count: 'لا توجد عمليات | عملية واحدة ({0}) | {0} عمليات',

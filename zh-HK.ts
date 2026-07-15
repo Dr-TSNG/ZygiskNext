@@ -7,6 +7,18 @@ export default {
         basic: '基本資訊',
         settings: '設定'
     },
+    bugreport: {
+        export: '匯出 Bugreport',
+        exporting: '正在匯出…',
+        export_success_title: 'Bugreport 已匯出',
+        export_success: 'Bugreport 已儲存到：',
+        export_failed_title: '匯出失敗',
+        export_failed: '無法匯出 Bugreport。',
+        copy_path: '複製路徑',
+        copy_path_failed: '複製失敗',
+        send_log: '發送日誌',
+        send_failed: '發送失敗',
+    },
     dashboard: {
         root_impl: 'Root 方案',
         zygote_monitor: 'Zygote 監測器',
@@ -60,9 +72,12 @@ export default {
             title: '模組存在問題',
             companion_api_issue: '此模組 {name} 存在 Companion API 使用不當嘅問題，可能導致行程崩潰同記憶體洩漏，請聯絡此模組嘅開發者解決。',
             linker_issue: '該模組 {name} 無法載入，請向模組開發者回報問題。',
+            crash_issue: '模組 {name} 出現在以下行程嘅崩潰執行緒回溯中：{processes}。',
+            unknown_process: '未知行程',
             learn_more: '訪問呢度了解更多信息：{link}',
             check_banner: '檢測到 {0} 個有問題嘅模組，請檢查模組列表。',
             badge: '有問題',
+            crash_badge: '導致崩潰',
         },
         zn: {
             process_count: '{0} 個進程',

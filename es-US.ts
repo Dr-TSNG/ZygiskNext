@@ -7,6 +7,18 @@ export default {
         basic: 'Información básica',
         settings: 'Ajustes'
     },
+    bugreport: {
+        export: 'Exportar Bugreport',
+        exporting: 'Exportando…',
+        export_success_title: 'Bugreport exportado',
+        export_success: 'El Bugreport se guardó en:',
+        export_failed_title: 'Error al exportar',
+        export_failed: 'No se pudo exportar el Bugreport.',
+        copy_path: 'Copiar ruta',
+        copy_path_failed: 'Error al copiar',
+        send_log: 'Enviar log',
+        send_failed: 'Error al enviar',
+    },
     dashboard: {
         root_impl: 'Solución de root',
         zygote_monitor: 'Monitor de Zygote',
@@ -60,9 +72,12 @@ export default {
             title: 'Este módulo presenta un problema',
             companion_api_issue: 'El módulo {name} utiliza de forma incorrecta la Companion API, lo que podría causar crashes de procesos y fugas de memoria. Por favor, contacta con el desarrollador de este módulo para resolverlo.',
             linker_issue: 'El m?dulo {name} no se pudo cargar. Informa el problema al desarrollador del m?dulo.',
+            crash_issue: 'El módulo {name} apareció en el backtrace del hilo que falló de: {processes}.',
+            unknown_process: 'proceso desconocido',
             learn_more: 'Visita este enlace para más información: {link}',
             check_banner: 'No se detectaron módulos con problemas. | Se detectó {0} módulo con problemas. | Se detectaron {0} módulos con problemas.',
             badge: 'Problema',
+            crash_badge: 'Crash',
         },
         zn: {
             process_count: 'Sin procesos | {0} proceso | {0} procesos',

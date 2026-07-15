@@ -7,6 +7,18 @@ export default {
         basic: 'Informasi Dasar',
         settings: 'Pengaturan'
     },
+    bugreport: {
+        export: 'Ekspor Bugreport',
+        exporting: 'Mengekspor…',
+        export_success_title: 'Bugreport diekspor',
+        export_success: 'Bugreport disimpan di:',
+        export_failed_title: 'Gagal mengekspor',
+        export_failed: 'Gagal mengekspor Bugreport.',
+        copy_path: 'Salin path',
+        copy_path_failed: 'Gagal menyalin',
+        send_log: 'Kirim log',
+        send_failed: 'Gagal mengirim',
+    },
     dashboard: {
         root_impl: 'Implementasi root',
         zygote_monitor: 'Monitor Zygote',
@@ -60,9 +72,12 @@ export default {
             title: 'Modul ini memiliki masalah',
             companion_api_issue: 'Modul {name} ini memiliki masalah dengan penggunaan Companion API yang tidak tepat, yang dapat menyebabkan kerusakan proses dan kebocoran memori. Harap hubungi pengembang modul ini untuk menyelesaikan masalah.',
             linker_issue: 'Modul {name} gagal dimuat. Laporkan masalah ini kepada pengembang modul.',
+            crash_issue: 'Modul {name} muncul dalam backtrace thread yang crash dari: {processes}.',
+            unknown_process: 'proses tidak dikenal',
             learn_more: 'Kunjungi di sini untuk informasi lebih lanjut：{link}',
             check_banner: 'Tidak ada modul bermasalah yang terdeteksi. | Terdeteksi {0} modul bermasalah. Silakan periksa daftar modul. | Terdeteksi {0} modul bermasalah. Silakan periksa daftar modul.',
             badge: 'Bermasalah',
+            crash_badge: 'Crash',
         },
         zn: {
             process_count: 'Tidak ada proses | {0} proses | {0} proses',
