@@ -14,6 +14,8 @@ export default {
         export_success: 'The bugreport was saved to:',
         export_failed_title: 'Export failed',
         export_failed: 'Failed to export the bugreport.',
+        copy_path: 'Copy path',
+        copy_path_failed: 'Copy failed, try again',
     },
     dashboard: {
         root_impl: 'Root implementation',

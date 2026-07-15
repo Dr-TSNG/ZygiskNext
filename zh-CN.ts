@@ -14,6 +14,8 @@ export default {
         export_success: 'Bugreport 已保存到：',
         export_failed_title: '导出失败',
         export_failed: '无法导出 Bugreport。',
+        copy_path: '复制路径',
+        copy_path_failed: '复制失败，请重试',
     },
     dashboard: {
         root_impl: 'Root 实现',
