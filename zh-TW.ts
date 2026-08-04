@@ -58,10 +58,12 @@ export default {
         injected: '已注入 ({pid})',
         inject_failed: '注入失敗 ({pid})',
         skipped: '已跳過 ({pid})',
+        abnormal: '異常 ({pid})',
         unknown_desc: '該 Zygote 的狀態未知，可能存在而未啟動，或 Zygote 監視器未檢測到其啟動。',
         injected_desc: '該 Zygote 已被注入 Zygisk ，其程序 ID 為 {pid}',
         inject_failed_desc: '該 Zygote 曾被嘗試注入 Zygisk 但失敗，其程序 ID 為 {pid}',
-        skipped_desc: '該 Zygote 被監視到啟動，其程序 ID 為 {pid}，但由於此前系統發生多次軟重啟，因此停止注入 Zygisk'
+        skipped_desc: '該 Zygote 被監視到啟動，其程序 ID 為 {pid}，但由於此前系統發生多次軟重啟，因此停止注入 Zygisk',
+        abnormal_desc: '該 Zygote 程序 {pid} 已被注入 Zygisk，但是 JNI Hook 未找到相符的方法（{funcs}），模組將無法正常載入。這可能是尚未適配的新版本或特殊 Android 系統，請在 GitHub 上建立 Issue 並提供目前系統的 /system/framework/framework.jar 和 /system/lib64/libandroid_runtime.so 以便開發者適配。'
     },
     corrupted: {
         title: '模組檔案損壞',

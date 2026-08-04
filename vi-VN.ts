@@ -58,10 +58,12 @@ export default {
         injected: 'Đã tiêm ({pid})',
         inject_failed: 'Tiêm thất bại ({pid})',
         skipped: 'Đã bỏ qua ({pid})',
+        abnormal: 'Bất thường ({pid})',
         unknown_desc: 'Trạng thái của Zygote này chưa được xác định và có thể tồn tại nhưng chưa được khởi chạy, hoặc Trình giám sát Zygote chưa phát hiện việc khởi động của nó.',
         injected_desc: 'Zygisk đã được tiêm vào Zygote. ID tiến trình là {pid}.',
         inject_failed_desc: 'Đã cố gắng tiêm Zygisk vào Zygote này nhưng thất bại. ID tiến trình là {pid}.',
-        skipped_desc: 'Zygote đã được phát hiện khởi động. ID tiến trình là {pid}. Tuy nhiên việc tiêm Zygisk đã bị dừng lại do hệ thống gặp nhiều lần khởi động lại mềm trước đó.'
+        skipped_desc: 'Zygote đã được phát hiện khởi động. ID tiến trình là {pid}. Tuy nhiên việc tiêm Zygisk đã bị dừng lại do hệ thống gặp nhiều lần khởi động lại mềm trước đó.',
+        abnormal_desc: 'Zygisk đã được tiêm vào tiến trình Zygote {pid}, nhưng JNI Hook không tìm thấy các phương thức khớp ({funcs}), nên các module sẽ không thể tải bình thường. Đây có thể là phiên bản mới chưa được hỗ trợ hoặc một hệ thống Android đặc biệt. Vui lòng tạo Issue trên GitHub và cung cấp /system/framework/framework.jar cùng /system/lib64/libandroid_runtime.so từ hệ thống hiện tại để nhà phát triển có thể hỗ trợ.'
     },
     corrupted: {
         title: 'Tệp module bị hỏng',

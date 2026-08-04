@@ -58,10 +58,12 @@ export default {
         injected: 'Enjekte edildi ({pid})',
         inject_failed: 'Enjeksiyon başarısız ({pid})',
         skipped: 'Atlandı ({pid})',
+        abnormal: 'Anormal ({pid})',
         unknown_desc: 'Bu Zygote`un durumu bilinmiyor ve mevcut olabilir ancak başlatılmamış olabilir veya Zygote monitörü onun başlatıldığını algılamamış olabilir.',
         injected_desc: 'Zygisk, Zygote`a enjekte edildi. İşlem kimliği {pid}',
         inject_failed_desc: 'Zygisk bu Zygote`a enjekte edilmeye çalışıldı ancak başarısız oldu. İşlem kimliği {pid}',
-        skipped_desc: 'Zygote`un başlatılması izlendi. İşlem kimliği {pid}. Ancak, sistemin önceki birçok yumuşak yeniden başlaması nedeniyle Zygisk enjeksiyonu durduruldu.'
+        skipped_desc: 'Zygote`un başlatılması izlendi. İşlem kimliği {pid}. Ancak, sistemin önceki birçok yumuşak yeniden başlaması nedeniyle Zygisk enjeksiyonu durduruldu.',
+        abnormal_desc: 'Zygisk, Zygote işlemi {pid} içine enjekte edildi ancak JNI Hook eşleşen yöntemleri bulamadı ({funcs}); bu nedenle modüller normal şekilde yüklenemeyecek. Bu, henüz uyarlanmamış yeni bir sürüm veya özel bir Android sistemi olabilir. Lütfen GitHub üzerinde bir Issue oluşturun ve geliştiricilerin uyarlama yapabilmesi için mevcut sistemdeki /system/framework/framework.jar ve /system/lib64/libandroid_runtime.so dosyalarını sağlayın.'
     },
     corrupted: {
         title: 'Modül dosyaları bozulmuş',

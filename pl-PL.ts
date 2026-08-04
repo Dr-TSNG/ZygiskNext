@@ -58,10 +58,12 @@ export default {
         injected: 'Wstrzyknięto ({pid})',
         inject_failed: 'Wstrzyknięcie nie powiodło się ({pid})',
         skipped: 'Pominięto ({pid})',
+        abnormal: 'Nieprawidłowość ({pid})',
         unknown_desc: 'Status tego procesu Zygote jest nieznany; może istnieć, ale nie być uruchomiony, albo monitor Zygote mógł nie wykryć jego startu.',
         injected_desc: 'Zygisk został wstrzyknięty do Zygote. Identyfikator procesu to {pid}',
         inject_failed_desc: 'Podjęto próbę wstrzyknięcia Zygisk do tego procesu Zygote, ale nie powiodła się. Identyfikator procesu to {pid}',
-        skipped_desc: 'Monitor wykrył uruchomienie Zygote. Identyfikator procesu to {pid}. Wstrzykiwanie Zygisk zostało jednak zatrzymane z powodu wielu wcześniejszych miękkich restartów systemu.'
+        skipped_desc: 'Monitor wykrył uruchomienie Zygote. Identyfikator procesu to {pid}. Wstrzykiwanie Zygisk zostało jednak zatrzymane z powodu wielu wcześniejszych miękkich restartów systemu.',
+        abnormal_desc: 'Zygisk został wstrzyknięty do procesu Zygote {pid}, ale JNI Hook nie znalazł pasujących metod ({funcs}), więc moduły nie będą ładować się poprawnie. Może to być nowa, nieobsługiwana jeszcze wersja albo specjalny system Android. Utwórz zgłoszenie na GitHubie i dostarcz /system/framework/framework.jar oraz /system/lib64/libandroid_runtime.so z bieżącego systemu, aby deweloperzy mogli dodać obsługę.'
     },
     corrupted: {
         title: 'Pliki modułu są uszkodzone',

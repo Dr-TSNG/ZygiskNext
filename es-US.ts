@@ -58,10 +58,12 @@ export default {
         injected: 'Inyectado ({pid})',
         inject_failed: 'Inyección fallida ({pid})',
         skipped: 'Omitido ({pid})',
+        abnormal: 'Anómalo ({pid})',
         unknown_desc: 'El estado de este Zygote es desconocido; puede que exista, pero que no se haya iniciado, o que el monitor de Zygote no haya detectado su inicio.',
         injected_desc: 'Zygisk ha sido inyectado en este Zygote con PID {pid}.',
         inject_failed_desc: 'Se intentó inyectar Zygisk en este Zygote con PID {pid}, pero la operación falló.',
-        skipped_desc: 'Se detectó el inicio de este Zygote con PID {pid}, pero la inyección de Zygisk se omitió debido a múltiples reinicios parciales del sistema.'
+        skipped_desc: 'Se detectó el inicio de este Zygote con PID {pid}, pero la inyección de Zygisk se omitió debido a múltiples reinicios parciales del sistema.',
+        abnormal_desc: 'Zygisk se ha inyectado en el proceso Zygote {pid}, pero JNI Hook no encontró métodos coincidentes ({funcs}), por lo que los módulos no se cargarán correctamente. Esto puede deberse a una versión nueva aún no compatible o a un sistema Android especial. Por favor, crea un issue en GitHub y proporciona /system/framework/framework.jar y /system/lib64/libandroid_runtime.so del sistema actual para que los desarrolladores puedan añadir soporte.'
     },
     corrupted: {
         title: 'Archivos del módulo corruptos',

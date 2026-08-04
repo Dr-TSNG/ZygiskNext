@@ -58,10 +58,12 @@ export default {
         injected: 'Diinjeksi ({pid})',
         inject_failed: 'Gagal diinjeksi ({pid})',
         skipped: 'Dilewatkan ({pid})',
+        abnormal: 'Abnormal ({pid})',
         unknown_desc: 'Status Zygote ini tidak diketahui, Mungkin ada namun belum dimulai, atau monitor Zygote tidak mendeteksi permulaannya.',
         injected_desc: 'Zygote ini telah diinjeksikan Zygisk. ID prosesnya adalah {pid}',
         inject_failed_desc: 'Zygote ini telah dicoba untuk diinjeksikan Zygisk tetapi gagal. ID prosesnya adalah {pid}',
-        skipped_desc: 'Zygote ini terpantau telah dimulai. ID prosesnya adalah {pid}. Namun injeksi Zygisk dihentikan karena sistem mengalami beberapa soft reboot sebelumnya.'
+        skipped_desc: 'Zygote ini terpantau telah dimulai. ID prosesnya adalah {pid}. Namun injeksi Zygisk dihentikan karena sistem mengalami beberapa soft reboot sebelumnya.',
+        abnormal_desc: 'Zygisk telah diinjeksikan ke proses Zygote {pid}, tetapi JNI Hook tidak menemukan metode yang cocok ({funcs}), sehingga modul tidak akan dimuat secara normal. Ini mungkin versi baru yang belum didukung atau sistem Android khusus. Harap buat issue di GitHub dan sertakan /system/framework/framework.jar serta /system/lib64/libandroid_runtime.so dari sistem saat ini agar developer dapat menyesuaikannya.'
     },
     corrupted: {
         title: 'File modul rusak',

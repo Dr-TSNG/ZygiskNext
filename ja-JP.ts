@@ -58,10 +58,12 @@ export default {
         injected: 'インジェクト済み ({pid})',
         inject_failed: 'インジェクトに失敗 ({pid})',
         skipped: 'スキップ済み ({pid})',
+        abnormal: '異常 ({pid})',
         unknown_desc: 'この Zygote のステータスは不明であり、存在はするが開始していないか、または Zygote の監視がその開始を検出しない可能性あります。',
         injected_desc: 'Zygisk が Zygote にインジェクトされました。プロセス ID は {pid} です。',
         inject_failed_desc: 'Zygisk をこの Zygote にインジェクトしようとしましたが失敗しました。プロセス ID は {pid} です。',
-        skipped_desc: 'Zygote の起動が監視されました。プロセス ID は {pid} です。ただし、システムの複数回のソフトリブートにより Zygisk のインジェクトは停止されました。'
+        skipped_desc: 'Zygote の起動が監視されました。プロセス ID は {pid} です。ただし、システムの複数回のソフトリブートにより Zygisk のインジェクトは停止されました。',
+        abnormal_desc: 'Zygisk は Zygote プロセス {pid} にインジェクトされましたが、JNI Hook が対応するメソッド ({funcs}) を見つけられなかったため、モジュールは正常に読み込まれません。これは未対応の新しいバージョンまたは特殊な Android システムである可能性があります。開発者が対応できるよう、GitHub で Issue を作成し、現在のシステムの /system/framework/framework.jar と /system/lib64/libandroid_runtime.so を提供してください。'
     },
     corrupted: {
         title: 'モジュールファイルが破損しています',

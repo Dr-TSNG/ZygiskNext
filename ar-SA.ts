@@ -58,10 +58,12 @@ export default {
         injected: 'تم الحقن ({pid})',
         inject_failed: 'فشل الحقن ({pid})',
         skipped: 'تم التجاوز ({pid})',
+        abnormal: 'غير طبيعي ({pid})',
         unknown_desc: 'حالة Zygote غير معروفة، قد يكون موجودًا لكنه لم يبدأ، أو أن المراقب لم يكتشف بدءه.',
         injected_desc: 'تم حقن Zygisk في Zygote. رقم العملية هو {pid}',
         inject_failed_desc: 'تمت محاولة حقن Zygisk في Zygote لكنها فشلت. رقم العملية هو {pid}',
-        skipped_desc: 'تمت مراقبة بدء Zygote. رقم العملية هو {pid}. لكن تم إيقاف الحقن بسبب عدة عمليات إعادة تشغيل ناعمة سابقة للنظام.'
+        skipped_desc: 'تمت مراقبة بدء Zygote. رقم العملية هو {pid}. لكن تم إيقاف الحقن بسبب عدة عمليات إعادة تشغيل ناعمة سابقة للنظام.',
+        abnormal_desc: 'تم حقن Zygisk في عملية Zygote {pid}، لكن JNI Hook لم يعثر على طرق مطابقة ({funcs})، لذلك لن يتم تحميل الوحدات بشكل طبيعي. قد يكون ذلك بسبب إصدار جديد غير مدعوم بعد أو نظام Android خاص. يرجى إنشاء Issue على GitHub وتوفير /system/framework/framework.jar و /system/lib64/libandroid_runtime.so من النظام الحالي حتى يتمكن المطورون من دعمه.'
     },
     corrupted: {
         title: 'ملفات الوحدة تالفة',

@@ -58,10 +58,12 @@ export default {
         injected: 'Injecté ({pid})',
         inject_failed: 'Échec injection ({pid})',
         skipped: 'Ignoré ({pid})',
+        abnormal: 'Anormal ({pid})',
         unknown_desc: 'L\'état de ce Zygote est inconnu (existe potentiellement mais ne peut être démarré), ou le moniteur Zygote n\'a pas détecté son démarrage.',
         injected_desc: 'Zygisk est injecté dans le Zygote. Son ID de process est {pid}',
         inject_failed_desc: 'Échec de l\'injection de Zygisk dans le Zygote. Son ID de process est {pid}',
-        skipped_desc: 'Le Zygote a été detecté comme démarré. Son ID de process est {pid}. Mais l\'injection  Zygisk injecting a été stoppée par de multiple reboots du système.'
+        skipped_desc: 'Le Zygote a été detecté comme démarré. Son ID de process est {pid}. Mais l\'injection  Zygisk injecting a été stoppée par de multiple reboots du système.',
+        abnormal_desc: 'Zygisk a été injecté dans le processus Zygote {pid}, mais le JNI Hook n\'a trouvé aucune méthode correspondante ({funcs}); les modules ne pourront donc pas se charger normalement. Il peut s\'agir d\'une nouvelle version non prise en charge ou d\'un système Android particulier. Veuillez créer une issue sur GitHub et fournir les fichiers /system/framework/framework.jar et /system/lib64/libandroid_runtime.so du système actuel afin que les développeurs puissent ajouter la prise en charge.'
     },
     corrupted: {
         title: 'Fichiers de module corrompus',
