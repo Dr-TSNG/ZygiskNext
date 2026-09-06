@@ -14,7 +14,7 @@ export default {
         export: 'Exporter le rapport de bugs',
         exporting: 'Exportation…',
         export_success_title: 'Rapport exporté',
-        export_success: 'Raport enregistré dans : ',
+        export_success: 'Rapport enregistré dans : ',
         export_failed_title: 'Échec de l\'exportation',
         export_failed: 'Exportation du rapport de bugs impossible.',
         copy_path: 'Copier le chemin',
