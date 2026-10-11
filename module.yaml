@@ -1,0 +1,26 @@
+schemaVersion: 1
+id: zygisksu
+name: Zygisk Next
+summary: Standalone implementation of Zygisk
+description: README.md
+homepage: https://github.com/Dr-TSNG/ZygiskNext
+support: https://github.com/Dr-TSNG/ZygiskNext/issues
+tags: [zygisk, zygisk-next]
+metamodule: false
+
+authors:
+  - name: 5ec1cff
+    url: https://github.com/5ec1cff
+  - name: Nullptr
+    url: https://github.com/Dr-TSNG
+  - name: Aviraxp
+    url: https://github.com/aviraxp
+  - name: LSPosed Developers
+    url: https://github.com/LSPosed
+
+compatibility:
+  androidMinApi: 26
+  architectures: [arm64-v8a, armeabi-v7a, x86_64, riscv64]
+
+release:
+  assetPattern: "Zygisk-Next-*-release.zip"
